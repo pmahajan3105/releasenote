@@ -221,10 +221,10 @@ Follow our **[Complete Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** for step-by
 - ✅ Professional email notifications
 - ✅ Public release notes pages
 - ✅ Complete deployment guides
+- ✅ Linear and Jira integrations
 
 ### Upcoming Features (1.1)
 - [ ] Slack integration for team notifications
-- [ ] Linear and Jira integrations
 - [ ] Advanced AI templates and customization
 - [ ] Polar.sh billing integration
 
