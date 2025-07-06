@@ -37,8 +37,8 @@ export default function StartReleasePage() {
       </div>
       <div className="px-4 py-5 sm:p-6">
         <ul role="list" className="mt-6 grid grid-cols-1 gap-6 border-t border-gray-200 py-6 sm:grid-cols-2 lg:grid-cols-3 dark:border-gray-700">
-          {options.map((option, optionIdx) => (
-            <li key={option.name} className="flow-root">
+          {options.map((option, index) => (
+            <li key={index} className="flow-root">
               <Link
                 href={option.href}
                 className="relative -m-2 flex items-start space-x-4 rounded-xl p-2 focus-within:ring-2 focus-within:ring-primary-500 hover:bg-gray-50 dark:hover:bg-gray-700"

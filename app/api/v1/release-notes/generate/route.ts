@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { getAiProvider } from '@/lib/ai'
 import { JSDOM } from 'jsdom'
 import DOMPurify from 'dompurify'
+import { z } from 'zod'
 
 // Placeholder types - replace with your actual Supabase types
 type OrganizationSettings = {
@@ -36,11 +37,22 @@ const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
 export async function POST(request: Request) {
-  const { releaseNoteId } = await request.json()
+  // Validate JSON body
+  const bodySchema = z.object({
+    releaseNoteId: z.string().min(1, 'releaseNoteId is required')
+  })
 
-  if (!releaseNoteId) {
-    return NextResponse.json({ error: 'releaseNoteId is required' }, { status: 400 })
+  const jsonBody = await request.json()
+  const parseResult = bodySchema.safeParse(jsonBody)
+
+  if (!parseResult.success) {
+    return NextResponse.json({
+      error: 'Invalid input',
+      details: parseResult.error.flatten().fieldErrors
+    }, { status: 400 })
   }
+
+  const { releaseNoteId } = parseResult.data
 
   const supabase = createRouteHandlerClient({ cookies })
   const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -69,10 +81,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No source tickets found for this draft' }, { status: 400 })
     }
 
-    // 2. Fetch Organization Settings (assuming settings are on an 'organizations' table linked by user ID for simplicity now)
-    // TODO: Adjust this based on your actual organization/settings structure
+    // 2. Fetch Organization Settings
     const { data: orgData, error: orgError } = await supabase
-        .from('organizations') // Replace with your actual table name
+        .from('organizations')
         .select('settings')
         .eq('id', noteData.organization_id)
         .single()
@@ -95,11 +106,20 @@ export async function POST(request: Request) {
     prompt += `\nPlease categorize these tickets into sections like 'New Features', 'Bug Fixes', and 'Improvements'.`
     prompt += ` Ensure the output is clean Markdown.`
 
-    // 5. Call AI Provider
+    // 5. Call AI Provider with Azure OpenAI
     const aiProvider = getAiProvider()
-    const generatedContent = await aiProvider.generateReleaseNotes(prompt, {
-        companyDetails: settings.companyDetails,
-        tone: settings.ai_tone
+    
+    // Convert ticket details to commit-like format for the AI provider
+    const commitsForAI = ticketDetails.map(ticket => ({
+      message: `${ticket.title}: ${ticket.description || ''}`,
+      sha: ticket.key,
+      type: 'feature' // Could be enhanced to detect type from ticket
+    }))
+    
+    const generatedContent = await aiProvider.generateReleaseNotes(commitsForAI, {
+        template: 'traditional',
+        tone: (settings.ai_tone as 'professional' | 'casual' | 'technical') || 'professional',
+        includeBreakingChanges: true
     })
 
     // --- ADD SANITIZATION STEP --- 

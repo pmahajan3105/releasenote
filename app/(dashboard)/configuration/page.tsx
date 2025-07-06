@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore, useAuthSelectors } from '@/lib/store'
 
 // Type for the organization settings
 // Adjust based on your actual settings structure within the JSONB column
@@ -14,7 +14,8 @@ type OrgSettings = {
 
 export default function ConfigurationPage() {
   const supabase = createClientComponentClient()
-  const { user, loading: authLoading } = useAuth()
+  const user = useAuthStore((state) => state.user)
+  const { isLoading: authLoading } = useAuthSelectors()
   
   const [settings, setSettings] = useState<OrgSettings>({ companyDetails: '', ai_tone: '' })
   const [isLoading, setIsLoading] = useState(true)
@@ -30,9 +31,7 @@ export default function ConfigurationPage() {
     setSuccessMessage(null)
 
     try {
-      // Assuming organization ID is linked to user ID or fetched differently
-      // For now, using user.id as a placeholder for the organization ID
-      // TODO: Replace with your actual logic to get the relevant organization ID
+      // Using user.id as organization ID for simplicity
       const orgId = user.id 
 
       const { data, error: fetchError } = await supabase
@@ -84,8 +83,8 @@ export default function ConfigurationPage() {
     setSuccessMessage(null)
 
     try {
-      // TODO: Replace with your actual logic to get the relevant organization ID
-       const orgId = user.id 
+      // Using user.id as organization ID for simplicity
+      const orgId = user.id 
 
       const { error: updateError } = await supabase
         .from('organizations')

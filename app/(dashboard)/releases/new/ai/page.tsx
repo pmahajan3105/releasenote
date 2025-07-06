@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/lib/store/use-auth'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { slugify } from '@/lib/utils'
+import { GitHubReleaseGenerator } from '@/components/features/GitHubReleaseGenerator'
 
 // Define the Jira ticket type
 type JiraTicket = {
@@ -51,18 +52,21 @@ const releaseNotesSchema = z.object({
 type ReleaseNotesFormData = z.infer<typeof releaseNotesSchema>
 
 // Renamed function to reflect its purpose
-export default function NewReleaseNotesAiPage() {
+export default function AIReleaseNotePage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [content, setContent] = useState('')
+  const [selectedTickets, setSelectedTickets] = useState<string[]>([])
+  const [tickets, setTickets] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<'github' | 'jira'>('github')
   const [integrations, setIntegrations] = useState<JiraIntegration[]>([])
   const [projects, setProjects] = useState<Array<{ key: string; name: string }>>([])
-  const [tickets, setTickets] = useState<JiraTicket[]>([])
-  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set())
   const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(true)
   const [isLoadingProjects, setIsLoadingProjects] = useState(false)
   const [isFetchingTickets, setIsFetchingTickets] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const { user } = useAuth()
+  const { user } = useAuthStore()
   const supabase = createClientComponentClient()
 
   const {
@@ -149,7 +153,7 @@ export default function NewReleaseNotesAiPage() {
     
     // Clear tickets and selected tickets
     setTickets([])
-    setSelectedTickets(new Set())
+    setSelectedTickets([])
   }
 
   // Fetch Jira tickets based on selected filters
@@ -158,7 +162,7 @@ export default function NewReleaseNotesAiPage() {
     setIsFetchingTickets(true)
     setError(null)
     setTickets([])
-    setSelectedTickets(new Set())
+    setSelectedTickets([])
 
     try {
       // In a real implementation, this would call a Jira API endpoint
@@ -231,99 +235,43 @@ export default function NewReleaseNotesAiPage() {
 
   // Toggle ticket selection
   const toggleTicketSelection = (ticketId: string) => {
-    const newSelectedTickets = new Set(selectedTickets)
-    
-    if (newSelectedTickets.has(ticketId)) {
-      newSelectedTickets.delete(ticketId)
-    } else {
-      newSelectedTickets.add(ticketId)
-    }
-    
+    const newSelectedTickets = selectedTickets.filter(id => id !== ticketId)
     setSelectedTickets(newSelectedTickets)
   }
 
   // Select all tickets
   const selectAllTickets = () => {
     const allTicketIds = tickets.map(ticket => ticket.id)
-    setSelectedTickets(new Set(allTicketIds))
+    setSelectedTickets(allTicketIds)
   }
 
   // Deselect all tickets
   const deselectAllTickets = () => {
-    setSelectedTickets(new Set())
+    setSelectedTickets([])
   }
 
   // Generate release notes (modified flow)
-  const generateReleaseNotes = async () => {
-    const formData = watch()
-    if (selectedTickets.size === 0) {
-      setError('Please select at least one ticket to include in the release notes')
-      return
-    }
-    if (!user) {
-        setError('User not found, please log in again.');
-        return;
-    }
-
-    setIsGenerating(true)
-    setError(null)
-
+  const generateReleaseNote = async () => {
     try {
-      // --- Step 1: Gather data for AI & Draft --- 
-      const selectedTicketDetails = tickets.filter(ticket => selectedTickets.has(ticket.id))
-                                          .map(t => ({ key: t.key, title: t.title, description: t.description }))
-      const releaseTitle = formData.title
-      const initialContentPlaceholder = '<!-- Generating AI content... -->'
-      const releaseSlug = slugify(releaseTitle) + '-' + Date.now().toString(36)
+      setLoading(true)
+      const response = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tickets: selectedTickets,
+        }),
+      })
 
-      // --- Step 2: Create Initial Draft in Supabase --- 
-      const { data: draftNote, error: insertError } = await supabase
-        .from('release_notes')
-        .insert({
-          organization_id: user.id,
-          title: releaseTitle,
-          slug: releaseSlug,
-          content_html: initialContentPlaceholder,
-          status: 'draft',
-          source_ticket_ids: Array.from(selectedTickets),
-        })
-        .select('id')
-        .single()
-
-      if (insertError) {
-         throw new Error(`Failed to create draft release note: ${insertError.message}`)
+      if (response.ok) {
+        const result = await response.json()
+        setContent(result.content || '')
       }
-
-      if (!draftNote || !draftNote.id) {
-          throw new Error('Failed to create draft: No ID returned.')
-      }
-
-      // --- Step 3: (Optional but Recommended) Trigger Backend AI Generation Asynchronously ---
-      // We won't generate AI content directly on the client anymore.
-      // Instead, we navigate to the editor, and the editor page 
-      // (or a background process triggered here) will handle fetching AI content.
-      // For now, we just redirect.
-      
-      // Example of how you *might* trigger a background generation (needs API route):
-      // fetch('/api/v1/release-notes/generate', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ 
-      //      releaseNoteId: draftNote.id, 
-      //      tickets: selectedTicketDetails, 
-      //      title: releaseTitle,
-      //      // Pass config like company details, tone if needed 
-      //   }),
-      // });
-      // Note: This background call shouldn't block navigation.
-
-      // --- Step 4: Redirect to the Editor Page --- 
-      router.push(`/releases/edit/${draftNote.id}`)
-
     } catch (error) {
-      console.error("Error during release note generation process:", error);
-      setError(error instanceof Error ? error.message : 'Failed to start release note generation')
-      setIsGenerating(false)
+      console.error('Error generating release note:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -339,6 +287,38 @@ export default function NewReleaseNotesAiPage() {
 
       <main>
         <div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <div className="border-b border-gray-200 dark:border-gray-700">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('github')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'github'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
+                  }`}
+                >
+                  GitHub Integration
+                </button>
+                <button
+                  onClick={() => setActiveTab('jira')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'jira'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
+                  }`}
+                >
+                  Jira Integration
+                </button>
+              </nav>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'github' ? (
+            <GitHubReleaseGenerator />
+          ) : (
           <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
             <form className="space-y-6">
               {/* Jira Integration Selection */}
@@ -513,7 +493,7 @@ export default function NewReleaseNotesAiPage() {
                             <input
                               id={`ticket-${ticket.id}`}
                               type="checkbox"
-                              checked={selectedTickets.has(ticket.id)}
+                              checked={selectedTickets.includes(ticket.id)}
                               onChange={() => toggleTicketSelection(ticket.id)}
                               className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
                             />
@@ -599,8 +579,8 @@ export default function NewReleaseNotesAiPage() {
                   <div>
                     <button
                       type="button"
-                      onClick={generateReleaseNotes}
-                      disabled={isGenerating || selectedTickets.size === 0}
+                      onClick={generateReleaseNote}
+                      disabled={isGenerating || selectedTickets.length === 0}
                       className="inline-flex justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isGenerating ? 'Generating...' : 'Generate Release Notes'}
@@ -610,6 +590,7 @@ export default function NewReleaseNotesAiPage() {
               )}
             </form>
           </div>
+          )}
         </div>
       </main>
     </div>

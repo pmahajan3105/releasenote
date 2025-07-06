@@ -1,29 +1,55 @@
-import { claudeProvider } from './claude'
-// Import other providers like openAiProvider here when added
 import { AiProvider } from './types'
 
-// Configuration logic (could come from environment variables or database settings)
-const configuredProvider = process.env.AI_PROVIDER || 'claude' // Default to Claude
+// Primary provider as specified in PRD: Azure OpenAI with GPT-4o-mini
+const configuredProvider = process.env.AI_PROVIDER || 'azure-openai'
 
-let aiProvider: AiProvider
+let aiProvider: AiProvider | null = null
 
-switch (configuredProvider) {
-  // case 'openai':
-  //   aiProvider = openAiProvider;
-  //   break;
-  case 'claude':
-  default:
-    aiProvider = claudeProvider
-    break;
+function initializeProvider(): AiProvider {
+  if (!aiProvider) {
+    switch (configuredProvider) {
+      case 'azure-openai':
+      default:
+        // Lazy import to prevent build-time initialization
+        const { azureOpenAIProvider } = require('./azure-openai')
+        aiProvider = azureOpenAIProvider
+        break;
+    }
+  }
+  return aiProvider!
 }
 
 /**
- * Gets the currently configured AI provider instance.
+ * Gets the legacy AI provider instance (for backward compatibility)
  */
 export function getAiProvider(): AiProvider {
-  if (!aiProvider) {
-    // This might happen if the default case failed, e.g., Claude key missing
+  try {
+    return initializeProvider()
+  } catch (error) {
+    console.error('AI Provider initialization failed:', error)
     throw new Error('AI Provider could not be initialized.')
   }
-  return aiProvider
+}
+
+// Enhanced AI system with multiple providers
+// Server AI controller removed - using Next.js service layer
+
+/**
+ * Gets the enhanced AI provider with support for multiple models
+ * Primary: Azure OpenAI as specified in PRD
+ */
+export function getEnhancedAiProvider(provider: 'azure-openai' | 'openai' = 'azure-openai') {
+  try {
+    // Use Azure OpenAI as primary provider per PRD specifications
+    return getAiProvider()
+  } catch (error) {
+    console.error('AI provider not available:', error)
+    throw new Error('AI provider initialization failed')
+  }
+}
+
+// Export the Azure OpenAI provider for direct use (lazy loaded)
+export function getAzureOpenAIProvider() {
+  const { azureOpenAIProvider } = require('./azure-openai')
+  return azureOpenAIProvider
 } 

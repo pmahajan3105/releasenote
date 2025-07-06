@@ -5,40 +5,81 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const state = requestUrl.searchParams.get('state')
   const supabase = createRouteHandlerClient({ cookies })
 
-  if (code) {
-    // Exchange the code for GitHub access token
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+  if (!code || state !== 'integration') {
+    return NextResponse.redirect(
+      `${requestUrl.origin}/integrations/new?error=Invalid GitHub callback`
+    )
+  }
 
-    if (error) {
+  try {
+    // Exchange code for GitHub access token (direct GitHub API call, not Supabase auth)
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    })
+
+    const tokenData = await tokenResponse.json()
+
+    if (tokenData.error) {
       return NextResponse.redirect(
-        `${requestUrl.origin}/integrations/new?error=${encodeURIComponent(error.message)}`
+        `${requestUrl.origin}/integrations/new?error=${encodeURIComponent(tokenData.error_description || tokenData.error)}`
       )
     }
 
-    // Get the GitHub access token from the session
+    const accessToken = tokenData.access_token
+
+    // Get GitHub user info
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'Release-Notes-Generator',
+      },
+    })
+
+    const githubUser = await userResponse.json()
+
+    // Get current user session (for user authentication, not GitHub auth)
     const { data: { session } } = await supabase.auth.getSession()
-    const githubToken = session?.provider_token
-
-    if (githubToken) {
-      // Store the GitHub token in the integrations table
-      const { error: insertError } = await supabase.from('integrations').insert({
-        type: 'github',
-        config: {
-          access_token: githubToken,
-        },
-        organization_id: session.user.id, // This should be the actual organization ID in production
-      })
-
-      if (insertError) {
-        return NextResponse.redirect(
-          `${requestUrl.origin}/integrations/new?error=${encodeURIComponent(insertError.message)}`
-        )
-      }
+    
+    if (!session?.user) {
+      return NextResponse.redirect(
+        `${requestUrl.origin}/login?error=Please sign in first`
+      )
     }
-  }
 
-  // Redirect back to the integrations page
-  return NextResponse.redirect(`${requestUrl.origin}/integrations/new`)
+    // Store the GitHub integration in the integrations table
+    const { error: insertError } = await supabase.from('integrations').insert({
+      provider: 'github',
+      access_token: accessToken,
+      refresh_token: tokenData.refresh_token,
+      expires_at: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString() : null,
+      user_info: githubUser,
+      organization_id: session.user.user_metadata?.organization_id || session.user.id, // Use actual org ID
+    })
+
+    if (insertError) {
+      return NextResponse.redirect(
+        `${requestUrl.origin}/integrations/new?error=${encodeURIComponent(insertError.message)}`
+      )
+    }
+
+    // Redirect back to integrations with success
+    return NextResponse.redirect(`${requestUrl.origin}/integrations/manage?success=GitHub integration added`)
+
+  } catch (error) {
+    return NextResponse.redirect(
+      `${requestUrl.origin}/integrations/new?error=${encodeURIComponent('Failed to connect GitHub')}`
+    )
+  }
 } 

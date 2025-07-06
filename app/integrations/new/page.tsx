@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/lib/store/use-auth'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const integrationSchema = z.object({
@@ -23,7 +23,7 @@ export default function NewIntegrationPage() {
   const [repositories, setRepositories] = useState<Array<{ id: number; full_name: string }>>([])
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const { user } = useAuth()
+  const { user } = useAuthStore()
   const supabase = createClientComponentClient()
 
   const {

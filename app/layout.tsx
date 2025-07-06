@@ -1,9 +1,18 @@
 import './globals.css'
+import '@/components/editor/prism-theme.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { MainLayout } from '@/components/layout/main-layout'
+import { ErrorBoundary } from '@/components/error-boundary'
+import { PrismLoader } from '@/components/editor/prism-loader'
+import { initializeDatabaseOptimization } from '@/lib/database-config'
 
 const inter = Inter({ subsets: ['latin'] })
+
+// Initialize database optimization on server startup
+if (typeof window === 'undefined') {
+  initializeDatabaseOptimization()
+}
 
 export const metadata: Metadata = {
   title: 'Release Notes Generator',
@@ -18,7 +27,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthProvider>{children}</AuthProvider>
+        <PrismLoader />
+        <ErrorBoundary>
+          <MainLayout>
+            {children}
+          </MainLayout>
+        </ErrorBoundary>
       </body>
     </html>
   )

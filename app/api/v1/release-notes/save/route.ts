@@ -17,7 +17,7 @@ const saveNoteSchema = z.object({
 
 // Configure DOMPurify to run in a JSDOM environment
 const window = new JSDOM('').window;
-// @ts-ignore // DOMPurify type expects browser Window, JSDOM window works but type mismatches
+// JSDOM window is compatible with DOMPurify requirements
 const purify = DOMPurify(window);
 
 export async function POST(request: Request) {

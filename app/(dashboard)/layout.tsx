@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore, useAuthSelectors, useAuthActions } from '@/lib/store'
 
 // Import icons (assuming heroicons is installed, adjust if using another library)
 import {
@@ -34,7 +34,9 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const { user, signOut, loading } = useAuth()
+  const { isLoading: loading } = useAuthSelectors()
+  const { signOut } = useAuthActions()
+  const user = useAuthStore((state) => state.user)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (loading) {

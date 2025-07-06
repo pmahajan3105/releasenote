@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore, useAuthSelectors } from '@/lib/store'
 import { PlusIcon, LinkIcon, PencilIcon, EyeIcon, WifiIcon, ArrowPathIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 // Define types for data placeholders (will be refined later)
 type RecentNote = {
@@ -23,7 +24,9 @@ type IntegrationStatus = {
 }
 
 export default function DashboardHomePage() {
-  const { user, plan, loading: authLoading } = useAuth()
+  const user = useAuthStore((state) => state.user)
+  const { plan, isLoading: authLoading } = useAuthSelectors()
+  const supabase = createClientComponentClient()
   const [quickStats, setQuickStats] = useState<{notes: number; subscribers: number; views: number; latestDate: string | null}>({ notes: 0, subscribers: 0, views: 0, latestDate: null })
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([])
   const [integrations, setIntegrations] = useState<IntegrationStatus[]>([])
@@ -31,30 +34,64 @@ export default function DashboardHomePage() {
   const [loadingNotes, setLoadingNotes] = useState(true)
   const [loadingIntegrations, setLoadingIntegrations] = useState(true)
 
-  // TODO: Implement data fetching for stats, notes, and integrations in useEffect
   useEffect(() => {
-    // Simulate fetching data
     const fetchData = async () => {
+      if (!user) return
+
       setLoadingStats(true)
       setLoadingNotes(true)
       setLoadingIntegrations(true)
-      await new Promise(res => setTimeout(res, 1500)) // Simulate network delay
 
-      // Mock data - replace with actual Supabase calls
-      setQuickStats({ notes: 12, subscribers: 45, views: 1234, latestDate: '2024-04-01' })
-      setRecentNotes([
-        { id: '1', title: 'April Feature Update', status: 'published', published_at: '2024-04-01', slug: 'april-feature-update' },
-        { id: '2', title: 'March Bug Fixes', status: 'published', published_at: '2024-03-15', slug: 'march-bug-fixes' },
-        { id: '3', title: 'Q2 Roadmap Preview (Draft)', status: 'draft', slug: 'q2-roadmap-preview' },
-      ])
-      setIntegrations([
-        { id: 'int1', type: 'jira', status: 'connected', last_synced: '2024-04-05T10:00:00Z', name: 'your-company.atlassian.net' },
-        { id: 'int2', type: 'github', status: 'error', name: 'your-org/your-repo' },
-      ])
+      try {
+        // Fetch stats
+        const { data: statsData, error: statsError } = await supabase
+          .from('release_notes')
+          .select('id, status, published_at, views')
+          .eq('organization_id', user.id)
 
-      setLoadingStats(false)
-      setLoadingNotes(false)
-      setLoadingIntegrations(false)
+        if (!statsError && statsData) {
+          const publishedNotes = statsData.filter((note: any) => note.status === 'published')
+          const totalViews = statsData.reduce((sum: number, note: any) => sum + (note.views || 0), 0)
+          const latestNote = publishedNotes
+            .sort((a: any, b: any) => new Date(b.published_at || '').getTime() - new Date(a.published_at || '').getTime())[0]
+
+          setQuickStats({
+            notes: publishedNotes.length,
+            subscribers: 0, // TODO: Implement subscriber count when available
+            views: totalViews,
+            latestDate: latestNote?.published_at || null
+          })
+        }
+
+        // Fetch recent notes
+        const { data: notesData, error: notesError } = await supabase
+          .from('release_notes')
+          .select('id, title, status, published_at, slug')
+          .eq('organization_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(5)
+
+        if (!notesError && notesData) {
+          setRecentNotes(notesData)
+        }
+
+        // Fetch integrations
+        const { data: integrationsData, error: integrationsError } = await supabase
+          .from('integrations')
+          .select('id, type, status, last_synced, name')
+          .eq('organization_id', user.id)
+
+        if (!integrationsError && integrationsData) {
+          setIntegrations(integrationsData)
+        }
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoadingStats(false)
+        setLoadingNotes(false)
+        setLoadingIntegrations(false)
+      }
     }
 
     if (!authLoading && user) {
@@ -77,8 +114,7 @@ export default function DashboardHomePage() {
   const userName = user?.email?.split('@')[0] || 'there' // Simple name extraction
 
   // Determine if user is new (needs Getting Started guide)
-  // TODO: Refine this logic based on actual user progress (e.g., integrations connected, first note published)
-  const isNewUser = integrations.length === 0
+  const isNewUser = integrations.length === 0 && recentNotes.length === 0
 
   return (
     <div className="space-y-8">
@@ -257,7 +293,10 @@ export default function DashboardHomePage() {
                         <ArrowPathIcon className="h-5 w-5" aria-hidden="true" />
                         <span className="sr-only">Refresh</span>
                       </button>
-                       {/* TODO: Add configure/disconnect button linked to /configuration */} 
+                      <Link href="/configuration" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <span className="sr-only">Configure</span>
+                        Configure
+                      </Link> 
                     </div>
                   </div>
                 </li>
@@ -302,7 +341,6 @@ export default function DashboardHomePage() {
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Publish your notes to a public page or email subscribers.</p>
              </div>
           </div>
-           {/* TODO: Add a dismiss button */}
         </section>
       )}
     </div>

@@ -8,15 +8,11 @@ import 'react-quill/dist/quill.snow.css' // Import Quill styles
 import type Quill from 'quill' // Import Quill type
 import type ReactQuillType from 'react-quill' // Import ReactQuill type
 
-// Dynamically import ReactQuill, disable SSR
-const ReactQuill = dynamic(
-    async () => {
-        const { default: RQ } = await import('react-quill');
-        // eslint-disable-next-line react/display-name
-        return ({ forwardedRef, ...props }: any) => <RQ ref={forwardedRef} {...props} />;
-    },
-    { ssr: false }
-);
+// Dynamically import ReactQuill, disable SSR  
+const ReactQuill = dynamic(() => import('react-quill'), { 
+  ssr: false,
+  loading: () => <div>Loading editor...</div>
+});
 
 interface ReleaseNoteEditorProps {
   value: string
@@ -27,7 +23,7 @@ interface ReleaseNoteEditorProps {
 const IMAGE_BUCKET = 'release-note-images' // Match your Supabase bucket name
 
 export default function ReleaseNoteEditor({ value, onChange, placeholder }: ReleaseNoteEditorProps) {
-  const quillRef = useRef<ReactQuillType>(null); // Use the imported type for the ref
+  const quillRef = useRef<any>(null); // Use any type for dynamic import
   const supabase = createClientComponentClient()
 
   const imageHandler = useCallback(async () => {
@@ -123,7 +119,7 @@ export default function ReleaseNoteEditor({ value, onChange, placeholder }: Rele
   return (
     <div>
       <ReactQuill
-        forwardedRef={quillRef}
+        ref={quillRef}
         theme="snow" // Use the Snow theme
         value={value || ''}
         onChange={onChange}

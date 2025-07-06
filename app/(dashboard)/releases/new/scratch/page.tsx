@@ -3,13 +3,13 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthStore } from '@/lib/store/use-auth'
 import { slugify } from '@/lib/utils' // Import slugify
 
 export default function NewReleaseNotesScratchPage() {
   const router = useRouter()
   const supabase = createClientComponentClient()
-  const { user } = useAuth()
+  const { user } = useAuthStore()
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
