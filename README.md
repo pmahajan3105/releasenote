@@ -200,9 +200,8 @@ Follow our **[Complete Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** for step-by
 
 ### Deployment Options
 
-1. **Frontend**: Deploy to [Vercel](https://vercel.com) (recommended)
-2. **Backend**: Deploy to [Railway](https://railway.app) (recommended)
-3. **Database**: PostgreSQL on Railway or [Supabase](https://supabase.com)
+1. **Frontend & API**: Deploy to [Vercel](https://vercel.com) (recommended) — Next.js App Router and API routes run together, no separate backend service required
+2. **Database**: Managed PostgreSQL on [Supabase](https://supabase.com) (recommended)
 
 ## 🔒 Security
 
