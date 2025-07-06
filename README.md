@@ -33,8 +33,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/release-notes-generator.git
-cd release-notes-generator
+git clone https://github.com/pmahajan3105/releasenote.git
+cd releasenote
 
 # Install dependencies
 npm install
@@ -133,7 +133,7 @@ types/               # TypeScript definitions
 
 ### For Deployment
 - **[Complete Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** - Step-by-step deployment for non-technical users
-- **[Environment Configuration](project/server/.env.example)** - All environment variables explained
+- **Environment Configuration** – See `.env.example` in the project root for all environment variables
 
 ### For Developers
 - **[OAuth Integration Guide](docs/EMAIL-SLACK-INTEGRATION.md)** - Adding new OAuth providers
