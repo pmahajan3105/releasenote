@@ -27,6 +27,7 @@ export default function DashboardHomePage() {
   const user = useAuthStore((state) => state.user)
   const { plan, isLoading: authLoading } = useAuthSelectors()
   const supabase = createClientComponentClient()
+  const orgId = user?.id  // Organization context derived from auth user
   const [quickStats, setQuickStats] = useState<{notes: number; subscribers: number; views: number; latestDate: string | null}>({ notes: 0, subscribers: 0, views: 0, latestDate: null })
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([])
   const [integrations, setIntegrations] = useState<IntegrationStatus[]>([])
@@ -36,7 +37,7 @@ export default function DashboardHomePage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return
+      if (!orgId) return  // Guard: ensure orgId is available
 
       setLoadingStats(true)
       setLoadingNotes(true)
@@ -47,7 +48,7 @@ export default function DashboardHomePage() {
         const { data: statsData, error: statsError } = await supabase
           .from('release_notes')
           .select('id, status, published_at, views')
-          .eq('organization_id', user.id)
+          .eq('organization_id', orgId)
 
         if (!statsError && statsData) {
           const publishedNotes = statsData.filter((note: any) => note.status === 'published')
@@ -67,7 +68,7 @@ export default function DashboardHomePage() {
         const { data: notesData, error: notesError } = await supabase
           .from('release_notes')
           .select('id, title, status, published_at, slug')
-          .eq('organization_id', user.id)
+          .eq('organization_id', orgId)
           .order('updated_at', { ascending: false })
           .limit(5)
 
@@ -79,7 +80,7 @@ export default function DashboardHomePage() {
         const { data: integrationsData, error: integrationsError } = await supabase
           .from('integrations')
           .select('id, type, status, last_synced, name')
-          .eq('organization_id', user.id)
+          .eq('organization_id', orgId)
 
         if (!integrationsError && integrationsData) {
           setIntegrations(integrationsData)

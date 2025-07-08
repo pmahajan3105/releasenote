@@ -25,7 +25,9 @@ ALTER TABLE domain_verifications ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own domain verifications" ON domain_verifications
   FOR ALL USING (
     organization_id IN (
-      SELECT id FROM organizations WHERE user_id = auth.uid()
+      SELECT organization_id FROM organization_members 
+      WHERE user_id = auth.uid() 
+      AND role IN ('owner', 'admin')
     )
   );
 

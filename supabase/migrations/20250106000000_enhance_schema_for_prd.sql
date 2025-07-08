@@ -11,7 +11,10 @@ ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS source_ticket_ids TEXT[];
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS views INTEGER DEFAULT 0;
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
 
--- Update content column to be nullable since we now have content_markdown
+-- Ensure legacy content column exists for backward compatibility
+ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS content TEXT;
+
+-- Now we can make it nullable
 ALTER TABLE release_notes ALTER COLUMN content DROP NOT NULL;
 
 -- Create organization_members table for team management
@@ -117,7 +120,10 @@ CREATE POLICY "Users can view templates for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = templates.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -127,7 +133,10 @@ CREATE POLICY "Users can insert templates for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = templates.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -137,7 +146,10 @@ CREATE POLICY "Users can update templates for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = templates.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -147,7 +159,10 @@ CREATE POLICY "Users can delete templates for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = templates.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -160,7 +175,10 @@ CREATE POLICY "Users can view subscribers for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = subscribers.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -170,7 +188,10 @@ CREATE POLICY "Users can insert subscribers for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = subscribers.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -180,7 +201,10 @@ CREATE POLICY "Users can update subscribers for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = subscribers.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -190,7 +214,10 @@ CREATE POLICY "Users can delete subscribers for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = subscribers.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -203,7 +230,10 @@ CREATE POLICY "Users can view ticket cache for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -213,7 +243,10 @@ CREATE POLICY "Users can insert ticket cache for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -223,7 +256,10 @@ CREATE POLICY "Users can update ticket cache for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -233,7 +269,10 @@ CREATE POLICY "Users can delete ticket cache for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -246,7 +285,10 @@ CREATE POLICY "Users can view organization members for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = organization_members.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -256,7 +298,10 @@ CREATE POLICY "Users can insert organization members for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = organization_members.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -266,7 +311,10 @@ CREATE POLICY "Users can update organization members for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = organization_members.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -276,7 +324,10 @@ CREATE POLICY "Users can delete organization members for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = organization_members.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -305,7 +356,10 @@ CREATE POLICY "Users can view release notes for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = release_notes.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -315,7 +369,10 @@ CREATE POLICY "Users can insert release notes for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = release_notes.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -325,7 +382,10 @@ CREATE POLICY "Users can update release notes for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = release_notes.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -335,7 +395,10 @@ CREATE POLICY "Users can delete release notes for their organizations"
     EXISTS (
       SELECT 1 FROM organizations
       WHERE organizations.id = release_notes.organization_id
-      AND organizations.user_id = auth.uid()
+      AND organizations.id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
     )
   );
 
@@ -359,3 +422,90 @@ BEGIN
   DELETE FROM ticket_cache WHERE expires_at IS NOT NULL AND expires_at < NOW();
 END;
 $$ LANGUAGE plpgsql;
+
+-- RLS policies for versioning tables (now that organization_members exists)
+-- RLS policies for release_note_versions
+CREATE POLICY "Users can view versions for their organization's release notes"
+  ON release_note_versions FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM release_notes
+      WHERE release_notes.id = release_note_versions.release_note_id
+      AND release_notes.organization_id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can insert versions for their organization's release notes"
+  ON release_note_versions FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM release_notes
+      WHERE release_notes.id = release_note_versions.release_note_id
+      AND release_notes.organization_id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- RLS policies for release_note_publishing_history
+CREATE POLICY "Users can view publishing history for their organization's release notes"
+  ON release_note_publishing_history FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM release_notes
+      WHERE release_notes.id = release_note_publishing_history.release_note_id
+      AND release_notes.organization_id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can insert publishing history for their organization's release notes"
+  ON release_note_publishing_history FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM release_notes
+      WHERE release_notes.id = release_note_publishing_history.release_note_id
+      AND release_notes.organization_id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- RLS policies for release_note_collaborators
+CREATE POLICY "Users can view collaborators for their organization's release notes"
+  ON release_note_collaborators FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM release_notes
+      WHERE release_notes.id = release_note_collaborators.release_note_id
+      AND release_notes.organization_id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY "Users can manage collaborators for their organization's release notes"
+  ON release_note_collaborators FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM release_notes
+      WHERE release_notes.id = release_note_collaborators.release_note_id
+      AND release_notes.organization_id IN (
+        SELECT organization_id FROM organization_members 
+        WHERE user_id = auth.uid() 
+        AND role IN ('owner', 'admin', 'editor')
+      )
+    )
+  );
+
+-- backwards-compat view so later migrations won't fail
+CREATE OR REPLACE VIEW integrations_legacy AS
+SELECT *, organization_id AS org_id FROM integrations;

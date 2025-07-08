@@ -197,7 +197,7 @@ export default function EditReleasePage({ params }: { params: { id: string } }) 
             <Button onClick={handleSave} disabled={loading}>
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
-            <Button variant="outline" onClick={() => router.push('/dashboard/releases')}>
+            <Button variant="outline" onClick={() => router.push('/releases')}>
               Cancel
             </Button>
           </div>

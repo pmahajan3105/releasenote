@@ -1,6 +1,9 @@
 -- Enhanced release notes versioning and workflow support
 -- This adds comprehensive version control and publishing workflow features
 
+-- Rename org_id to organization_id for consistency across all tables
+ALTER TABLE release_notes RENAME COLUMN org_id TO organization_id;
+
 -- Add version control and publishing workflow fields
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS version_number TEXT;
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS is_major_version BOOLEAN DEFAULT false;
@@ -66,79 +69,10 @@ CREATE INDEX IF NOT EXISTS release_notes_version_number_idx ON release_notes(org
 CREATE INDEX IF NOT EXISTS release_notes_scheduled_at_idx ON release_notes(scheduled_at) WHERE scheduled_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS release_notes_tags_idx ON release_notes USING GIN(tags);
 
--- Enable RLS for new tables
+-- Enable RLS for new tables (policies will be added after organization_members table exists)
 ALTER TABLE release_note_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE release_note_publishing_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE release_note_collaborators ENABLE ROW LEVEL SECURITY;
-
--- RLS policies for release_note_versions
-CREATE POLICY "Users can view versions for their organization's release notes"
-  ON release_note_versions FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM release_notes
-      JOIN organizations ON organizations.id = release_notes.organization_id
-      WHERE release_notes.id = release_note_versions.release_note_id
-      AND organizations.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can insert versions for their organization's release notes"
-  ON release_note_versions FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM release_notes
-      JOIN organizations ON organizations.id = release_notes.organization_id
-      WHERE release_notes.id = release_note_versions.release_note_id
-      AND organizations.user_id = auth.uid()
-    )
-  );
-
--- RLS policies for release_note_publishing_history
-CREATE POLICY "Users can view publishing history for their organization's release notes"
-  ON release_note_publishing_history FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM release_notes
-      JOIN organizations ON organizations.id = release_notes.organization_id
-      WHERE release_notes.id = release_note_publishing_history.release_note_id
-      AND organizations.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can insert publishing history for their organization's release notes"
-  ON release_note_publishing_history FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM release_notes
-      JOIN organizations ON organizations.id = release_notes.organization_id
-      WHERE release_notes.id = release_note_publishing_history.release_note_id
-      AND organizations.user_id = auth.uid()
-    )
-  );
-
--- RLS policies for release_note_collaborators
-CREATE POLICY "Users can view collaborators for their organization's release notes"
-  ON release_note_collaborators FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM release_notes
-      JOIN organizations ON organizations.id = release_notes.organization_id
-      WHERE release_notes.id = release_note_collaborators.release_note_id
-      AND organizations.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can manage collaborators for their organization's release notes"
-  ON release_note_collaborators FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM release_notes
-      JOIN organizations ON organizations.id = release_notes.organization_id
-      WHERE release_notes.id = release_note_collaborators.release_note_id
-      AND organizations.user_id = auth.uid()
-    )
-  );
 
 -- Function to create new version automatically
 CREATE OR REPLACE FUNCTION create_release_note_version(

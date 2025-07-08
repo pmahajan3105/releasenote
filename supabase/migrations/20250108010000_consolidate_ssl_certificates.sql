@@ -1,4 +1,12 @@
--- SSL certificate management tables
+-- Consolidated migration: SSL Certificate Management
+-- Merges: add_ssl_certificates.sql
+-- Date: 2025-01-08
+
+-- ======================================
+-- 1. SSL CERTIFICATE MANAGEMENT
+-- ======================================
+
+-- SSL certificate storage table
 CREATE TABLE IF NOT EXISTS ssl_certificates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
@@ -28,11 +36,19 @@ CREATE TABLE IF NOT EXISTS ssl_challenges (
   verified_at TIMESTAMP WITH TIME ZONE
 );
 
+-- ======================================
+-- 2. INDEXES FOR PERFORMANCE
+-- ======================================
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_ssl_certificates_org_domain ON ssl_certificates(organization_id, domain);
 CREATE INDEX IF NOT EXISTS idx_ssl_certificates_expires_at ON ssl_certificates(expires_at) WHERE auto_renew = true;
 CREATE INDEX IF NOT EXISTS idx_ssl_challenges_domain_status ON ssl_challenges(domain, status);
 CREATE INDEX IF NOT EXISTS idx_ssl_challenges_expires_at ON ssl_challenges(expires_at);
+
+-- ======================================
+-- 3. ROW LEVEL SECURITY
+-- ======================================
 
 -- Enable RLS (Row Level Security)
 ALTER TABLE ssl_certificates ENABLE ROW LEVEL SECURITY;
@@ -74,6 +90,10 @@ CREATE POLICY "Users can manage SSL challenges for their organization" ON ssl_ch
     )
   );
 
+-- ======================================
+-- 4. TRIGGERS AND FUNCTIONS
+-- ======================================
+
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_ssl_certificates_updated_at()
 RETURNS TRIGGER AS $$
@@ -96,6 +116,10 @@ BEGIN
     WHERE expires_at < NOW() - INTERVAL '1 day';
 END;
 $$ language 'plpgsql';
+
+-- ======================================
+-- 5. SSL STATUS VIEW
+-- ======================================
 
 -- Add SSL status to organizations view (optional)
 CREATE OR REPLACE VIEW organization_ssl_status AS

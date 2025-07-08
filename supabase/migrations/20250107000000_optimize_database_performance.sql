@@ -8,34 +8,34 @@
 
 -- Release Notes Performance Indexes
 -- Primary query pattern: organization_id + status + created_at (filtering and sorting)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_release_notes_org_status_created 
+CREATE INDEX IF NOT EXISTS idx_release_notes_org_status_created 
 ON release_notes (organization_id, status, created_at DESC) 
 WHERE status IN ('published', 'draft', 'scheduled');
 
 -- Full-text search optimization for title and content
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_release_notes_search_title 
+CREATE INDEX IF NOT EXISTS idx_release_notes_search_title 
 ON release_notes USING gin(to_tsvector('english', title));
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_release_notes_search_content 
+CREATE INDEX IF NOT EXISTS idx_release_notes_search_content 
 ON release_notes USING gin(to_tsvector('english', content_markdown));
 
 -- Public release notes (public pages optimization)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_release_notes_public_published 
+CREATE INDEX IF NOT EXISTS idx_release_notes_public_published 
 ON release_notes (organization_id, is_public, published_at DESC) 
 WHERE status = 'published' AND is_public = true;
 
 -- Slug lookup optimization for public pages
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_release_notes_org_slug 
+CREATE INDEX IF NOT EXISTS idx_release_notes_org_slug 
 ON release_notes (organization_id, slug) 
 WHERE status = 'published';
 
 -- Version-based queries
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_release_notes_org_version 
+CREATE INDEX IF NOT EXISTS idx_release_notes_org_version 
 ON release_notes (organization_id, version) 
 WHERE version IS NOT NULL;
 
 -- Author-based queries
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_release_notes_author_created 
+CREATE INDEX IF NOT EXISTS idx_release_notes_author_created 
 ON release_notes (author_id, created_at DESC);
 
 -- ======================================
@@ -43,12 +43,12 @@ ON release_notes (author_id, created_at DESC);
 -- ======================================
 
 -- Slug-based organization lookup (for public pages)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_organizations_slug 
+CREATE INDEX IF NOT EXISTS idx_organizations_slug 
 ON organizations (slug) 
 WHERE slug IS NOT NULL;
 
 -- Custom domain lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_organizations_custom_domain 
+CREATE INDEX IF NOT EXISTS idx_organizations_custom_domain 
 ON organizations ((settings->>'custom_domain')) 
 WHERE settings->>'custom_domain' IS NOT NULL;
 
@@ -57,12 +57,12 @@ WHERE settings->>'custom_domain' IS NOT NULL;
 -- ======================================
 
 -- Integration type and status queries
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_integrations_org_type_status 
-ON integrations (org_id, type, (config->>'status')) 
+CREATE INDEX IF NOT EXISTS idx_integrations_org_type_status 
+ON integrations (organization_id, type, (config->>'status')) 
 WHERE config->>'status' IS NOT NULL;
 
 -- External ID lookup for integration sync
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_integrations_external_id 
+CREATE INDEX IF NOT EXISTS idx_integrations_external_id 
 ON integrations (type, external_id);
 
 -- ======================================
@@ -70,20 +70,20 @@ ON integrations (type, external_id);
 -- ======================================
 
 -- Ticket lookup by integration and status
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ticket_cache_integration_status 
+CREATE INDEX IF NOT EXISTS idx_ticket_cache_integration_status 
 ON ticket_cache (integration_id, status, completed_at DESC NULLS LAST);
 
 -- External ticket ID lookup for deduplication
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ticket_cache_external_id 
+CREATE INDEX IF NOT EXISTS idx_ticket_cache_external_id 
 ON ticket_cache (integration_id, external_ticket_id);
 
 -- Recent tickets for dashboard
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ticket_cache_recent 
+CREATE INDEX IF NOT EXISTS idx_ticket_cache_recent 
 ON ticket_cache (integration_id, fetched_at DESC) 
 WHERE status IN ('completed', 'closed', 'done');
 
 -- Ticket type filtering
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ticket_cache_type 
+CREATE INDEX IF NOT EXISTS idx_ticket_cache_type 
 ON ticket_cache (integration_id, type) 
 WHERE type IS NOT NULL;
 
@@ -92,11 +92,11 @@ WHERE type IS NOT NULL;
 -- ======================================
 
 -- User role-based queries (most common pattern)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_org_members_user_role 
+CREATE INDEX IF NOT EXISTS idx_org_members_user_role 
 ON organization_members (user_id, role, organization_id);
 
 -- Organization member listing
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_org_members_org_role_created 
+CREATE INDEX IF NOT EXISTS idx_org_members_org_role_created 
 ON organization_members (organization_id, role, created_at DESC);
 
 -- ======================================
@@ -104,12 +104,12 @@ ON organization_members (organization_id, role, created_at DESC);
 -- ======================================
 
 -- Active subscribers for email campaigns
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscribers_org_active 
-ON subscribers (org_id, created_at DESC) 
+CREATE INDEX IF NOT EXISTS idx_subscribers_org_active 
+ON subscribers (organization_id, created_at DESC) 
 WHERE status = 'active';
 
 -- Email lookup for subscription management
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscribers_email 
+CREATE INDEX IF NOT EXISTS idx_subscribers_email 
 ON subscribers (email) 
 WHERE status = 'active';
 
@@ -177,8 +177,8 @@ BEGIN
     (SELECT COUNT(*)::INTEGER FROM release_notes WHERE organization_id = p_organization_id),
     (SELECT COUNT(*)::INTEGER FROM release_notes WHERE organization_id = p_organization_id AND status = 'published'),
     (SELECT COUNT(*)::INTEGER FROM release_notes WHERE organization_id = p_organization_id AND status = 'draft'),
-    (SELECT COUNT(*)::INTEGER FROM subscribers WHERE org_id = p_organization_id AND status = 'active'),
-    (SELECT COUNT(*)::INTEGER FROM integrations WHERE org_id = p_organization_id AND config->>'status' = 'active');
+    (SELECT COUNT(*)::INTEGER FROM subscribers WHERE organization_id = p_organization_id AND status = 'active'),
+    (SELECT COUNT(*)::INTEGER FROM integrations WHERE organization_id = p_organization_id AND config->>'status' = 'active');
 END;
 $$ LANGUAGE plpgsql STABLE;
 
@@ -214,7 +214,7 @@ BEGIN
       COALESCE(name, email) as title,
       created_at
     FROM subscribers 
-    WHERE org_id = p_organization_id
+    WHERE organization_id = p_organization_id
     ORDER BY created_at DESC
     LIMIT p_limit
   )
@@ -309,3 +309,5 @@ COMMENT ON INDEX idx_release_notes_public_published IS 'Optimizes public release
 COMMENT ON FUNCTION search_release_notes IS 'Optimized full-text search for release notes with relevance ranking';
 COMMENT ON FUNCTION get_organization_stats IS 'Single query to get all organization dashboard statistics';
 COMMENT ON FUNCTION get_recent_activity IS 'Optimized activity feed for organization dashboard';
+
+-- ======================================

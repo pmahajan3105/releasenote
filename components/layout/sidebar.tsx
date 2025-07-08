@@ -25,11 +25,18 @@ import {
 } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { useAuthStore } from "@/lib/store/use-auth"
 
-export const Sidebar = (): JSX.Element => {
+export const Sidebar = (): JSX.Element | null => {
   const router = useRouter()
   const pathname = usePathname()
   const [openSections, setOpenSections] = useState<string[]>(['release-notes'])
+  const { user, profile, signOut } = useAuthStore()
+
+  // 🚫 If no authenticated user, don't render the sidebar
+  if (!user) {
+    return null
+  }
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => 
@@ -219,16 +226,23 @@ export const Sidebar = (): JSX.Element => {
           <div className="flex items-start gap-4 pl-2 pr-8 pt-6 relative border-t border-[#e4e7ec]">
             <div className="flex items-center gap-3 flex-1">
               <Avatar className="w-10 h-10 border-[0.75px] border-[#00000014]">
-                <AvatarImage src="/avatar.png" alt="User" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage 
+                  src={profile?.avatar_url || user?.user_metadata?.avatar_url || "/avatar.png"} 
+                  alt="User" 
+                />
+                <AvatarFallback>
+                  {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
               </Avatar>
 
               <div className="flex flex-col items-start">
                 <span className="font-text-sm-semibold text-[#344054]">
-                  User Name
+                  {profile?.first_name && profile?.last_name 
+                    ? `${profile.first_name} ${profile.last_name}` 
+                    : user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
                 </span>
                 <span className="font-normal text-[#475467] text-sm leading-5">
-                  user@example.com
+                  {user?.email || 'user@example.com'}
                 </span>
               </div>
             </div>
@@ -237,6 +251,8 @@ export const Sidebar = (): JSX.Element => {
               variant="ghost"
               size="icon"
               className="p-2 absolute top-4 right-0"
+              onClick={() => signOut()}
+              title="Sign out"
             >
               <LogOutIcon className="w-5 h-5" />
             </Button>

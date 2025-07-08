@@ -34,20 +34,18 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+
   const { isLoading: loading } = useAuthSelectors()
   const { signOut } = useAuthActions()
   const user = useAuthStore((state) => state.user)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (loading) {
-    return <div>Loading user information...</div> // Or a proper skeleton loader
+    return <div>Loading user information...</div>
   }
 
   if (!user) {
-    // This should ideally be handled by middleware, but as a fallback:
-    // No need to redirect here as middleware should handle it.
-    // You might want to show a message or redirect explicitly if needed.
-    return <div>Redirecting to login...</div>;
+    return null
   }
 
   const sidebarContent = (
@@ -146,7 +144,6 @@ export default function DashboardLayout({
           <Bars3Icon className="h-6 w-6" aria-hidden="true" />
         </button>
         <div className="flex-1 text-sm font-semibold leading-6 text-gray-900 dark:text-white">Dashboard</div>
-        {/* You might add user avatar/menu here for mobile too */}
       </div>
 
       {/* Main content area */}
