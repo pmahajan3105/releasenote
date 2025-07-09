@@ -26,7 +26,7 @@ export class JiraAPIClient {
       token: string
       cloudId?: string
     }
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { method = 'GET', headers = {}, body, token, cloudId } = options
 
     let url = endpoint
@@ -87,7 +87,7 @@ export class JiraAPIClient {
    * Get accessible resources (Jira sites)
    */
   async getAccessibleResources(token: string): Promise<unknown[]> {
-    return this.request('/oauth/token/accessible-resources', { token })
+    return this.request('/oauth/token/accessible-resources', { token }) as Promise<unknown[]>
   }
 
   /**
@@ -109,7 +109,7 @@ export class JiraAPIClient {
       maxResults?: number
       startAt?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { expand, recent, maxResults = 50, startAt = 0 } = options
     
     const params = new URLSearchParams({
@@ -136,7 +136,7 @@ export class JiraAPIClient {
     cloudId: string,
     projectIdOrKey: string,
     expand?: string[]
-  ): Promise<any> {
+  ): Promise<unknown> {
     const params = expand && expand.length > 0 
       ? `?expand=${expand.join(',')}`
       : ''
@@ -157,7 +157,7 @@ export class JiraAPIClient {
       fields?: string[]
       expand?: string[]
     }
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { jql, startAt = 0, maxResults = 50, fields, expand } = options
     
     const body = {
@@ -187,7 +187,7 @@ export class JiraAPIClient {
       fields?: string[]
       expand?: string[]
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { fields, expand } = options
     
     const params = new URLSearchParams()
@@ -219,7 +219,7 @@ export class JiraAPIClient {
       maxResults?: number
       startAt?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { issueTypes, statuses, assignee, updatedSince, maxResults = 50, startAt = 0 } = options
     
     // Build JQL query with proper escaping
@@ -282,7 +282,7 @@ export class JiraAPIClient {
       maxResults?: number
       startAt?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { expand, maxResults = 50, startAt = 0 } = options
     
     const params = new URLSearchParams({
@@ -309,7 +309,7 @@ export class JiraAPIClient {
       maxResults?: number
       startAt?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { maxResults = 100, startAt = 0 } = options
     
     const jql = `project = "${projectKey}" AND fixVersion = "${versionName}" ORDER BY updated DESC`

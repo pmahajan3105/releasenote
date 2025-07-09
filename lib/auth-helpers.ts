@@ -1,87 +1,193 @@
 import { NextRequest } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-
-export interface AuthContext {
-  user: Record<string, unknown>
-  session: Record<string, unknown>
-  organizationId: string
-  userRole: string
-  organization: Record<string, unknown>
-}
-
-export interface AuthError {
-  error: string
-  status: number
-}
+import type { 
+  AuthContext, 
+  AuthError, 
+  AuthUser, 
+  AuthSession, 
+  AuthOrganization,
+  SessionValidationResult,
+  OrganizationValidationResult,
+  MembershipQueryResult
+} from '@/types/auth'
+import { 
+  isValidUser, 
+  isValidSession, 
+  validateMembershipQueryResult, 
+  extractOrganizationFromMembership 
+} from '@/lib/auth/type-guards'
 
 /**
- * Validates user session and returns auth context
- * Replaces Express.js handleUserSession middleware
+ * Validates user session and returns typed auth context
+ * 
+ * This function:
+ * - Validates Supabase session and user data
+ * - Fetches organization membership with proper JOIN queries
+ * - Performs runtime type validation on all data
+ * - Returns fully typed AuthContext or detailed error information
+ * 
  * @param request - The Next.js request object
- * @returns Promise containing auth context or error details
+ * @returns Promise<SessionValidationResult> - Either AuthContext or AuthError with details
+ * 
  * @example
  * ```typescript
  * const authResult = await validateUserSession(request)
  * if ('error' in authResult) {
- *   return NextResponse.json({ error: authResult.error }, { status: authResult.status })
+ *   return NextResponse.json({ 
+ *     error: authResult.error,
+ *     details: authResult.details 
+ *   }, { status: authResult.status })
  * }
- * console.log(`User: ${authResult.user.email}, Org: ${authResult.organization.name}`)
+ * 
+ * // Now you have full type safety
+ * console.log(`User: ${authResult.user.email}`)
+ * console.log(`Organization: ${authResult.organization.name}`)
+ * console.log(`Role: ${authResult.userRole}`)
  * ```
  */
-export async function validateUserSession(request: NextRequest): Promise<AuthContext | AuthError> {
+export async function validateUserSession(request: NextRequest): Promise<SessionValidationResult> {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get session from Supabase
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (sessionError || !session?.user) {
+    if (sessionError) {
+      return { 
+        error: 'Session error', 
+        status: 401, 
+        details: { sessionError: sessionError.message } 
+      }
+    }
+
+    if (!session?.user) {
       return { error: 'Unauthorized', status: 401 }
     }
 
-    // Get user's organization membership
+    // Validate session and user types
+    if (!isValidSession(session)) {
+      return { 
+        error: 'Invalid session format', 
+        status: 401, 
+        details: { message: 'Session does not match expected structure' } 
+      }
+    }
+
+    if (!isValidUser(session.user)) {
+      return { 
+        error: 'Invalid user format', 
+        status: 401, 
+        details: { message: 'User does not match expected structure' } 
+      }
+    }
+
+    // Get user's organization membership with proper JOIN query
     const { data: orgMember, error: memberError } = await supabase
       .from('organization_members')
       .select(`
+        id,
+        created_at,
         user_id,
         role,
         organization_id,
+        invited_by,
+        joined_at,
         organizations (
           id,
+          created_at,
+          updated_at,
           name,
           slug,
-          settings
+          description,
+          user_id,
+          settings,
+          plan
         )
       `)
       .eq('user_id', session.user.id)
       .single()
 
-    if (memberError || !orgMember) {
+    if (memberError) {
+      return { 
+        error: 'Organization membership error', 
+        status: 403, 
+        details: { memberError: memberError.message } 
+      }
+    }
+
+    if (!orgMember) {
       return { error: 'No organization found', status: 403 }
     }
 
-    return {
-      user: session.user,
-      session,
-      organizationId: orgMember.organization_id,
-      userRole: orgMember.role,
-      organization: orgMember.organizations
+    // Validate membership query result
+    const membershipValidation = validateMembershipQueryResult(orgMember)
+    if (!membershipValidation.isValid) {
+      return {
+        error: 'Invalid membership data',
+        status: 500,
+        details: { 
+          validationErrors: membershipValidation.errors,
+          rawData: orgMember 
+        }
+      }
     }
+
+    // Extract and validate organization data
+    const organization = extractOrganizationFromMembership(membershipValidation.membership!)
+
+    // Create properly typed auth context
+    const authContext: AuthContext = {
+      user: session.user as AuthUser,
+      session: session as AuthSession,
+      organizationId: membershipValidation.membership!.organization_id,
+      userRole: membershipValidation.membership!.role,
+      organization
+    }
+
+    return authContext
   } catch (error) {
     console.error('Session validation error:', error)
-    return { error: 'Internal server error', status: 500 }
+    return { 
+      error: 'Internal server error', 
+      status: 500,
+      details: { 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }
   }
 }
 
 /**
  * Validates user has access to specific organization
- * Replaces Express.js checkOrganization middleware
+ * 
+ * This function:
+ * - Verifies user membership in the specified organization
+ * - Performs runtime type validation on organization data
+ * - Returns typed organization data with user role
+ * - Provides detailed error information for debugging
+ * 
+ * @param userId - The user ID to check access for
+ * @param organizationId - The organization ID to validate access to
+ * @returns Promise<OrganizationValidationResult> - Either organization data or error
+ * 
+ * @example
+ * ```typescript
+ * const orgResult = await validateOrganizationAccess(userId, orgId)
+ * if ('error' in orgResult) {
+ *   return NextResponse.json({ error: orgResult.error }, { status: orgResult.status })
+ * }
+ * 
+ * // Type-safe access to organization data
+ * console.log(`Organization: ${orgResult.organization.name}`)
+ * console.log(`User role: ${orgResult.userRole}`)
+ * ```
  */
 export async function validateOrganizationAccess(
   userId: string, 
   organizationId: string
-): Promise<{ organization: Record<string, unknown>; userRole: string } | AuthError> {
+): Promise<OrganizationValidationResult> {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -90,30 +196,70 @@ export async function validateOrganizationAccess(
       .from('organization_members')
       .select(`
         id,
+        created_at,
+        user_id,
         role,
         organization_id,
+        invited_by,
+        joined_at,
         organizations (
           id,
+          created_at,
+          updated_at,
           name,
           slug,
-          settings
+          description,
+          user_id,
+          settings,
+          plan
         )
       `)
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
       .single()
 
-    if (error || !membership) {
+    if (error) {
+      return { 
+        error: 'Organization access error', 
+        status: 403, 
+        details: { error: error.message } 
+      }
+    }
+
+    if (!membership) {
       return { error: 'Organization access denied', status: 403 }
     }
 
+    // Validate membership query result
+    const membershipValidation = validateMembershipQueryResult(membership)
+    if (!membershipValidation.isValid) {
+      return {
+        error: 'Invalid membership data',
+        status: 500,
+        details: { 
+          validationErrors: membershipValidation.errors,
+          rawData: membership 
+        }
+      }
+    }
+
+    // Extract and validate organization data
+    const organization = extractOrganizationFromMembership(membershipValidation.membership!)
+
     return {
-      organization: membership.organizations,
-      userRole: membership.role
+      organization,
+      userRole: membershipValidation.membership!.role
     }
   } catch (error) {
     console.error('Organization validation error:', error)
-    return { error: 'Internal server error', status: 500 }
+    return { 
+      error: 'Internal server error', 
+      status: 500,
+      details: { 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    }
   }
 }
 
@@ -138,7 +284,10 @@ export function withAuth<T extends unknown[]>(
     
     if ('error' in authResult) {
       return new Response(
-        JSON.stringify({ error: authResult.error }),
+        JSON.stringify({ 
+          error: authResult.error,
+          ...(authResult.details && { details: authResult.details })
+        }),
         { 
           status: authResult.status,
           headers: { 'Content-Type': 'application/json' }
@@ -166,6 +315,7 @@ export function withOrgAuth<T extends unknown[]>(
 
 /**
  * Check if user has specific role permissions
+ * @deprecated Use hasPermission from @/lib/auth/permissions instead
  */
 export function hasPermission(userRole: string, requiredRole: 'owner' | 'admin' | 'member'): boolean {
   const roleHierarchy = {

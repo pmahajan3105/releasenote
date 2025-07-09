@@ -5,7 +5,7 @@ export interface ErrorContext {
   component?: string
   userId?: string
   orgId?: string
-  additionalData?: Record<string, any>
+  additionalData?: Record<string, unknown>
 }
 
 export interface AppErrorOptions {
@@ -13,7 +13,7 @@ export interface AppErrorOptions {
   statusCode?: number
   isRetryable?: boolean
   context?: ErrorContext
-  originalError?: any
+  originalError?: unknown
 }
 
 export class AppError extends Error {
@@ -21,7 +21,7 @@ export class AppError extends Error {
   public readonly statusCode: number
   public readonly isRetryable: boolean
   public readonly context?: ErrorContext
-  public readonly originalError?: any
+  public readonly originalError?: unknown
 
   constructor(message: string, options: AppErrorOptions = {}) {
     super(message)
@@ -91,13 +91,13 @@ class ErrorHandler {
     console.error('Error logged:', logData)
   }
 
-  private getErrorMessage(error: any): string {
+  private getErrorMessage(error: unknown): string {
     if (error instanceof AppError) {
       return error.message
     }
     
-    if (error?.message) {
-      return error.message
+    if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as Record<string, unknown>).message === 'string') {
+      return (error as { message: string }).message
     }
     
     if (typeof error === 'string') {
@@ -107,19 +107,30 @@ class ErrorHandler {
     return 'An unexpected error occurred'
   }
 
-  private shouldShowRetry(error: any): boolean {
+  private shouldShowRetry(error: unknown): boolean {
     if (error instanceof AppError) {
       return error.isRetryable
     }
     
-    // Network errors and 5xx errors are typically retryable
-    return error?.statusCode >= 500 || error?.code === 'NETWORK_ERROR'
+    if (typeof error === 'object' && error !== null) {
+      if ('statusCode' in error && typeof (error as Record<string, unknown>).statusCode === 'number' && Number((error as Record<string, unknown>).statusCode) >= 500) {
+        return true
+      }
+      if ('code' in error && (error as Record<string, unknown>).code === 'NETWORK_ERROR') {
+        return true
+      }
+    }
+    
+    return false
   }
 
   // Handle errors with user feedback
-  handle(error: any, context?: ErrorContext): void {
-    this.logError(error, context)
-    
+  handle(error: unknown, context?: ErrorContext): void {
+    if (error instanceof Error) {
+      this.logError(error, context)
+    } else {
+      this.logError(new Error(this.getErrorMessage(error)), context)
+    }
     const message = this.getErrorMessage(error)
     const shouldRetry = this.shouldShowRetry(error)
     
@@ -129,7 +140,7 @@ class ErrorHandler {
           label: 'Retry',
           onClick: () => {
             // Emit a retry event or call a retry callback
-            if (context?.additionalData?.retryCallback) {
+            if (context?.additionalData?.retryCallback && typeof context.additionalData.retryCallback === 'function') {
               context.additionalData.retryCallback()
             }
           }
@@ -141,19 +152,27 @@ class ErrorHandler {
   }
 
   // Handle validation errors
-  handleValidation(error: any, context?: ErrorContext): void {
-    this.logError(error, context)
+  handleValidation(error: unknown, context?: ErrorContext): void {
+    if (error instanceof Error) {
+      this.logError(error, context)
+    } else {
+      this.logError(new Error(this.getErrorMessage(error)), context)
+    }
     toast.validationError(this.getErrorMessage(error))
   }
 
   // Handle network errors
-  handleNetwork(error: any, context?: ErrorContext): void {
-    this.logError(error, context)
+  handleNetwork(error: unknown, context?: ErrorContext): void {
+    if (error instanceof Error) {
+      this.logError(error, context)
+    } else {
+      this.logError(new Error(this.getErrorMessage(error)), context)
+    }
     toast.networkError(context?.operation)
   }
 
   // Handle auth errors
-  handleAuth(error: any, context?: ErrorContext): void {
+  handleAuth(error: unknown, context?: ErrorContext): void {
     this.logError(error, context)
     toast.error('Authentication failed. Please log in again.')
     
@@ -186,18 +205,24 @@ class ErrorHandler {
 export const errorHandler = new ErrorHandler()
 
 // Utility functions for common error scenarios
-export const handleApiError = (error: any, operation: string, component: string) => {
+export const handleApiError = (error: unknown, operation: string, component: string) => {
   const context: ErrorContext = {
     operation,
     component,
     additionalData: { timestamp: new Date().toISOString() }
   }
   
-  if (error?.status === 401) {
+  if (typeof error === 'object' && error !== null && 'status' in error && Number((error as Record<string, unknown>).status) === 401) {
     errorHandler.handleAuth(error, context)
-  } else if (error?.status >= 400 && error?.status < 500) {
+  } else if (
+    typeof error === 'object' && error !== null &&
+    'status' in error && typeof (error as Record<string, unknown>).status === 'number' && Number((error as Record<string, unknown>).status) >= 400 && Number((error as Record<string, unknown>).status) < 500
+  ) {
     errorHandler.handleValidation(error, context)
-  } else if (error?.status >= 500) {
+  } else if (
+    typeof error === 'object' && error !== null &&
+    'status' in error && typeof (error as Record<string, unknown>).status === 'number' && Number((error as Record<string, unknown>).status) >= 500
+  ) {
     errorHandler.handle(new ServerError('Server error occurred', context))
   } else if (!navigator.onLine) {
     errorHandler.handleNetwork(new NetworkError('Network connection lost', context))
@@ -206,7 +231,7 @@ export const handleApiError = (error: any, operation: string, component: string)
   }
 }
 
-export const handleFormError = (error: any, formName: string) => {
+export const handleFormError = (error: unknown, formName: string) => {
   errorHandler.handleValidation(error, {
     operation: 'form submission',
     component: formName
