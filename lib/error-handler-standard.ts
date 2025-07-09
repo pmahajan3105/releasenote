@@ -173,7 +173,11 @@ class ErrorHandler {
 
   // Handle auth errors
   handleAuth(error: unknown, context?: ErrorContext): void {
-    this.logError(error, context)
+    if (error instanceof Error) {
+      this.logError(error, context)
+    } else {
+      this.logError(new Error(this.getErrorMessage(error)), context)
+    }
     toast.error('Authentication failed. Please log in again.')
     
     // In a real app, you might redirect to login
