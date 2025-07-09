@@ -73,11 +73,11 @@ class ToastService {
     
     try {
       const result = await promise
-      this.dismiss(loadingId)
+      this.dismiss(typeof loadingId === 'string' ? loadingId : String(loadingId))
       this.success(successMessage)
       return result
     } catch (error) {
-      this.dismiss(loadingId)
+      this.dismiss(typeof loadingId === 'string' ? loadingId : String(loadingId))
       this.error(errorMessage || 'Operation failed. Please try again.')
       throw error
     }

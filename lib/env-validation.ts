@@ -62,7 +62,7 @@ const ENV_VARS: EnvVarConfig[] = [
   // App Configuration
   {
     name: 'NEXT_PUBLIC_APP_URL',
-    required: true,
+    required: false, // Make this optional during build, required at runtime
     description: 'Application base URL',
     example: 'https://your-app.vercel.app'
   }
@@ -90,6 +90,12 @@ export function validateEnvironmentVariables(): ValidationResult {
       missing.push(envVar.name)
       errors.push(`Missing required environment variable: ${envVar.name}${envVar.description ? ` (${envVar.description})` : ''}`)
     }
+  }
+
+  // Special check for NEXT_PUBLIC_APP_URL - only required at runtime, not during build
+  if (!process.env.NEXT_PHASE && !process.env.NEXT_PUBLIC_APP_URL) {
+    missing.push('NEXT_PUBLIC_APP_URL')
+    errors.push('Missing required environment variable: NEXT_PUBLIC_APP_URL (Application base URL)')
   }
 
   // Check AI provider availability
@@ -181,8 +187,8 @@ export function logValidationResults(result: ValidationResult): void {
   }
 }
 
-// Run validation on startup in production
-if (process.env.NODE_ENV === 'production') {
+// Run validation on startup in production (but not during build)
+if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PHASE) {
   const result = validateEnvironmentVariables()
   logValidationResults(result)
   

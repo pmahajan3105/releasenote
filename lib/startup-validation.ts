@@ -59,5 +59,7 @@ export function runStartupValidation(): void {
   console.log('\n✅ Startup validation complete!\n')
 }
 
-// Auto-run validation when this module is imported
-runStartupValidation()
+// Auto-run validation when this module is imported (but not during build)
+if (typeof window === 'undefined' && !process.env.NEXT_PHASE) {
+  runStartupValidation()
+}
