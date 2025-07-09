@@ -13,8 +13,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "vercel-build": "next build",
-    "audit": "npm audit --audit-level=moderate",
-    "prepare": "husky install"
+    "audit": "npm audit --audit-level=moderate"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
