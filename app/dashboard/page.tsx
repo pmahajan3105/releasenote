@@ -35,9 +35,9 @@ export default function DashboardHomePage() {
                 <Link href="/dashboard/templates" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                   <EyeIcon className="w-4 h-4 mr-1" /> Template Management
                 </Link>
-                <Link href="/support" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                <a href="mailto:help@releasenote.ai" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                   <UserGroupIcon className="w-4 h-4 mr-1" /> Support & Help
-                </Link>
+                </a>
               </div>
             </div>
           </CardContent>
@@ -120,9 +120,9 @@ export default function DashboardHomePage() {
               </li>
             </ol>
             <div className="mt-4 text-right">
-              <Link href="/support" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+              <a href="mailto:help@releasenote.ai" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                 <UserGroupIcon className="w-4 h-4 mr-1" /> Need help? Contact Support
-              </Link>
+              </a>
             </div>
           </CardContent>
         </Card>

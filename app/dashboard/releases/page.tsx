@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
@@ -13,23 +13,33 @@ import { PlusIcon, EyeIcon, EditIcon, TrashIcon, SearchIcon } from 'lucide-react
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/ui/empty-state'
+import { DashboardSkeleton } from '@/components/ui/skeleton'
 
 export default function ReleasesPage() {
   const router = useRouter()
   const user = useAuthStore((state) => state.user)
+  
+  // Use Zustand store for state management
   const releaseNotes = useReleaseNotesStore((state) => state.releaseNotes)
   const loading = useReleaseNotesStore((state) => state.isLoading)
   const error = useReleaseNotesStore((state) => state.error)
-  const { deleteReleaseNote, clearError } = useReleaseNotesActions()
+  const { fetchReleaseNotes, deleteReleaseNote, clearError } = useReleaseNotesActions()
+  
+  const [searchTerm, setSearchTerm] = useState('')
+  const [activeTab, setActiveTab] = useState('all')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  
+  // Fetch release notes on component mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchReleaseNotes(user.id)
+    }
+  }, [user?.id, fetchReleaseNotes])
   
   // Helper function to get release notes by status
   const getReleaseNotesByStatus = (status: string) => {
     return releaseNotes.filter(note => note.status === status)
   }
-  
-  const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState('all')
-  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Filter and search logic
   const filteredReleaseNotes = releaseNotes.filter(note => {
@@ -60,7 +70,7 @@ export default function ReleasesPage() {
   const handleAction = (action: string, releaseNote: any, data?: any) => {
     switch (action) {
       case 'edit':
-        router.push(`/releases/edit/${releaseNote.id}`)
+        router.push(`/dashboard/releases/edit/${releaseNote.id}`)
         break
       case 'view':
         // Open public view
@@ -99,7 +109,7 @@ export default function ReleasesPage() {
           <h1 className="text-3xl font-bold text-gray-900">Release Notes</h1>
           <p className="text-gray-600 mt-1">Manage and publish your release notes</p>
         </div>
-        <Link href="/releases/start">
+        <Link href="/dashboard/releases/start">
           <Button className="bg-blue-600 hover:bg-blue-700">
             <PlusIcon className="w-4 h-4 mr-2" />
             Create New
@@ -156,10 +166,7 @@ export default function ReleasesPage() {
 
         <TabsContent value={activeTab} className="mt-6">
           {loading ? (
-            <div className="text-center py-10">
-              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-500">Loading release notes...</p>
-            </div>
+            <DashboardSkeleton />
           ) : filteredReleaseNotes.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center py-12">
@@ -178,7 +185,7 @@ export default function ReleasesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <Link 
-                            href={`/releases/edit/${note.id}`}
+                            href={`/dashboard/releases/edit/${note.id}`}
                             className="text-lg font-medium text-gray-900 hover:text-blue-600 truncate"
                           >
                             {note.title || 'Untitled Release Note'}

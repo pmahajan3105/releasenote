@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { FormSkeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 
 interface AIContext {
@@ -79,7 +80,14 @@ export default function AIContextPage() {
   }
 
   if (loading) {
-    return <div className="max-w-2xl mx-auto py-10 text-center text-gray-500">Loading AI context...</div>
+    return (
+      <div className="max-w-2xl mx-auto py-10">
+        <div className="mb-6">
+          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+        </div>
+        <FormSkeleton />
+      </div>
+    )
   }
   if (error) {
     return <div className="max-w-2xl mx-auto py-10 text-center text-red-500">{error}</div>

@@ -10,6 +10,7 @@ import { AI_TEMPLATES, AITemplate } from "@/lib/ai/templates"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { CardSkeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 
 function TemplateForm({ template, onSave, onCancel }: {
@@ -221,7 +222,23 @@ export default function TemplateManagementPage() {
   }
 
   if (loading) {
-    return <div className="max-w-3xl mx-auto py-8 text-center text-gray-500">Loading templates...</div>
+    return (
+      <div className="max-w-3xl mx-auto py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
+          <div className="flex gap-2">
+            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <div className="grid gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    )
   }
   if (error) {
     return <div className="max-w-3xl mx-auto py-8 text-center text-red-500">{error}</div>

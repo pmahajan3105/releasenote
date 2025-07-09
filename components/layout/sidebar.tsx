@@ -67,25 +67,25 @@ export const Sidebar = (): JSX.Element | null => {
       label: "Release Notes",
       hasDropdown: true,
       section: "release-notes",
-      active: isActive("/release-notes"),
+      active: isActive("/dashboard/releases") || isActive("/release-notes"),
       subItems: [
-        { label: "Create", path: "/release-notes/create" },
-        { label: "Published", path: "/release-notes/published" },
-        { label: "Draft", path: "/release-notes/draft" },
-        { label: "Scheduled", path: "/release-notes/scheduled" },
+        { label: "View All", path: "/dashboard/releases" },
+        { label: "Create New", path: "/dashboard/releases/new/ai" },
+        { label: "From Template", path: "/dashboard/releases/new/template" },
+        { label: "From Scratch", path: "/dashboard/releases/new/scratch" },
       ],
     },
     {
       icon: <SettingsIcon className="w-6 h-6" />,
-      label: "Setup",
-      path: "/setup",
-      active: isActive("/setup"),
+      label: "Configuration",
+      path: "/dashboard/configuration",
+      active: isActive("/dashboard/configuration"),
     },
     {
       icon: <BarChart2Icon className="w-6 h-6" />,
-      label: "Analytics",
-      path: "/analytics",
-      active: isActive("/analytics"),
+      label: "AI Context",
+      path: "/dashboard/ai-context",
+      active: isActive("/dashboard/ai-context"),
     },
   ]
 
@@ -93,13 +93,13 @@ export const Sidebar = (): JSX.Element | null => {
   const footerItems = [
     {
       icon: <LifeBuoyIcon className="w-6 h-6" />,
-      label: "Support",
-      path: "/support",
+      label: "Templates",
+      path: "/dashboard/templates",
     },
     {
       icon: <SettingsIcon className="w-6 h-6" />,
       label: "Settings",
-      path: "/settings",
+      path: "/dashboard/settings",
     },
   ]
 

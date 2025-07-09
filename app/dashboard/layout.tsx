@@ -12,13 +12,13 @@ import {
 } from '@heroicons/react/24/outline'
 
 const navigation = [
-  { name: 'Home', href: '/', icon: HomeIcon },
-  { name: 'Release Notes', href: '/releases', icon: DocumentTextIcon },
-  { name: 'Configuration', href: '/configuration', icon: Cog6ToothIcon },
-  { name: 'AI Context', href: '/ai-context', icon: PencilIcon },
-  { name: 'Templates', href: '/templates', icon: EyeIcon },
-  { name: 'Support & Help', href: '/support', icon: UserGroupIcon },
-  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Release Notes', href: '/dashboard/releases', icon: DocumentTextIcon },
+  { name: 'Configuration', href: '/dashboard/configuration', icon: Cog6ToothIcon },
+  { name: 'AI Context', href: '/dashboard/ai-context', icon: PencilIcon },
+  { name: 'Templates', href: '/dashboard/templates', icon: EyeIcon },
+  { name: 'Support & Help', href: 'mailto:help@releasenote.ai', icon: UserGroupIcon },
+  { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon },
 ]
 
 export default function DashboardLayout({

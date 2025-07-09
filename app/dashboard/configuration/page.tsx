@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useAuthStore, useAuthSelectors } from '@/lib/store'
 
 import { toast } from '@/lib/toast'
@@ -11,6 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/toast'
+import { FormSkeleton } from '@/components/ui/skeleton'
 
 // Type for organization settings
 type OrgSettings = {
@@ -19,7 +20,6 @@ type OrgSettings = {
 }
 
 export default function ConfigurationPage() {
-  const supabase = createClientComponentClient()
   const user = useAuthStore((state) => state.user)
   const { isLoading: authLoading } = useAuthSelectors()
   const orgId = user?.id
@@ -36,20 +36,15 @@ export default function ConfigurationPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const { data, error: fetchError } = await supabase
-        .from('organizations')
-        .select('settings')
-        .eq('id', orgId)
-        .single()
-      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
-      if (data?.settings) {
-        setSettings({
-          companyDetails: data.settings.companyDetails || '',
-          ai_tone: data.settings.ai_tone || '',
-        })
-      } else {
-        setSettings({ companyDetails: '', ai_tone: '' })
+      const response = await fetch(`/api/organizations/${orgId}/settings`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings')
       }
+      const data = await response.json()
+      setSettings({
+        companyDetails: data.settings.companyDetails || '',
+        ai_tone: data.settings.ai_tone || '',
+      })
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to load settings'
       setError(msg)
@@ -57,7 +52,7 @@ export default function ConfigurationPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [orgId, supabase])
+  }, [orgId])
 
   useEffect(() => {
     if (!authLoading) fetchSettings()
@@ -79,11 +74,20 @@ export default function ConfigurationPage() {
     setIsSaving(true)
     setError(null)
     try {
-      const { error: updateError } = await supabase
-        .from('organizations')
-        .update({ settings, updated_at: new Date().toISOString() })
-        .eq('id', orgId)
-      if (updateError) throw updateError
+      const response = await fetch(`/api/organizations/${orgId}/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to save settings')
+      }
+      
+      const data = await response.json()
+      setSettings(data.settings)
       const successText = 'Settings saved successfully!'
       setSuccessMessage(successText)
       toast.success(successText)
@@ -99,11 +103,17 @@ export default function ConfigurationPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="p-6 space-y-4 animate-pulse">
-        <div className="h-6 bg-gray-300 rounded w-1/3"></div>
-        <div className="h-4 bg-gray-300 rounded"></div>
-        <div className="h-10 bg-gray-300 rounded"></div>
-      </div>
+      <>
+        <Toaster />
+        <Card className="dark:bg-gray-800 rounded-lg shadow">
+          <CardHeader>
+            <div className="h-6 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent>
+            <FormSkeleton />
+          </CardContent>
+        </Card>
+      </>
     )
   }
 

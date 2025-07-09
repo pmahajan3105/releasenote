@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+
 import { 
   addSecurityHeaders, 
   apiRateLimit, 
@@ -89,7 +89,7 @@ export async function middleware(request: NextRequest) {
   
   if (isProtectedRoute) {
     try {
-      const supabase = createServerComponentClient({ cookies })
+      const supabase = createMiddlewareClient({ req: request, res: response })
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
