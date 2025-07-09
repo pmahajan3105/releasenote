@@ -19,16 +19,180 @@ type TicketDetail = {
   description: string | null
 }
 
-// Placeholder function to fetch ticket details - replace with actual API calls
-async function fetchTicketDetails(ticketIds: string[]): Promise<TicketDetail[]> {
-  console.log('Fetching details for tickets:', ticketIds)
-  // In a real app, call Jira/GitHub API based on IDs
-  await new Promise(res => setTimeout(res, 500)) // Simulate delay
-  return ticketIds.map((id, index) => ({
-    key: `TIC-${id}`,
-    title: `Fetched Ticket Title ${index + 1}`,
-    description: `This is the fetched description for ticket ${id}. It might contain details about the fix or feature implementation.`
-  }))
+// Real ticket fetching implementation
+async function fetchTicketDetails(ticketIds: string[], organizationId: string): Promise<TicketDetail[]> {
+  const supabase = createRouteHandlerClient({ cookies })
+  
+  // First check if we have cached ticket data
+  const { data: cachedTickets, error: cacheError } = await supabase
+    .from('ticket_cache')
+    .select('external_id, title, description, type, status, url')
+    .in('external_id', ticketIds)
+    .eq('organization_id', organizationId)
+  
+  if (cacheError) {
+    console.error('Error fetching cached tickets:', cacheError)
+  }
+  
+  // Convert cached tickets to TicketDetail format
+  const ticketDetails: TicketDetail[] = []
+  
+  for (const ticketId of ticketIds) {
+    const cachedTicket = cachedTickets?.find(t => t.external_id === ticketId)
+    
+    if (cachedTicket) {
+      ticketDetails.push({
+        key: cachedTicket.external_id,
+        title: cachedTicket.title,
+        description: cachedTicket.description
+      })
+    } else {
+      // If not cached, try to fetch from integrations
+      const fetchedTicket = await fetchFromIntegrations(ticketId, organizationId)
+      if (fetchedTicket) {
+        ticketDetails.push(fetchedTicket)
+      } else {
+        // Fallback to basic ticket info
+        ticketDetails.push({
+          key: ticketId,
+          title: `Ticket ${ticketId}`,
+          description: `Details for ticket ${ticketId} (integration data not available)`
+        })
+      }
+    }
+  }
+  
+  return ticketDetails
+}
+
+// Fetch ticket from active integrations
+async function fetchFromIntegrations(ticketId: string, organizationId: string): Promise<TicketDetail | null> {
+  const supabase = createRouteHandlerClient({ cookies })
+  
+  try {
+    // Get active integrations for the organization
+    const { data: integrations, error: intError } = await supabase
+      .from('integrations')
+      .select('type, config, access_token')
+      .eq('organization_id', organizationId)
+      .eq('status', 'connected')
+    
+    if (intError || !integrations?.length) {
+      console.log('No active integrations found for organization:', organizationId)
+      return null
+    }
+    
+    // Try each integration to find the ticket
+    for (const integration of integrations) {
+      let ticketData: TicketDetail | null = null
+      
+      switch (integration.type) {
+        case 'github':
+          ticketData = await fetchFromGitHub(ticketId, integration)
+          break
+        case 'jira':
+          ticketData = await fetchFromJira(ticketId, integration)
+          break
+        case 'linear':
+          ticketData = await fetchFromLinear(ticketId, integration)
+          break
+        default:
+          console.warn('Unknown integration type:', integration.type)
+      }
+      
+      if (ticketData) {
+        // Cache the ticket data for future use
+        await supabase
+          .from('ticket_cache')
+          .upsert({
+            external_id: ticketData.key,
+            title: ticketData.title,
+            description: ticketData.description,
+            organization_id: organizationId,
+            integration_type: integration.type,
+            updated_at: new Date().toISOString()
+          })
+        
+        return ticketData
+      }
+    }
+    
+    return null
+  } catch (error) {
+    console.error('Error fetching from integrations:', error)
+    return null
+  }
+}
+
+// GitHub ticket fetching
+async function fetchFromGitHub(ticketId: string, integration: any): Promise<TicketDetail | null> {
+  try {
+    const { GitHubService } = await import('@/lib/integrations/github')
+    const github = new GitHubService(integration.access_token)
+    
+    // Parse GitHub ticket ID (could be issue or PR number)
+    const match = ticketId.match(/(\d+)/) || ticketId.match(/([^\/]+)\/([^\/]+)#(\d+)/)
+    if (!match) return null
+    
+    const issueNumber = match[match.length - 1]
+    const config = integration.config || {}
+    const owner = config.owner || config.selectedRepo?.split('/')[0]
+    const repo = config.repo || config.selectedRepo?.split('/')[1]
+    
+    if (!owner || !repo) return null
+    
+    const issue = await github.getIssue(owner, repo, parseInt(issueNumber))
+    if (!issue) return null
+    
+    return {
+      key: `${owner}/${repo}#${issue.number}`,
+      title: issue.title,
+      description: issue.body || null
+    }
+  } catch (error) {
+    console.error('Error fetching from GitHub:', error)
+    return null
+  }
+}
+
+// Jira ticket fetching  
+async function fetchFromJira(ticketId: string, integration: any): Promise<TicketDetail | null> {
+  try {
+    const { JiraAPIClient } = await import('@/lib/integrations/jira-client')
+    const jira = new JiraAPIClient(integration.config, integration.access_token)
+    
+    const issue = await jira.getIssue(ticketId)
+    if (!issue) return null
+    
+    return {
+      key: issue.key,
+      title: issue.fields.summary,
+      description: issue.fields.description || null
+    }
+  } catch (error) {
+    console.error('Error fetching from Jira:', error)
+    return null
+  }
+}
+
+// Linear ticket fetching
+async function fetchFromLinear(ticketId: string, integration: any): Promise<TicketDetail | null> {
+  try {
+    const { LinearAPIClient } = await import('@/lib/integrations/linear-client')
+    const linear = new LinearAPIClient(integration.access_token)
+    
+    const issue = await linear.getIssue(ticketId)
+    if (!issue) return null
+    
+    return {
+      key: issue.identifier,
+      title: issue.title,
+      description: issue.description || null
+    }
+  } catch (error) {
+    console.error('Error fetching from Linear:', error)
+    return null
+  }
 }
 
 // Configure DOMPurify outside the handler
@@ -92,7 +256,7 @@ export async function POST(request: Request) {
     const settings: OrganizationSettings = orgError || !orgData ? {} : (orgData.settings || {})
 
     // 3. Fetch Ticket Details
-    const ticketDetails = await fetchTicketDetails(noteData.source_ticket_ids)
+    const ticketDetails = await fetchTicketDetails(noteData.source_ticket_ids, noteData.organization_id)
 
     // 4. Construct Prompt
     let prompt = `Generate release notes based on the following completed tickets:\n\n`

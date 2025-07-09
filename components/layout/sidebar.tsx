@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import React, { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import Image from "next/image"
 import {
   Avatar,
   AvatarFallback,
@@ -107,11 +108,19 @@ export const Sidebar = (): JSX.Element | null => {
       <div className="flex flex-col h-full justify-between">
         <div className="flex flex-col gap-6 pt-8">
           <header className="pl-6 pr-5">
-            <img
-              className="w-[163px] h-[54.7px]"
-              alt="Rn logo"
-              src="/rn-logo.svg"
-            />
+            <div className="flex items-center">
+              <Image
+                src="/rn-logo.svg"
+                alt="Release Notes AI"
+                width={163}
+                height={55}
+                priority
+                className="h-auto w-auto max-w-[163px] max-h-[55px]"
+                onError={() => {
+                  console.warn('Sidebar logo failed to load')
+                }}
+              />
+            </div>
           </header>
 
           <div className="px-6">

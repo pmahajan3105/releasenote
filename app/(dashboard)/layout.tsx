@@ -13,15 +13,20 @@ import {
   ChartBarIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  PencilIcon,
+  EyeIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline'
 
 const navigation = [
   { name: 'Home', href: '/dashboard', icon: HomeIcon },
-  { name: 'Release Notes', href: '/releases', icon: DocumentTextIcon }, // Note: Changed from /dashboard/releases to /releases for brevity
+  { name: 'Release Notes', href: '/releases', icon: DocumentTextIcon },
   { name: 'Configuration', href: '/configuration', icon: Cog6ToothIcon },
-  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
-  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon }, // Re-using Cog icon for Settings
+  { name: 'AI Context', href: '/ai-context', icon: PencilIcon },
+  { name: 'Templates', href: '/templates', icon: EyeIcon },
+  { name: 'Support & Help', href: '/support', icon: UserGroupIcon },
+  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ]
 
 function classNames(...classes: string[]) {

@@ -11,6 +11,10 @@ import TableCell from '@tiptap/extension-table-cell'
 import Highlight from '@tiptap/extension-highlight'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
+import Underline from '@tiptap/extension-underline'
+import TextAlign from '@tiptap/extension-text-align'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
 import { Callout } from './extensions/callout'
 import { CodeBlockEnhanced } from './extensions/code-block-enhanced'
 import { Button } from '@/components/ui/button'
@@ -21,6 +25,7 @@ import {
   StrikethroughIcon,
   ListIcon,
   ListOrderedIcon,
+  ListChecksIcon,
   QuoteIcon,
   CodeIcon,
   UndoIcon,
@@ -37,9 +42,14 @@ import {
   AlertTriangleIcon,
   CheckCircleIcon,
   XCircleIcon,
-  LightbulbIcon
+  LightbulbIcon,
+  AlignLeftIcon,
+  AlignCenterIcon,
+  AlignRightIcon,
+  AlignJustifyIcon
 } from 'lucide-react'
 import { useState, useCallback } from 'react'
+import { getSupabaseClient } from '@/lib/supabase'
 
 interface RichTextEditorProps {
   content?: string
@@ -60,6 +70,8 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const supabase = getSupabaseClient()
 
   const editor = useEditor({
     extensions: [
@@ -91,6 +103,21 @@ export function RichTextEditor({
       }),
       TextStyle,
       Color,
+      Underline,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
+      TaskList.configure({
+        HTMLAttributes: {
+          class: 'not-prose',
+        },
+      }),
+      TaskItem.configure({
+        nested: true,
+        HTMLAttributes: {
+          class: 'flex items-start gap-2 not-prose',
+        },
+      }),
       Callout,
       CodeBlockEnhanced,
     ],
@@ -105,12 +132,46 @@ export function RichTextEditor({
     },
   })
 
-  const addImage = useCallback(() => {
-    const url = window.prompt('Enter image URL:')
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run()
+
+const addImage = useCallback(() => {
+  if (!editor) return;
+  if (!supabase) {
+    alert('Supabase client not initialized. Please check your environment variables.');
+    return;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.click();
+  input.onchange = async () => {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    setUploading(true);
+    try {
+      const timestamp = Date.now();
+      const fileName = `editor_${timestamp}_${file.name}`;
+      const filePath = `${fileName}`;
+      const { data, error: uploadError } = await supabase.storage
+        .from('release-note-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage
+        .from('release-note-images')
+        .getPublicUrl(filePath);
+      if (!urlData || !urlData.publicUrl) {
+        throw new Error('Could not get public URL for uploaded image.');
+      }
+      editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
+    } catch (error) {
+      alert('Image upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setUploading(false);
     }
-  }, [editor])
+  };
+}, [editor, supabase]);
 
   const setLink = useCallback(() => {
     const previousUrl = editor?.getAttributes('link').href
@@ -165,6 +226,14 @@ export function RichTextEditor({
             className={editor.isActive('italic') ? 'bg-gray-200' : ''}
           >
             <ItalicIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            className={editor.isActive('underline') ? 'bg-gray-200' : ''}
+          >
+            <UnderlineIcon className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -229,6 +298,50 @@ export function RichTextEditor({
             className={editor.isActive('orderedList') ? 'bg-gray-200' : ''}
           >
             <ListOrderedIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            className={editor.isActive('taskList') ? 'bg-gray-200' : ''}
+          >
+            <ListChecksIcon className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Text Alignment */}
+        <div className="flex gap-1 mr-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            className={editor.isActive({ textAlign: 'left' }) ? 'bg-gray-200' : ''}
+          >
+            <AlignLeftIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            className={editor.isActive({ textAlign: 'center' }) ? 'bg-gray-200' : ''}
+          >
+            <AlignCenterIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            className={editor.isActive({ textAlign: 'right' }) ? 'bg-gray-200' : ''}
+          >
+            <AlignRightIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            className={editor.isActive({ textAlign: 'justify' }) ? 'bg-gray-200' : ''}
+          >
+            <AlignJustifyIcon className="h-4 w-4" />
           </Button>
         </div>
 

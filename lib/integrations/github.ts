@@ -292,3 +292,6 @@ export class GitHubService {
     })
   }
 }
+
+// Export alias for backward compatibility
+export { GitHubService as GitHubClient }

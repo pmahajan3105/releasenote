@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuthActions } from '@/lib/store'
-import { MailIcon } from 'lucide-react'
+import { MailIcon, AlertTriangleIcon } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -19,6 +20,13 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Basic email validation
+    if (!email || !email.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setIsLoading(true)
     setError('')
     setSuccess(false)
@@ -26,12 +34,22 @@ export default function LoginPage() {
     try {
       const { error } = await signInWithMagicLink(email)
       if (error) {
-        setError(error.message || 'Failed to send magic link')
+        // Provide more user-friendly error messages
+        let errorMessage = 'Failed to send magic link'
+        if (error.message?.includes('rate limit')) {
+          errorMessage = 'Too many requests. Please wait a moment before trying again.'
+        } else if (error.message?.includes('invalid')) {
+          errorMessage = 'Please enter a valid email address'
+        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.'
+        }
+        setError(errorMessage)
       } else {
         setSuccess(true)
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to send magic link')
+      console.error('Login error:', err)
+      setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -41,11 +59,20 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <img
-            className="mx-auto h-12 w-auto"
-            src="/rn-logo.svg"
-            alt="Release Notes Generator"
-          />
+          <div className="mx-auto h-12 w-auto flex items-center justify-center">
+            <Image
+              src="/rn-logo.svg"
+              alt="Release Notes Generator"
+              width={120}
+              height={32}
+              priority
+              className="h-8 w-auto"
+              onError={() => {
+                // Fallback if logo fails to load
+                console.warn('Logo failed to load, using text fallback')
+              }}
+            />
+          </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Sign in to your account
           </h2>
@@ -92,7 +119,10 @@ export default function LoginPage() {
               <form className="space-y-6" onSubmit={handleSubmit}>
                 {error && (
                   <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertTriangleIcon className="h-4 w-4" />
+                    <AlertDescription className="ml-2">
+                      {error}
+                    </AlertDescription>
                   </Alert>
                 )}
 

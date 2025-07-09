@@ -1,6 +1,18 @@
+import type { ProjectFilterInput } from '../types/linear'
 /**
  * Linear API Client with GraphQL support
  */
+export class LinearAPIError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public data?: unknown
+  ) {
+    super(message)
+    this.name = 'LinearAPIError'
+  }
+}
+
 export class LinearAPIClient {
   private static instance: LinearAPIClient
   private baseURL = 'https://api.linear.app/graphql'
@@ -19,9 +31,9 @@ export class LinearAPIClient {
    */
   private async request(
     query: string,
-    variables: Record<string, any> = {},
+    variables: Record<string, unknown> = {},
     token: string
-  ): Promise<any> {
+  ): Promise<unknown> {
     try {
       const response = await fetch(this.baseURL, {
         method: 'POST',
@@ -56,7 +68,7 @@ export class LinearAPIClient {
       
       if (data.errors && data.errors.length > 0) {
         throw new LinearAPIError(
-          `GraphQL errors: ${data.errors.map((e: any) => e.message).join(', ')}`,
+          `GraphQL errors: ${Array.isArray(data.errors) ? data.errors.map((e: { message?: string }) => e.message).join(', ') : ''}`,
           400,
           data.errors
         )
@@ -78,7 +90,7 @@ export class LinearAPIClient {
   /**
    * Get current user (viewer) information
    */
-  async getViewer(token: string): Promise<any> {
+  async getViewer(token: string): Promise<unknown> {
     const query = `
       query {
         viewer {
@@ -101,13 +113,16 @@ export class LinearAPIClient {
     `
     
     const data = await this.request(query, {}, token)
-    return data.viewer
+    if (data && typeof data === 'object' && 'viewer' in data) {
+      return (data as { viewer: unknown }).viewer
+    }
+    return undefined
   }
 
   /**
    * Get organization information
    */
-  async getOrganization(token: string): Promise<any> {
+  async getOrganization(token: string): Promise<unknown> {
     const query = `
       query {
         organization {
@@ -124,7 +139,10 @@ export class LinearAPIClient {
     `
     
     const data = await this.request(query, {}, token)
-    return data.organization
+    if (data && typeof data === 'object' && 'organization' in data) {
+      return (data as { organization: unknown }).organization
+    }
+    return undefined
   }
 
   /**
@@ -137,7 +155,7 @@ export class LinearAPIClient {
       after?: string
       includeArchived?: boolean
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { first = 50, after, includeArchived = false } = options
     
     const query = `
@@ -171,7 +189,10 @@ export class LinearAPIClient {
     `
     
     const data = await this.request(query, { first, after, includeArchived }, token)
-    return data.teams
+    if (data && typeof data === 'object' && 'teams' in data) {
+      return (data as { teams: unknown }).teams
+    }
+    return undefined
   }
 
   /**
@@ -188,7 +209,7 @@ export class LinearAPIClient {
       updatedSince?: string
       orderBy?: 'createdAt' | 'updatedAt' | 'priority'
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { 
       first = 50, 
       after, 
@@ -279,13 +300,16 @@ export class LinearAPIClient {
     `
     
     const data = await this.request(query, { first, after, orderBy }, token)
-    return data.issues
+    if (data && typeof data === 'object' && 'issues' in data) {
+      return (data as { issues: unknown }).issues
+    }
+    return undefined
   }
 
   /**
    * Get issue by ID
    */
-  async getIssue(token: string, issueId: string): Promise<any> {
+  async getIssue(token: string, issueId: string): Promise<unknown> {
     const query = `
       query GetIssue($issueId: String!) {
         issue(id: $issueId) {
@@ -375,18 +399,6 @@ export class LinearAPIClient {
                 type
               }
             }
-          }
-        }
-      }
-    `
-    
-    const data = await this.request(query, { issueId }, token)
-    return data.issue
-  }
-
-  /**
-   * Get projects
-   */
   async getProjects(
     token: string,
     options: {
@@ -395,14 +407,17 @@ export class LinearAPIClient {
       teamId?: string
       includeArchived?: boolean
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { first = 50, after, teamId, includeArchived = false } = options
     
-    const teamFilter = teamId ? `filter: { team: { id: { eq: "${teamId}" } } }` : ''
-    
     const query = `
-      query GetProjects($first: Int!, $after: String, $includeArchived: Boolean) {
-        projects(first: $first, after: $after, ${teamFilter}, includeArchived: $includeArchived) {
+      query GetProjects($first: Int!, $after: String, $filter: ProjectFilterInput, $includeArchived: Boolean) {
+        projects(
+          first: $first,
+          after: $after,
+          filter: $filter,
+          includeArchived: $includeArchived
+        ) {
           nodes {
             id
             name
@@ -459,10 +474,13 @@ export class LinearAPIClient {
           }
         }
       }
-    `
-    
+    `;
+
     const data = await this.request(query, { first, after, includeArchived }, token)
-    return data.projects
+    if (data && typeof data === 'object' && 'projects' in data) {
+      return (data as { projects: unknown }).projects
+    }
+    return undefined
   }
 
   /**
@@ -476,15 +494,60 @@ export class LinearAPIClient {
       teamId?: string
       includeArchived?: boolean
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const { first = 50, teamId, includeArchived = false } = options
     
-    const searchQuery = `
-      query SearchIssues($query: String!, $first: Int!, $teamId: String, $includeArchived: Boolean) {
-        issueSearch(query: $query, first: $first, teamId: $teamId, includeArchived: $includeArchived) {
-          nodes {
+    const searchQuery = `query SearchIssues($query: String!, $first: Int!, $teamId: String, $includeArchived: Boolean) {
+      issueSearch(
+        query: $query,
+        first: $first,
+        teamId: $teamId,
+        includeArchived: $includeArchived
+      ) {
+        nodes {
+          id
+          identifier
+          number
+          title
+          description
+          priority
+          url
+          createdAt
+          updatedAt
+          state {
             id
-            identifier
+            name
+            type
+            color
+          }
+          team {
+            id
+            name
+            key
+          }
+          assignee {
+            id
+            name
+            displayName
+            avatarUrl
+          }
+          labels {
+            nodes {
+              id
+              name
+              color
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }
+      }
+    }
+    `
             number
             title
             description
@@ -524,16 +587,20 @@ export class LinearAPIClient {
             endCursor
           }
         }
-      }
-    `
+      };
+    `;
     
-    const data = await this.request(searchQuery, { 
-      query, 
-      first, 
-      teamId, 
-      includeArchived 
-    }, token)
-    return data.issueSearch
+    const variables: Record<string, unknown> = {
+      query,
+      first,
+      teamId: teamId ?? null,
+      includeArchived
+    }
+    const data = await this.request(searchQuery, variables, token)
+    if (data && typeof data === 'object' && 'issueSearch' in data) {
+      return (data as { issueSearch: unknown }).issueSearch
+    }
+    return undefined
   }
 
   /**
@@ -541,8 +608,8 @@ export class LinearAPIClient {
    */
   async testConnection(token: string): Promise<{
     success: boolean
-    user?: any
-    organization?: any
+    user?: Record<string, unknown>
+    organization?: Record<string, unknown>
     error?: string
   }> {
     try {
@@ -576,7 +643,7 @@ export class LinearAPIError extends Error {
   constructor(
     message: string,
     public status: number,
-    public data?: any
+    public data?: unknown
   ) {
     super(message)
     this.name = 'LinearAPIError'
@@ -585,3 +652,6 @@ export class LinearAPIError extends Error {
 
 // Export singleton instance
 export const linearAPI = LinearAPIClient.getInstance()
+
+// Export alias for backward compatibility
+export { LinearAPIClient as LinearClient }

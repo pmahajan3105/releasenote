@@ -94,17 +94,15 @@ export function EnhancedReleaseNotesList({
       <div className="max-w-6xl mx-auto">
         {/* Organization Header */}
         <header className="text-center mb-8 sm:mb-10 md:mb-12">
-          {organization.logo_url && (
-            <div className="flex justify-center mb-4 sm:mb-6">
-              <Image
-                src={organization.logo_url}
-                alt={`${organization.name} logo`}
-                width={60}
-                height={60}
-                className="rounded-full sm:w-20 sm:h-20"
-              />
-            </div>
-          )}
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <Image
+              src={organization.logo_url || '/branding/org-logo-placeholder.svg'}
+              alt={`${organization.name} logo`}
+              width={60}
+              height={60}
+              className="rounded-full sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-700 object-cover"
+            />
+          </div>
           
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-2">
             {organization.name}

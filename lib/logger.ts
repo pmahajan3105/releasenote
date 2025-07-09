@@ -6,7 +6,7 @@
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 export interface LogContext {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface Logger {
@@ -14,7 +14,7 @@ export interface Logger {
   info(message: string, context?: LogContext): void
   warn(message: string, context?: LogContext): void
   error(message: string, context?: LogContext): void
-  dbError(operation: string, error: any, context?: LogContext): void
+  dbError(operation: string, error: unknown, context?: LogContext): void
 }
 
 class ConsoleLogger implements Logger {
@@ -53,7 +53,8 @@ class ConsoleLogger implements Logger {
 
       // In production, use single line JSON
       return JSON.stringify(logEntry)
-    } catch (error) {
+    } catch {
+
       // Handle circular references
       try {
         const safeEntry = {
@@ -63,7 +64,8 @@ class ConsoleLogger implements Logger {
           context: '[Circular reference detected]'
         }
         return JSON.stringify(safeEntry)
-      } catch (fallbackError) {
+      } catch {
+
         // Final fallback
         return `${timestamp} ${level.toUpperCase()} ${message}`
       }
@@ -94,15 +96,21 @@ class ConsoleLogger implements Logger {
     }
   }
 
-  dbError(operation: string, error: any, context?: LogContext): void {
+  dbError(operation: string, error: unknown, context?: LogContext): void {
     const errorContext = {
       operation,
-      error: {
-        message: error?.message,
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint
-      },
+      error: (() => {
+        if (typeof error === "object" && error !== null) {
+          const err = error as Record<string, unknown>;
+          return {
+            message: typeof err.message === "string" ? err.message : undefined,
+            code: typeof err.code === "string" ? err.code : undefined,
+            details: typeof err.details === "string" ? err.details : undefined,
+            hint: typeof err.hint === "string" ? err.hint : undefined,
+          };
+        }
+        return { message: String(error) };
+      })(),
       ...context
     }
 
@@ -122,15 +130,21 @@ export function logApiResponse(method: string, path: string, statusCode: number,
   logger.info(`API Response: ${method} ${path} - ${statusCode} (${duration}ms)`, context)
 }
 
-export function logApiError(method: string, path: string, error: any, context?: LogContext): void {
+export function logApiError(method: string, path: string, error: unknown, context?: LogContext): void {
   const errorContext = {
     method,
     path,
-    error: {
-      message: error?.message,
-      stack: error?.stack,
-      statusCode: error?.statusCode
-    },
+    error: (() => {
+      if (typeof error === "object" && error !== null) {
+        const err = error as Record<string, unknown>;
+        return {
+          message: typeof err.message === "string" ? err.message : undefined,
+          stack: typeof err.stack === "string" ? err.stack : undefined,
+          statusCode: typeof err.statusCode === "number" ? err.statusCode : undefined,
+        };
+      }
+      return { message: String(error) };
+    })(),
     ...context
   }
 
@@ -151,7 +165,7 @@ export function logPerformance(operation: string, duration: number, context?: Lo
 }
 
 // Error boundary logging
-export function logErrorBoundary(error: Error, errorInfo: any, context?: LogContext): void {
+export function logErrorBoundary(error: Error, errorInfo: unknown, context?: LogContext): void {
   logger.error('React Error Boundary caught an error', {
     error: {
       message: error.message,

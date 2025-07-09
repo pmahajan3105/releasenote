@@ -4,7 +4,7 @@
  */
 
 import { createServerSupabaseClient, SUPABASE_CONFIG } from './supabase'
-import type { Database } from '@/types/database'
+
 
 type SupabaseClient = ReturnType<typeof createServerSupabaseClient>
 
@@ -12,14 +12,16 @@ type SupabaseClient = ReturnType<typeof createServerSupabaseClient>
  * Query cache implementation for frequently accessed data
  */
 class QueryCache {
-  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+  private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>()
   private maxSize = SUPABASE_CONFIG.cache.maxSize
 
-  set(key: string, data: any, ttl = SUPABASE_CONFIG.cache.defaultTTL * 1000) {
+  set(key: string, data: unknown, ttl = SUPABASE_CONFIG.cache.defaultTTL * 1000) {
     // Implement LRU eviction if cache is full
     if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value
-      this.cache.delete(firstKey)
+      if (typeof firstKey === 'string') {
+        this.cache.delete(firstKey)
+      }
     }
 
     this.cache.set(key, {
@@ -29,7 +31,7 @@ class QueryCache {
     })
   }
 
-  get(key: string): any | null {
+  get(key: string): unknown | null {
     const entry = this.cache.get(key)
     
     if (!entry) {
@@ -82,9 +84,9 @@ if (typeof window === 'undefined') {
 export class QueryBatch {
   private queries: Array<{
     id: string
-    operation: () => Promise<any>
-    resolve: (value: any) => void
-    reject: (error: any) => void
+    operation: () => Promise<unknown>
+    resolve: (value: unknown) => void
+    reject: (error: unknown) => void
   }> = []
   private timeout: NodeJS.Timeout | null = null
   private batchDelay = 10 // 10ms delay to batch operations
@@ -97,8 +99,8 @@ export class QueryBatch {
       this.queries.push({
         id,
         operation,
-        resolve,
-        reject
+        resolve: resolve as (value: unknown) => void,
+        reject: reject as (error: unknown) => void
       })
 
       // Schedule batch execution
@@ -292,7 +294,7 @@ export const QueryOptimizer = {
   /**
    * Create a cache key from query parameters
    */
-  createCacheKey(prefix: string, params: Record<string, any>): string {
+  createCacheKey(prefix: string, params: Record<string, unknown>): string {
     const sortedParams = Object.keys(params)
       .sort()
       .map(key => `${key}=${params[key]}`)
@@ -349,7 +351,7 @@ export const QueryPatterns = {
     tableName: string,
     options: {
       select?: string
-      filters?: Record<string, any>
+      filters?: Record<string, unknown>
       orderBy?: { column: string; ascending?: boolean }
       page: number
       limit: number
@@ -358,13 +360,16 @@ export const QueryPatterns = {
     const { select = '*', filters = {}, orderBy, page, limit } = options
     const offset = (page - 1) * limit
 
-    let query = supabase
+    // TypeScript can't guarantee tableName is a valid table at runtime, so this is a runtime risk.
+    // TypeScript limitation: dynamic tableName means strict typing is not possible here
+    let query = (supabase as unknown as { from: (table: string) => any })
       .from(tableName)
-      .select(select, { count: 'exact' })
+      .select(typeof select === 'string' ? select : '*', { count: 'exact' })
       .range(offset, offset + limit - 1)
 
     // Apply filters
     Object.entries(filters).forEach(([key, value]) => {
+      // TypeScript can't check key/value types here due to dynamic filters
       query = query.eq(key, value)
     })
 
@@ -403,13 +408,15 @@ export const QueryPatterns = {
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize)
       
-      let query = supabase
+      // TypeScript limitation: dynamic tableName means strict typing is not possible here
+      let query = (supabase as unknown as { from: (table: string) => any })
         .from(tableName)
         .insert(batch)
         .select()
 
       if (onConflict) {
-        query = query as any // Type assertion needed for upsert
+        // Type assertion needed for upsert
+      query = query as unknown as { upsert: (arg: unknown) => unknown }
       }
 
       const { data, error } = await query

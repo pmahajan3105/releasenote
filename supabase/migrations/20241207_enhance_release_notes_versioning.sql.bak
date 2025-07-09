@@ -1,8 +1,17 @@
 -- Enhanced release notes versioning and workflow support
 -- This adds comprehensive version control and publishing workflow features
 
--- Rename org_id to organization_id for consistency across all tables
-ALTER TABLE release_notes RENAME COLUMN org_id TO organization_id;
+-- Rename org_id to organization_id for consistency across all tables (if it exists)
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'release_notes' 
+        AND column_name = 'org_id'
+    ) THEN
+        ALTER TABLE release_notes RENAME COLUMN org_id TO organization_id;
+    END IF;
+END $$;
 
 -- Add version control and publishing workflow fields
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS version_number TEXT;
@@ -216,6 +225,7 @@ ALTER TABLE release_notes ADD CONSTRAINT release_notes_status_check
   CHECK (status IN ('draft', 'published', 'scheduled', 'archived'));
 
 -- Add some useful views
+DROP VIEW IF EXISTS release_notes_with_stats;
 CREATE OR REPLACE VIEW release_notes_with_stats AS
 SELECT 
   rn.*,

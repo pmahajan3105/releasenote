@@ -103,8 +103,32 @@ CREATE INDEX IF NOT EXISTS templates_is_default_idx ON templates(organization_id
 CREATE INDEX IF NOT EXISTS subscribers_organization_id_status_idx ON subscribers(organization_id, status);
 CREATE INDEX IF NOT EXISTS subscribers_email_idx ON subscribers(email);
 
-CREATE INDEX IF NOT EXISTS ticket_cache_organization_id_type_idx ON ticket_cache(organization_id, integration_type);
-CREATE INDEX IF NOT EXISTS ticket_cache_expires_at_idx ON ticket_cache(expires_at);
+-- Create index only if columns exist
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'ticket_cache' 
+        AND column_name = 'organization_id'
+    ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'ticket_cache' 
+        AND column_name = 'integration_type'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS ticket_cache_organization_id_type_idx ON ticket_cache(organization_id, integration_type);
+    END IF;
+END $$;
+-- Create index only if column exists
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'ticket_cache' 
+        AND column_name = 'expires_at'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS ticket_cache_expires_at_idx ON ticket_cache(expires_at);
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS user_oauth_states_user_id_provider_idx ON user_oauth_states(user_id, provider);
 CREATE INDEX IF NOT EXISTS user_oauth_states_expires_at_idx ON user_oauth_states(expires_at);
@@ -228,9 +252,10 @@ CREATE POLICY "Users can view ticket cache for their organizations"
   ON ticket_cache FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM organizations
-      WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.id IN (
+      SELECT 1 FROM integrations i
+      JOIN organizations o ON i.organization_id = o.id
+      WHERE i.id = ticket_cache.integration_id
+      AND o.id IN (
         SELECT organization_id FROM organization_members 
         WHERE user_id = auth.uid()
       )
@@ -241,9 +266,10 @@ CREATE POLICY "Users can insert ticket cache for their organizations"
   ON ticket_cache FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM organizations
-      WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.id IN (
+      SELECT 1 FROM integrations i
+      JOIN organizations o ON i.organization_id = o.id
+      WHERE i.id = ticket_cache.integration_id
+      AND o.id IN (
         SELECT organization_id FROM organization_members 
         WHERE user_id = auth.uid()
       )
@@ -254,9 +280,10 @@ CREATE POLICY "Users can update ticket cache for their organizations"
   ON ticket_cache FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1 FROM organizations
-      WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.id IN (
+      SELECT 1 FROM integrations i
+      JOIN organizations o ON i.organization_id = o.id
+      WHERE i.id = ticket_cache.integration_id
+      AND o.id IN (
         SELECT organization_id FROM organization_members 
         WHERE user_id = auth.uid()
       )
@@ -267,9 +294,10 @@ CREATE POLICY "Users can delete ticket cache for their organizations"
   ON ticket_cache FOR DELETE
   USING (
     EXISTS (
-      SELECT 1 FROM organizations
-      WHERE organizations.id = ticket_cache.organization_id
-      AND organizations.id IN (
+      SELECT 1 FROM integrations i
+      JOIN organizations o ON i.organization_id = o.id
+      WHERE i.id = ticket_cache.integration_id
+      AND o.id IN (
         SELECT organization_id FROM organization_members 
         WHERE user_id = auth.uid()
       )

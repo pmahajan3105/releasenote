@@ -85,12 +85,10 @@ export async function generateMetadata({ params }: Props) {
     },
   }
 
-  // Add favicon if provided
-  if (organization.favicon_url) {
-    metadata.icons = {
-      icon: organization.favicon_url,
-      shortcut: organization.favicon_url,
-    }
+  // Add favicon if provided, else fallback to default
+  metadata.icons = {
+    icon: organization.favicon_url || '/branding/favicon-placeholder.ico',
+    shortcut: organization.favicon_url || '/branding/favicon-placeholder.ico',
   }
 
   // Add social media image if provided

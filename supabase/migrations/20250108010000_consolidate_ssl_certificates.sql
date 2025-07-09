@@ -55,6 +55,7 @@ ALTER TABLE ssl_certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ssl_challenges ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for ssl_certificates
+DROP POLICY IF EXISTS "Users can view SSL certificates for their organization" ON ssl_certificates;
 CREATE POLICY "Users can view SSL certificates for their organization" ON ssl_certificates
   FOR SELECT USING (
     organization_id IN (
@@ -63,6 +64,7 @@ CREATE POLICY "Users can view SSL certificates for their organization" ON ssl_ce
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage SSL certificates for their organization" ON ssl_certificates;
 CREATE POLICY "Users can manage SSL certificates for their organization" ON ssl_certificates
   FOR ALL USING (
     organization_id IN (
@@ -73,6 +75,7 @@ CREATE POLICY "Users can manage SSL certificates for their organization" ON ssl_
   );
 
 -- RLS policies for ssl_challenges
+DROP POLICY IF EXISTS "Users can view SSL challenges for their organization" ON ssl_challenges;
 CREATE POLICY "Users can view SSL challenges for their organization" ON ssl_challenges
   FOR SELECT USING (
     organization_id IN (
@@ -81,6 +84,7 @@ CREATE POLICY "Users can view SSL challenges for their organization" ON ssl_chal
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage SSL challenges for their organization" ON ssl_challenges;
 CREATE POLICY "Users can manage SSL challenges for their organization" ON ssl_challenges
   FOR ALL USING (
     organization_id IN (
@@ -104,6 +108,7 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_ssl_certificates_updated_at ON ssl_certificates;
 CREATE TRIGGER update_ssl_certificates_updated_at 
   BEFORE UPDATE ON ssl_certificates 
   FOR EACH ROW EXECUTE FUNCTION update_ssl_certificates_updated_at();

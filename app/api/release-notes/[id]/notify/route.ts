@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { sendReleaseNotesToSubscribers } from '@/lib/email'
 
 /**
  * Send email notifications for a published release note
@@ -75,7 +74,8 @@ export async function POST(
       })
     }
 
-    // Send emails
+    // Send emails - use dynamic import to avoid build-time issues
+    const { sendReleaseNotesToSubscribers } = await import('@/lib/email')
     const result = await sendReleaseNotesToSubscribers(
       releaseNote,
       organization,

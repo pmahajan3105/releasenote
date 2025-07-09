@@ -6,6 +6,7 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PrismLoader } from '@/components/editor/prism-loader'
 import { initializeDatabaseOptimization } from '@/lib/database-config'
+import '@/lib/startup-validation' // Run startup validation
 
 const inter = Inter({ subsets: ['latin'] })
 

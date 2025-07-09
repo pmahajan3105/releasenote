@@ -376,3 +376,6 @@ export class JiraAPIError extends Error {
 
 // Export singleton instance
 export const jiraAPI = JiraAPIClient.getInstance()
+
+// Export alias for backward compatibility
+export { JiraAPIClient as JiraClient }

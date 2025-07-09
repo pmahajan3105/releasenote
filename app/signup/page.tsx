@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuthActions } from '@/lib/store'
-import { MailIcon } from 'lucide-react'
+import { MailIcon, AlertTriangleIcon } from 'lucide-react'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -57,11 +58,20 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <img
-            className="mx-auto h-12 w-auto"
-            src="/rn-logo.svg"
-            alt="Release Notes Generator"
-          />
+          <div className="mx-auto h-12 w-auto flex items-center justify-center">
+            <Image
+              src="/rn-logo.svg"
+              alt="Release Notes Generator"
+              width={120}
+              height={32}
+              priority
+              className="h-8 w-auto"
+              onError={() => {
+                // Fallback if logo fails to load
+                console.warn('Logo failed to load, using text fallback')
+              }}
+            />
+          </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Create your account
           </h2>

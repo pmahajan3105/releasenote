@@ -10,10 +10,17 @@ let resend: Resend | null = null
 function getResendClient(): Resend {
   if (!resend) {
     const apiKey = process.env.RESEND_API_KEY
-    if (!apiKey) {
-      throw new Error('Missing API key. RESEND_API_KEY environment variable is required.')
+    if (!apiKey || apiKey === 'placeholder' || apiKey.includes('placeholder')) {
+      // Check if we're in runtime vs build time
+      if (typeof window === 'undefined' && process.env.NODE_ENV !== 'development') {
+        throw new Error('RESEND_API_KEY environment variable is required for email functionality')
+      }
+      // For build time, use a placeholder to avoid build errors
+      console.warn('RESEND_API_KEY not configured - email functionality will not work')
+      resend = new Resend('re_placeholder_key_for_build_only')
+    } else {
+      resend = new Resend(apiKey)
     }
-    resend = new Resend(apiKey)
   }
   return resend
 }

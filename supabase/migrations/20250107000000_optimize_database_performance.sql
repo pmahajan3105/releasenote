@@ -228,17 +228,18 @@ $$ LANGUAGE plpgsql STABLE;
 -- ======================================
 
 -- View for monitoring slow queries
+DROP VIEW IF EXISTS query_performance_monitor;
 CREATE OR REPLACE VIEW query_performance_monitor AS
 SELECT 
-  schemaname,
-  tablename,
-  indexname,
-  idx_scan,
-  idx_tup_read,
-  idx_tup_fetch
-FROM pg_stat_user_indexes
-WHERE idx_scan > 0
-ORDER BY idx_scan DESC;
+  sui.schemaname,
+  sui.relname as tablename,
+  sui.indexrelname as indexname,
+  sui.idx_scan,
+  sui.idx_tup_read,
+  sui.idx_tup_fetch
+FROM pg_stat_user_indexes sui
+WHERE sui.idx_scan > 0
+ORDER BY sui.idx_scan DESC;
 
 -- View for table size monitoring
 CREATE OR REPLACE VIEW table_size_monitor AS
@@ -256,6 +257,7 @@ ORDER BY size_bytes DESC;
 -- ======================================
 
 -- Function to cleanup old oauth states (performance optimization)
+DROP FUNCTION IF EXISTS cleanup_expired_oauth_states();
 CREATE OR REPLACE FUNCTION cleanup_expired_oauth_states()
 RETURNS INTEGER AS $$
 DECLARE
@@ -271,6 +273,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to cleanup old ticket cache entries
+DROP FUNCTION IF EXISTS cleanup_old_ticket_cache();
 CREATE OR REPLACE FUNCTION cleanup_old_ticket_cache()
 RETURNS INTEGER AS $$
 DECLARE

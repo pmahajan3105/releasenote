@@ -6,6 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash, randomBytes } from 'crypto'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
+
+// CSRF token store (use Redis in production)
+const csrfTokenStore = new Map<string, { token: string; expires: number }>()
+const CSRF_TOKEN_EXPIRY = 60 * 60 * 1000 // 1 hour
 
 // In-memory store for rate limiting (use Redis in production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
@@ -120,12 +125,8 @@ export function sanitizeInput(input: string): string {
     .trim()
 }
 
-// CSRF protection
-export function generateCSRFToken(): string {
-  return randomBytes(32).toString('hex')
-}
-
-export function validateCSRFToken(token: string, sessionToken: string): boolean {
+// Basic CSRF token validation (legacy)
+export function validateCSRFTokenLegacy(token: string, sessionToken: string): boolean {
   if (!token || !sessionToken) return false
   
   const hash1 = createHash('sha256').update(token).digest('hex')
@@ -174,13 +175,12 @@ export function generateSecureToken(length: number = 32): string {
 
 // Password hashing utilities
 export async function hashPassword(password: string): Promise<string> {
-  // TODO: Implement when bcryptjs is added to dependencies
-  throw new Error('Password hashing not implemented')
+  const saltRounds = parseInt(process.env.BCRYPT_ROUNDS || '12')
+  return await bcrypt.hash(password, saltRounds)
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // TODO: Implement when bcryptjs is added to dependencies
-  throw new Error('Password verification not implemented')
+  return await bcrypt.compare(password, hash)
 }
 
 // Environment variable validation
@@ -200,8 +200,8 @@ export function validateEnvironmentVariables(): void {
 }
 
 // Request validation middleware
-export function validateRequest(schema: z.ZodSchema) {
-  return async (req: NextRequest): Promise<{ success: boolean; data?: any; error?: string }> => {
+export function validateRequest<T>(schema: z.ZodSchema<T>) {
+  return async (req: NextRequest): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
       const body = await req.json()
       const data = schema.parse(body)
@@ -216,6 +216,43 @@ export function validateRequest(schema: z.ZodSchema) {
       return { success: false, error: 'Invalid request format' }
     }
   }
+}
+
+// CSRF Protection
+export function generateCSRFToken(sessionId: string): string {
+  const token = generateSecureToken(32)
+  const expires = Date.now() + CSRF_TOKEN_EXPIRY
+  
+  csrfTokenStore.set(sessionId, { token, expires })
+  
+  // Clean up expired tokens
+  for (const [key, value] of csrfTokenStore.entries()) {
+    if (value.expires < Date.now()) {
+      csrfTokenStore.delete(key)
+    }
+  }
+  
+  return token
+}
+
+export function verifyCSRFToken(sessionId: string, token: string): boolean {
+  const stored = csrfTokenStore.get(sessionId)
+  
+  if (!stored || stored.expires < Date.now()) {
+    return false
+  }
+  
+  return stored.token === token
+}
+
+export function validateCSRFToken(req: NextRequest, sessionId: string): boolean {
+  const token = req.headers.get('x-csrf-token') || req.headers.get('X-CSRF-Token')
+  
+  if (!token) {
+    return false
+  }
+  
+  return verifyCSRFToken(sessionId, token)
 }
 
 // Security audit helpers
@@ -261,7 +298,7 @@ export function logSecurityEvent(event: {
   type: 'rate_limit' | 'invalid_input' | 'csrf_violation' | 'suspicious_activity'
   ip: string
   userAgent?: string
-  details?: any
+  details?: unknown
 }) {
   console.warn('Security Event:', {
     timestamp: new Date().toISOString(),
@@ -269,7 +306,7 @@ export function logSecurityEvent(event: {
   })
 }
 
-export default {
+const securityUtils = {
   createRateLimit,
   apiRateLimit,
   authRateLimit,
@@ -289,4 +326,6 @@ export default {
   validateRequest,
   auditSecurityHeaders,
   logSecurityEvent
-} 
+}
+
+export default securityUtils;

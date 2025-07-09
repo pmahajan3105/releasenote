@@ -9,6 +9,11 @@ import { useAuthStore } from '@/lib/store/use-auth'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { slugify } from '@/lib/utils'
 import { GitHubReleaseGenerator } from '@/components/features/GitHubReleaseGenerator'
+import { handleApiError } from '@/lib/error-handler-standard'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 
 // Define the Jira ticket type
 type JiraTicket = {
@@ -120,20 +125,23 @@ export default function AIReleaseNotePage() {
       setError(null)
 
       try {
-        // In a real implementation, this would call a Jira API endpoint
-        // For now, we'll simulate the API call with mock data
-        const mockProjects = [
-          { key: 'PROJ', name: 'Project Alpha' },
-          { key: 'DEV', name: 'Development' },
-          { key: 'TEST', name: 'Testing' },
-          { key: 'PROD', name: 'Production' },
-        ]
-
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const response = await fetch('/api/integrations/jira/projects')
         
-        setProjects(mockProjects)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch projects: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        
+        // Transform the API response to match the expected format
+        const transformedProjects = data.projects?.map((project: any) => ({
+          key: project.key,
+          name: project.name
+        })) || []
+        
+        setProjects(transformedProjects)
       } catch (error) {
+        handleApiError(error, 'load Jira projects', 'AIReleaseNotePage')
         setError(error instanceof Error ? error.message : 'Failed to load Jira projects')
       } finally {
         setIsLoadingProjects(false)
@@ -165,68 +173,56 @@ export default function AIReleaseNotePage() {
     setSelectedTickets([])
 
     try {
-      // In a real implementation, this would call a Jira API endpoint
-      // For now, we'll simulate the API call with mock data
-      const mockTickets: JiraTicket[] = [
-        {
-          id: '1',
-          key: 'PROJ-123',
-          title: 'Add user authentication',
-          description: 'Implement user authentication with email and password',
-          status: 'Closed',
-          type: 'Story',
-          priority: 'High',
-          url: 'https://jira.example.com/browse/PROJ-123',
-          assignee: 'John Doe',
-          created: '2023-05-01T10:00:00Z',
-          updated: '2023-05-15T14:30:00Z',
-        },
-        {
-          id: '2',
-          key: 'PROJ-124',
-          title: 'Fix login page layout',
-          description: 'Fix the layout issues on the login page',
-          status: 'Closed',
-          type: 'Bug',
-          priority: 'Medium',
-          url: 'https://jira.example.com/browse/PROJ-124',
-          assignee: 'Jane Smith',
-          created: '2023-05-05T09:15:00Z',
-          updated: '2023-05-10T16:45:00Z',
-        },
-        {
-          id: '3',
-          key: 'PROJ-125',
-          title: 'Add dark mode support',
-          description: 'Implement dark mode for the application',
-          status: 'Closed',
-          type: 'Story',
-          priority: 'Medium',
-          url: 'https://jira.example.com/browse/PROJ-125',
-          assignee: 'John Doe',
-          created: '2023-05-08T11:30:00Z',
-          updated: '2023-05-20T10:15:00Z',
-        },
-        {
-          id: '4',
-          key: 'PROJ-126',
-          title: 'Optimize database queries',
-          description: 'Optimize database queries for better performance',
-          status: 'Closed',
-          type: 'Task',
-          priority: 'High',
-          url: 'https://jira.example.com/browse/PROJ-126',
-          assignee: 'Jane Smith',
-          created: '2023-05-12T14:20:00Z',
-          updated: '2023-05-25T09:30:00Z',
-        },
-      ]
+      if (!formData.projectKey) {
+        setError('Please select a project first')
+        return
+      }
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Build query parameters
+      const params = new URLSearchParams()
+      params.set('projectKey', formData.projectKey)
+      params.set('maxResults', '50')
+      params.set('startAt', '0')
       
-      setTickets(mockTickets)
+      // Add status filter
+      if (formData.status !== 'all') {
+        const statusFilter = formData.status === 'closed' ? 'Done,Closed,Resolved' : 'Open,In Progress,To Do'
+        params.set('statuses', statusFilter)
+      }
+      
+      // Add lookback filter
+      if (formData.lookbackDays) {
+        const lookbackDate = new Date()
+        lookbackDate.setDate(lookbackDate.getDate() - formData.lookbackDays)
+        params.set('updatedSince', lookbackDate.toISOString().split('T')[0])
+      }
+
+      const response = await fetch(`/api/integrations/jira/issues?${params}`)
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tickets: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      // Transform the API response to match the expected JiraTicket format
+      const transformedTickets: JiraTicket[] = data.issues?.map((issue: any) => ({
+        id: issue.id,
+        key: issue.key,
+        title: issue.summary,
+        description: issue.description || '',
+        status: issue.status.name,
+        type: issue.issueType.name,
+        priority: issue.priority?.name || 'Medium',
+        url: issue.url,
+        assignee: issue.assignee?.displayName || 'Unassigned',
+        created: issue.created,
+        updated: issue.updated,
+      })) || []
+      
+      setTickets(transformedTickets)
     } catch (error) {
+      handleApiError(error, 'fetch Jira tickets', 'AIReleaseNotePage')
       setError(error instanceof Error ? error.message : 'Failed to fetch Jira tickets')
     } finally {
       setIsFetchingTickets(false)
@@ -323,12 +319,9 @@ export default function AIReleaseNotePage() {
             <form className="space-y-6">
               {/* Jira Integration Selection */}
               <div>
-                <label
-                  htmlFor="integrationId"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <Label htmlFor="integrationId">
                   Select Jira Integration
-                </label>
+                </Label>
                 <select
                   id="integrationId"
                   {...register('integrationId')}
@@ -568,23 +561,22 @@ export default function AIReleaseNotePage() {
                     >
                       Description (Optional)
                     </label>
-                    <textarea
+                    <Textarea
                       id="description"
                       rows={3}
                       {...register('description')}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
+                      className="mt-1"
                     />
                   </div>
 
                   <div>
-                    <button
+                    <Button
                       type="button"
                       onClick={generateReleaseNote}
                       disabled={isGenerating || selectedTickets.length === 0}
-                      className="inline-flex justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isGenerating ? 'Generating...' : 'Generate Release Notes'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

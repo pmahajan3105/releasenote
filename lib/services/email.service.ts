@@ -3,7 +3,25 @@ import { config } from '@/lib/config'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-const resend = new Resend(config.email.resend.apiKey)
+let resend: Resend | null = null
+
+function getResendClient(): Resend {
+  if (!resend) {
+    const apiKey = config.email.resend.apiKey
+    if (!apiKey || apiKey === 'placeholder' || apiKey.includes('placeholder')) {
+      // Check if we're in runtime vs build time
+      if (typeof window === 'undefined' && process.env.NODE_ENV !== 'development') {
+        throw new Error('RESEND_API_KEY environment variable is required for email functionality')
+      }
+      // For build time, use a placeholder to avoid build errors
+      console.warn('RESEND_API_KEY not configured - email functionality will not work')
+      resend = new Resend('re_placeholder_key_for_build_only')
+    } else {
+      resend = new Resend(apiKey)
+    }
+  }
+  return resend
+}
 
 export interface EmailTemplate {
   subject: string
@@ -119,7 +137,7 @@ export class EmailService {
     from?: string
   }): Promise<void> {
     try {
-      await resend.emails.send({
+      await getResendClient().emails.send({
         from: from || config.email.resend.from,
         to,
         subject,

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS domain_verifications (
 -- Add RLS policies for domain verifications
 ALTER TABLE domain_verifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own domain verifications" ON domain_verifications;
 CREATE POLICY "Users can manage their own domain verifications" ON domain_verifications
   FOR ALL USING (
     organization_id IN (

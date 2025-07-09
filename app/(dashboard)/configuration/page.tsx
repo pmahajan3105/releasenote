@@ -2,10 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-
-import { toast, Toaster } from 'react-hot-toast'
-
 import { useAuthStore, useAuthSelectors } from '@/lib/store'
+
+import { toast } from '@/lib/toast'
+import { handleApiError, handleAsyncOperation } from '@/lib/error-handler-standard'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 
 // Type for organization settings
 type OrgSettings = {
@@ -105,77 +110,74 @@ export default function ConfigurationPage() {
   return (
     <>
       <Toaster />
-      <div className="space-y-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Configuration
-        </h1>
-        {error && (
-          <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/50">
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">
-              Error: {error}
-            </p>
+      <Card className="dark:bg-gray-800 rounded-lg shadow">
+        <CardHeader>
+          <CardTitle>Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/50">
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                Error: {error}
+              </p>
+            </div>
+          )}
+          {successMessage && (
+            <div className="rounded-md bg-green-50 p-4 dark:bg-green-900/50">
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                {successMessage}
+              </p>
+            </div>
+          )}
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="companyDetails">
+                Company Details
+              </Label>
+              <Textarea
+                id="companyDetails"
+                name="companyDetails"
+                rows={3}
+                value={settings.companyDetails}
+                onChange={handleChange}
+                className="mt-1"
+                placeholder="Brief description of your company/product."
+                disabled={isSaving}
+              />
+            </div>
+            <div>
+              <Label htmlFor="ai_tone">
+                AI Tone
+              </Label>
+              <Select
+                value={settings.ai_tone || ""}
+                onValueChange={(value) => setSettings(prev => ({ ...prev, ai_tone: value }))}
+                disabled={isSaving}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Default (Neutral)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Default (Neutral)</SelectItem>
+                  <SelectItem value="formal">Formal</SelectItem>
+                  <SelectItem value="informal">Informal</SelectItem>
+                  <SelectItem value="technical">Technical</SelectItem>
+                  <SelectItem value="marketing-friendly">Marketing-Friendly</SelectItem>
+                  <SelectItem value="concise">Concise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save Settings'}
+              </Button>
+            </div>
           </div>
-        )}
-        {successMessage && (
-          <div className="rounded-md bg-green-50 p-4 dark:bg-green-900/50">
-            <p className="text-sm font-medium text-green-800 dark:text-green-200">
-              {successMessage}
-            </p>
-          </div>
-        )}
-        <div className="space-y-6">
-          <div>
-            <label
-              htmlFor="companyDetails"
-              className="block text-sm font-medium text-gray-900 dark:text-white"
-            >
-              Company Details
-            </label>
-            <textarea
-              id="companyDetails"
-              name="companyDetails"
-              rows={3}
-              value={settings.companyDetails}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Brief description of your company/product."
-              disabled={isSaving}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="ai_tone"
-              className="block text-sm font-medium text-gray-900 dark:text-white"
-            >
-              AI Tone
-            </label>
-            <select
-              id="ai_tone"
-              name="ai_tone"
-              value={settings.ai_tone}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 bg-white py-2 pl-3 pr-10 text-base focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              disabled={isSaving}
-            >
-              <option value="">Default (Neutral)</option>
-              <option value="formal">Formal</option>
-              <option value="informal">Informal</option>
-              <option value="technical">Technical</option>
-              <option value="marketing-friendly">Marketing-Friendly</option>
-              <option value="concise">Concise</option>
-            </select>
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="inline-flex justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
-            >
-              {isSaving ? 'Saving...' : 'Save Settings'}
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </>
   )
 }

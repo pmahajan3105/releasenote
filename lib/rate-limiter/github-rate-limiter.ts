@@ -68,7 +68,7 @@ export class GitHubRateLimiter {
     url: string,
     options: RequestInit & RequestOptions = {}
   ): Promise<Response> {
-    const { priority = 'medium', maxRetries = this.MAX_RETRIES, timeout = 30000, organizationId, ...fetchOptions } = options
+    const { priority = 'medium', timeout = 30000, organizationId, ...fetchOptions } = options
 
     return new Promise<Response>((resolve, reject) => {
       const requestId = this.generateRequestId()
@@ -264,7 +264,6 @@ export class GitHubRateLimiter {
    * Track API usage for an organization
    */
   private trackOrganizationUsage(organizationId: string): void {
-    const now = Date.now()
     const dayStart = new Date().setHours(0, 0, 0, 0)
     
     let orgLimits = this.organizationLimits.get(organizationId)
@@ -312,18 +311,24 @@ export class GitHubRateLimiter {
   /**
    * Check if an error is retryable
    */
-  private isRetryableError(error: any): boolean {
-    if (error.name === 'AbortError') return false // Don't retry timeouts
-    if (error.code === 'ENOTFOUND') return false // DNS errors
-    if (error.code === 'ECONNREFUSED') return false // Connection refused
-    
-    return true // Retry other network errors
+  private isRetryableError(error: unknown): boolean {
+    if (
+      typeof error === 'object' && error !== null &&
+      ('name' in error || 'code' in error)
+    ) {
+      const err = error as { name?: unknown; code?: unknown }
+      if (err.name === 'AbortError') return false // Don't retry timeouts
+      if (err.code === 'ENOTFOUND') return false // DNS errors
+      if (err.code === 'ECONNREFUSED') return false // Connection refused
+      return true // Retry other network errors
+    }
+    return false // Not retryable if not an object with expected properties
   }
 
   /**
    * Get current rate limit status
    */
-  getRateLimitStatus(resource = 'core'): RateLimit | null {
+  getRateLimitStatus(resource: string = 'core'): RateLimit | null {
     return this.rateLimits.get(resource) || null
   }
 

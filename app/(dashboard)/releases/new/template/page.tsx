@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useAuthStore } from '@/lib/store/use-auth'
 import { slugify } from '@/lib/utils' // Import slugify
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 
 const DEFAULT_RELEASE_NOTES_TEMPLATE = `
 # Release Notes - [Your Release Title/Version]
@@ -83,43 +84,41 @@ export default function NewReleaseNotesTemplatePage() {
   }
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <Card className="rounded-lg shadow bg-white dark:bg-gray-800">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
           Create Release Notes from Template
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6 p-6">
+        <p className="text-gray-600 dark:text-gray-400">
           Select a template below (template selection coming soon). For now, you can start with the default.
         </p>
-      </div>
-
-      {error && (
-        <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/50">
-          <p className="text-sm font-medium text-red-800 dark:text-red-200">Error: {error}</p>
+        {error && (
+          <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/50">
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">Error: {error}</p>
+          </div>
+        )}
+        <div>
+          <h2 className="text-lg font-medium text-gray-800 dark:text-gray-200">Default Template Preview</h2>
+          <pre className="mt-2 p-4 bg-gray-100 dark:bg-gray-700 rounded-md text-sm text-gray-800 dark:text-gray-200 overflow-x-auto">
+            <code>
+              {DEFAULT_RELEASE_NOTES_TEMPLATE}
+            </code>
+          </pre>
         </div>
-      )}
-
-      <div>
-        <h2 className="text-lg font-medium text-gray-800 dark:text-gray-200">Default Template Preview</h2>
-        <pre className="mt-2 p-4 bg-gray-100 dark:bg-gray-700 rounded-md text-sm text-gray-800 dark:text-gray-200 overflow-x-auto">
-          <code>
-            {DEFAULT_RELEASE_NOTES_TEMPLATE}
-          </code>
-        </pre>
-      </div>
-
-      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-        <button
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
             type="button"
             onClick={handleCreateFromTemplate}
             disabled={isCreating}
             className="inline-flex justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
-            >
+          >
             {isCreating ? 'Creating Draft...' : 'Use Default Template'}
-        </button>
-      </div>
-
-      {/* Placeholder for actual template selection UI will go here */}
-    </div>
+          </button>
+        </div>
+        {/* Placeholder for actual template selection UI will go here */}
+      </CardContent>
+    </Card>
   )
 } 

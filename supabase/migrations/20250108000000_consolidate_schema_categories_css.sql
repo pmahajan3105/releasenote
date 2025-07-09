@@ -83,6 +83,7 @@ ALTER TABLE css_themes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE css_customization_history ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for categories
+DROP POLICY IF EXISTS "Users can view categories for their organization" ON release_note_categories;
 CREATE POLICY "Users can view categories for their organization" ON release_note_categories
   FOR SELECT USING (
     organization_id IN (
@@ -91,6 +92,7 @@ CREATE POLICY "Users can view categories for their organization" ON release_note
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage categories for their organization" ON release_note_categories;
 CREATE POLICY "Users can manage categories for their organization" ON release_note_categories
   FOR ALL USING (
     organization_id IN (
@@ -101,22 +103,28 @@ CREATE POLICY "Users can manage categories for their organization" ON release_no
   );
 
 -- RLS policies for css_themes
+DROP POLICY IF EXISTS "Anyone can view public CSS themes" ON css_themes;
 CREATE POLICY "Anyone can view public CSS themes" ON css_themes
   FOR SELECT USING (is_public = true);
 
+DROP POLICY IF EXISTS "Users can view their own CSS themes" ON css_themes;
 CREATE POLICY "Users can view their own CSS themes" ON css_themes
   FOR SELECT USING (created_by = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create CSS themes" ON css_themes;
 CREATE POLICY "Users can create CSS themes" ON css_themes
   FOR INSERT WITH CHECK (created_by = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update their own CSS themes" ON css_themes;
 CREATE POLICY "Users can update their own CSS themes" ON css_themes
   FOR UPDATE USING (created_by = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete their own CSS themes" ON css_themes;
 CREATE POLICY "Users can delete their own CSS themes" ON css_themes
   FOR DELETE USING (created_by = auth.uid());
 
 -- RLS policies for css_customization_history
+DROP POLICY IF EXISTS "Users can view CSS history for their organization" ON css_customization_history;
 CREATE POLICY "Users can view CSS history for their organization" ON css_customization_history
   FOR SELECT USING (
     organization_id IN (
@@ -125,6 +133,7 @@ CREATE POLICY "Users can view CSS history for their organization" ON css_customi
     )
   );
 
+DROP POLICY IF EXISTS "Users can manage CSS history for their organization" ON css_customization_history;
 CREATE POLICY "Users can manage CSS history for their organization" ON css_customization_history
   FOR ALL USING (
     organization_id IN (
@@ -148,10 +157,12 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers for updated_at columns
+DROP TRIGGER IF EXISTS update_release_note_categories_updated_at ON release_note_categories;
 CREATE TRIGGER update_release_note_categories_updated_at 
   BEFORE UPDATE ON release_note_categories 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_css_themes_updated_at ON css_themes;
 CREATE TRIGGER update_css_themes_updated_at 
   BEFORE UPDATE ON css_themes 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
