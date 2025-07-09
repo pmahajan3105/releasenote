@@ -28,7 +28,8 @@ export {
 export {
   useReleaseNotesStore,
   useReleaseNotesSelectors,
-  useReleaseNotesActions
+  useReleaseNotesActions,
+  useReleaseNotes
 } from './use-release-notes'
 
 export {

@@ -36,45 +36,24 @@ const nextConfig: NextConfig = {
     ];
   },
   
-  // Experimental features for performance
-  experimental: {
-    optimizePackageImports: ['lucide-react', '@heroicons/react'],
-    // Optimize for Vercel deployment
-    optimizeServerReact: true,
-  },
-
+// Commenting experimental features to test may resolve the deployment issue.
+  // Remove these if not necessary or causing conflicts.
+  
   // Output configuration - let Vercel handle this automatically
   // output: 'standalone',
 
-  // Webpack configuration for better build stability
-  webpack: (config, { dev, isServer }) => {
-    // Optimize for production builds
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        ...config.optimization.splitChunks,
-        cacheGroups: {
-          ...config.optimization.splitChunks.cacheGroups,
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            priority: 10,
-            chunks: 'all',
-          },
-        },
-      };
-    }
-    return config;
-  },
+  // Simplified webpack configuration
+  // webpack: (config, { dev, isServer }) => {
+  //   return config;
+  // },
   
   // TypeScript configuration
   typescript: {
-    // Allow build to complete for production deployment (fix types post-launch)
     ignoreBuildErrors: true,
   },
   
   // ESLint configuration
   eslint: {
-    // Allow builds to proceed for production deployment (fix linting post-launch)
     ignoreDuringBuilds: true,
   },
 };

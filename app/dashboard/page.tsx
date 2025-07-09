@@ -23,16 +23,16 @@ export default function DashboardHomePage() {
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <h2 className="font-semibold text-gray-900 dark:text-white mb-2 md:mb-0 md:mr-6">Quick Actions</h2>
               <div className="flex flex-wrap gap-3">
-                <Link href="/releases/new/ai" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                <Link href="/dashboard/releases/new/ai" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                   <PlusIcon className="w-4 h-4 mr-1" /> Create Release Note
                 </Link>
-                <Link href="/configuration" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                <Link href="/dashboard/configuration" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                   <LinkIcon className="w-4 h-4 mr-1" /> Setup Integration
                 </Link>
-                <Link href="/ai-context" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                <Link href="/dashboard/ai-context" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                   <PencilIcon className="w-4 h-4 mr-1" /> AI Context Settings
                 </Link>
-                <Link href="/templates" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                <Link href="/dashboard/templates" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                   <EyeIcon className="w-4 h-4 mr-1" /> Template Management
                 </Link>
                 <Link href="/support" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
@@ -51,13 +51,13 @@ export default function DashboardHomePage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <EyeIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
             <p className="text-gray-500 dark:text-gray-400 mb-4 text-center">No release notes created yet.</p>
-            <Link href="/releases/new" className="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
+            <Link href="/dashboard/releases/start" className="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
               <PlusIcon className="w-4 h-4 mr-2" /> Create your first one
             </Link>
           </CardContent>
         </Card>
         <div className="mt-6 text-right">
-          <Link href="/releases" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">
+          <Link href="/dashboard/releases" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">
             View all release notes →
           </Link>
         </div>
@@ -70,13 +70,13 @@ export default function DashboardHomePage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <LinkIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
             <p className="text-gray-500 dark:text-gray-400 mb-4 text-center">No integrations connected yet.</p>
-            <Link href="/configuration" className="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
+            <Link href="/dashboard/configuration" className="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
               <PlusIcon className="w-4 h-4 mr-2" /> Connect your first integration
             </Link>
           </CardContent>
         </Card>
         <div className="mt-6 text-right">
-          <Link href="/configuration" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">
+          <Link href="/dashboard/configuration" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">
             Manage integrations →
           </Link>
         </div>
@@ -95,28 +95,28 @@ export default function DashboardHomePage() {
                   <LinkIcon className="w-5 h-5 text-primary-500" />
                 </span>
                 <span className="flex-1">Connect an integration (Jira, GitHub, etc.)</span>
-                <Link href="/configuration" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Setup</Link>
+                <Link href="/dashboard/configuration" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Setup</Link>
               </li>
               <li className="flex items-center">
                 <span className="mr-2">
                   <PencilIcon className="w-5 h-5 text-primary-500" />
                 </span>
                 <span className="flex-1">Configure your AI Context</span>
-                <Link href="/ai-context" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Configure</Link>
+                <Link href="/dashboard/ai-context" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Configure</Link>
               </li>
               <li className="flex items-center">
                 <span className="mr-2">
                   <PlusIcon className="w-5 h-5 text-primary-500" />
                 </span>
                 <span className="flex-1">Create your first Release Note</span>
-                <Link href="/releases/new/ai" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Create</Link>
+                <Link href="/dashboard/releases/new/ai" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Create</Link>
               </li>
               <li className="flex items-center">
                 <span className="mr-2">
                   <EyeIcon className="w-5 h-5 text-primary-500" />
                 </span>
                 <span className="flex-1">Explore and manage Templates</span>
-                <Link href="/templates" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Templates</Link>
+                <Link href="/dashboard/templates" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Templates</Link>
               </li>
             </ol>
             <div className="mt-4 text-right">

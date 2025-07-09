@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { useReleaseNotesStore } from '@/lib/store/use-release-notes'
+import { useReleaseNotes } from '@/lib/store'
 
 interface GitHubRepository {
   id: number

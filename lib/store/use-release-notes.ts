@@ -545,3 +545,16 @@ export const useReleaseNotesActions = () => {
     reset: store.reset
   }
 }
+
+// Composite hook for backward compatibility
+export const useReleaseNotes = () => {
+  const store = useReleaseNotesStore()
+  const selectors = useReleaseNotesSelectors()
+  const actions = useReleaseNotesActions()
+  
+  return {
+    ...store,
+    ...selectors,
+    ...actions
+  }
+}
