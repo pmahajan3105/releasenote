@@ -1,3 +1,4 @@
+
 # Releasenote App Dashboard Launch Plan
 
 ## Sync Status
@@ -76,12 +77,8 @@
   - [ ] Release Note Editor Preview
     - [ ] "Apply Changes" action
     - [ ] "Preview Public Page" step
-  - [ ] Settings & Team Management
-    - [ ] Settings menu categories: General, Appearance, SEO, AI Context, Templates, Team, Billing
-    - [ ] Team member management UI: list, invite, assign roles
   - [ ] End-to-End Journey Elements
     - [ ] Onboarding progress steps banner on dashboard
-    - [ ] Analytics card placeholders and empty state
     - [ ] Continue drafting section
     - [ ] Scheduled release notes list
 

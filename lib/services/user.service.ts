@@ -14,7 +14,7 @@ export interface UserProfile extends User {
   organizations?: Array<{
     organization_id: string
     role: string
-    organization: any
+    organization: Record<string, unknown>
   }>
 }
 
@@ -86,12 +86,24 @@ export class UserService {
   /**
    * Create or update user from auth
    */
-  async upsertFromAuth(authUser: any): Promise<User> {
+  async upsertFromAuth(authUser: Record<string, unknown>): Promise<User> {
+    let name: string | undefined = undefined;
+    let avatar_url: string | undefined = undefined;
+    if (typeof authUser.user_metadata === 'object' && authUser.user_metadata !== null) {
+      if (typeof (authUser.user_metadata as Record<string, unknown>).name === 'string') {
+        name = (authUser.user_metadata as Record<string, unknown>).name as string;
+      } else if (typeof (authUser.user_metadata as Record<string, unknown>).full_name === 'string') {
+        name = (authUser.user_metadata as Record<string, unknown>).full_name as string;
+      }
+      if (typeof (authUser.user_metadata as Record<string, unknown>).avatar_url === 'string') {
+        avatar_url = (authUser.user_metadata as Record<string, unknown>).avatar_url as string;
+      }
+    }
     const userData = {
       id: authUser.id,
       email: authUser.email,
-      name: authUser.user_metadata?.name || authUser.user_metadata?.full_name,
-      avatar_url: authUser.user_metadata?.avatar_url
+      name,
+      avatar_url
     }
 
     const { data: user, error } = await this.supabase
@@ -125,7 +137,7 @@ export class UserService {
   /**
    * Get user preferences
    */
-  async getPreferences(userId: string): Promise<any> {
+  async getPreferences(userId: string): Promise<Record<string, unknown>> {
     const { data: preferences, error } = await this.supabase
       .from('user_preferences')
       .select('*')
@@ -142,7 +154,7 @@ export class UserService {
   /**
    * Update user preferences
    */
-  async updatePreferences(userId: string, preferences: any): Promise<void> {
+  async updatePreferences(userId: string, preferences: Record<string, unknown>): Promise<void> {
     const { error } = await this.supabase
       .from('user_preferences')
       .upsert({

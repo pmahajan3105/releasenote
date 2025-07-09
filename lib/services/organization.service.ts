@@ -3,12 +3,8 @@ import { cookies } from 'next/headers'
 import type { 
   Database, 
   Organization, 
-  OrganizationMember, 
-  OrganizationInsert, 
-  OrganizationUpdate 
+  OrganizationMember
 } from '@/types/database'
-
-type SupabaseClient = ReturnType<typeof createRouteHandlerClient<Database>>
 
 export interface OrganizationWithMembership extends Organization {
   membership?: OrganizationMember
@@ -138,7 +134,7 @@ export class OrganizationService {
     name: string, 
     slug: string, 
     ownerId: string, 
-    settings?: any
+    settings?: Record<string, unknown>
   ): Promise<Organization> {
     // Check if slug is already taken
     const existing = await this.findBySlug(slug)
@@ -187,7 +183,7 @@ export class OrganizationService {
    */
   async update(
     id: string, 
-    data: { name?: string; slug?: string; settings?: any }
+    data: { name?: string; slug?: string; settings?: Record<string, unknown> }
   ): Promise<Organization> {
     // Check if slug is already taken by another organization
     if (data.slug) {
@@ -292,28 +288,5 @@ export class OrganizationService {
     }
 
     return member
-  }
-
-  /**
-   * Get organization members
-   */
-  async getMembers(organizationId: string): Promise<Array<OrganizationMember & { user: any }>> {
-    const { data: members, error } = await this.supabase
-      .from('organization_members')
-      .select(`
-        *,
-        users (
-          id,
-          email,
-          name
-        )
-      `)
-      .eq('organization_id', organizationId)
-
-    if (error) {
-      throw new Error(`Failed to fetch organization members: ${error.message}`)
-    }
-
-    return members || []
   }
 }

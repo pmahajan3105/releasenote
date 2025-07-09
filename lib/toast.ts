@@ -57,7 +57,7 @@ class ToastService {
     return this.success(`${action} completed successfully`)
   }
 
-  operationError(action: string, error?: any) {
+  operationError(action: string, error?: unknown) {
     console.error(`${action} failed:`, error)
     return this.error(`Failed to ${action}. Please try again.`)
   }

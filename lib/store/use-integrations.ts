@@ -84,22 +84,22 @@ interface IntegrationsState {
   
   // Actions - API Operations
   fetchIntegrations: (organizationId: string) => Promise<void>
-  connectIntegration: (type: string, config: Record<string, any>) => Promise<Integration | null>
+  connectIntegration: (type: string, config: Record<string, unknown>) => Promise<Integration | null>
   disconnectIntegration: (id: string) => Promise<void>
-  testConnection: (type: string, config?: Record<string, any>) => Promise<boolean>
+  testConnection: (type: string, config?: Record<string, unknown>) => Promise<boolean>
   
   // Actions - GitHub API
   fetchGitHubRepositories: () => Promise<void>
-  fetchGitHubCommits: (owner: string, repo: string, since?: string) => Promise<any[]>
-  fetchGitHubPullRequests: (owner: string, repo: string, state?: string) => Promise<any[]>
+  fetchGitHubCommits: (owner: string, repo: string, since?: string) => Promise<unknown[]>
+  fetchGitHubPullRequests: (owner: string, repo: string, state?: string) => Promise<unknown[]>
   
   // Actions - Jira API
   fetchJiraProjects: () => Promise<void>
-  fetchJiraIssues: (projectKey: string, jql?: string) => Promise<any[]>
+  fetchJiraIssues: (projectKey: string, jql?: string) => Promise<unknown[]>
   
   // Actions - Linear API
   fetchLinearTeams: () => Promise<void>
-  fetchLinearIssues: (teamId: string, filter?: Record<string, any>) => Promise<any[]>
+  fetchLinearIssues: (teamId: string, filter?: Record<string, unknown>) => Promise<unknown[]>
   
   // UI Actions
   setLoading: (loading: boolean) => void
@@ -203,7 +203,7 @@ export const useIntegrationsStore = create<IntegrationsState>()(
           }
         },
         
-        connectIntegration: async (type: string, config: Record<string, any>) => {
+        connectIntegration: async (type: string, config: Record<string, unknown>) => {
           try {
             set({ isConnecting: true, error: null }, false, 'connectIntegrationStart')
             const response = await fetch('/api/integrations', {
@@ -244,7 +244,7 @@ export const useIntegrationsStore = create<IntegrationsState>()(
           }
         },
         
-        testConnection: async (type: string, config?: Record<string, any>) => {
+        testConnection: async (type: string, config?: Record<string, unknown>) => {
           try {
             set({ isLoading: true, error: null }, false, 'testConnectionStart')
             const response = await fetch(`/api/integrations/${type}/test-connection`, {
@@ -373,7 +373,7 @@ export const useIntegrationsStore = create<IntegrationsState>()(
           }
         },
         
-        fetchLinearIssues: async (teamId: string, filter?: Record<string, any>) => {
+        fetchLinearIssues: async (teamId: string, filter?: Record<string, unknown>) => {
           try {
             const params = new URLSearchParams({ teamId })
             if (filter) {

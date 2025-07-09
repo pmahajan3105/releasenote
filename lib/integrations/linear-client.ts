@@ -1,4 +1,5 @@
 import type { ProjectFilterInput } from '../types/linear'
+
 /**
  * Linear API Client with GraphQL support
  */
@@ -399,6 +400,21 @@ export class LinearAPIClient {
                 type
               }
             }
+          }
+        }
+      }
+    `
+    
+    const data = await this.request(query, { issueId }, token)
+    if (data && typeof data === 'object' && 'issue' in data) {
+      return (data as { issue: unknown }).issue
+    }
+    return undefined
+  }
+
+  /**
+   * Get projects
+   */
   async getProjects(
     token: string,
     options: {
@@ -474,7 +490,7 @@ export class LinearAPIClient {
           }
         }
       }
-    `;
+    `
 
     const data = await this.request(query, { first, after, includeArchived }, token)
     if (data && typeof data === 'object' && 'projects' in data) {
@@ -497,57 +513,17 @@ export class LinearAPIClient {
   ): Promise<unknown> {
     const { first = 50, teamId, includeArchived = false } = options
     
-    const searchQuery = `query SearchIssues($query: String!, $first: Int!, $teamId: String, $includeArchived: Boolean) {
-      issueSearch(
-        query: $query,
-        first: $first,
-        teamId: $teamId,
-        includeArchived: $includeArchived
-      ) {
-        nodes {
-          id
-          identifier
-          number
-          title
-          description
-          priority
-          url
-          createdAt
-          updatedAt
-          state {
+    const searchQuery = `
+      query SearchIssues($query: String!, $first: Int!, $teamId: String, $includeArchived: Boolean) {
+        issueSearch(
+          query: $query,
+          first: $first,
+          teamId: $teamId,
+          includeArchived: $includeArchived
+        ) {
+          nodes {
             id
-            name
-            type
-            color
-          }
-          team {
-            id
-            name
-            key
-          }
-          assignee {
-            id
-            name
-            displayName
-            avatarUrl
-          }
-          labels {
-            nodes {
-              id
-              name
-              color
-            }
-          }
-        }
-        pageInfo {
-          hasNextPage
-          hasPreviousPage
-          startCursor
-          endCursor
-        }
-      }
-    }
-    `
+            identifier
             number
             title
             description
@@ -587,8 +563,8 @@ export class LinearAPIClient {
             endCursor
           }
         }
-      };
-    `;
+      }
+    `
     
     const variables: Record<string, unknown> = {
       query,
@@ -625,7 +601,7 @@ export class LinearAPIClient {
       return {
         success: true,
         user: viewer,
-        organization: viewer.organization
+        organization: (viewer as any).organization
       }
     } catch (error) {
       return {
@@ -633,20 +609,6 @@ export class LinearAPIClient {
         error: error instanceof Error ? error.message : 'Unknown error'
       }
     }
-  }
-}
-
-/**
- * Custom error class for Linear API errors
- */
-export class LinearAPIError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public data?: unknown
-  ) {
-    super(message)
-    this.name = 'LinearAPIError'
   }
 }
 

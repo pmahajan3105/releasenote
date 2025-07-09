@@ -11,7 +11,7 @@ export interface Integration {
   access_token: string
   refresh_token?: string
   expires_at?: string
-  user_info: any
+  user_info: Record<string, unknown>
   created_at: string
   updated_at: string
 }
@@ -84,7 +84,7 @@ export class IntegrationService {
       access_token: string
       refresh_token?: string
       expires_at?: string
-      user_info: any
+      user_info: Record<string, unknown>
     }
   ): Promise<Integration> {
     const { data: integration, error } = await this.supabase
@@ -131,29 +131,31 @@ export class IntegrationService {
   async testConnection(
     organizationId: string,
     provider: 'github' | 'jira' | 'linear'
-  ): Promise<{ success: boolean; error?: string; userInfo?: any }> {
+  ): Promise<{ success: boolean; error?: string; userInfo?: Record<string, unknown> }> {
     try {
       const integration = await this.findByProvider(organizationId, provider)
       if (!integration) {
         return { success: false, error: 'Integration not found' }
       }
 
-      let client: any
-      let userInfo: any
+      let userInfo: Record<string, unknown> | null = null;
 
       switch (provider) {
-        case 'github':
-          client = new GitHubClient(integration.access_token)
-          userInfo = await client.getUser()
-          break
-        case 'jira':
-          client = new JiraClient(integration.access_token)
-          userInfo = await client.getCurrentUser()
-          break
-        case 'linear':
-          client = new LinearClient(integration.access_token)
-          userInfo = await client.getViewer()
-          break
+        case 'github': {
+          const client = new GitHubClient(integration.access_token);
+          userInfo = await client.getUser();
+          break;
+        }
+        case 'jira': {
+          const client = new JiraClient(integration.access_token);
+          userInfo = await client.getCurrentUser();
+          break;
+        }
+        case 'linear': {
+          const client = new LinearClient(integration.access_token);
+          userInfo = await client.getViewer();
+          break;
+        }
         default:
           return { success: false, error: 'Unknown provider' }
       }
@@ -200,7 +202,7 @@ export class IntegrationService {
     owner: string,
     repo: string,
     options?: { since?: string; until?: string; branch?: string }
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const integration = await this.findByProvider(organizationId, 'github')
     if (!integration) {
       throw new Error('GitHub integration not found')
@@ -213,7 +215,7 @@ export class IntegrationService {
   /**
    * Jira specific methods
    */
-  async getJiraProjects(organizationId: string): Promise<any[]> {
+  async getJiraProjects(organizationId: string): Promise<unknown[]> {
     const integration = await this.findByProvider(organizationId, 'jira')
     if (!integration) {
       throw new Error('Jira integration not found')
@@ -240,7 +242,7 @@ export class IntegrationService {
   /**
    * Linear specific methods
    */
-  async getLinearTeams(organizationId: string): Promise<any[]> {
+  async getLinearTeams(organizationId: string): Promise<unknown[]> {
     const integration = await this.findByProvider(organizationId, 'linear')
     if (!integration) {
       throw new Error('Linear integration not found')

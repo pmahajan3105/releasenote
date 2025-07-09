@@ -296,7 +296,7 @@ export const useReleaseNotesStore = create<ReleaseNotesState>()(
           }
         },
         
-        generateWithTemplate: async (templateId: string, data: any) => {
+        generateWithTemplate: async (templateId: string, data: Record<string, unknown>) => {
           try {
             set({ isLoading: true, error: null }, false, 'generateWithTemplateStart')
             const response = await fetch('/api/ai/generate', {

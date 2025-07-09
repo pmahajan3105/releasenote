@@ -1,9 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateSlug } from '@/lib/utils'
-import type { Database, ReleaseNote, ReleaseNoteInsert, ReleaseNoteUpdate } from '@/types/database'
-
-type SupabaseClient = ReturnType<typeof createRouteHandlerClient<Database>>
+import type { Database, ReleaseNote } from '@/types/database'
 
 export interface CreateReleaseNoteData {
   title?: string
@@ -63,7 +61,7 @@ export class ReleaseNotesService {
   async findAll(
     organizationId: string, 
     filters: ReleaseNoteFilters = {}
-  ): Promise<{ data: ReleaseNote[]; pagination: any }> {
+  ): Promise<{ data: ReleaseNote[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
     const { status, search, page = 1, limit = 20 } = filters
     const offset = (page - 1) * limit
 
@@ -230,7 +228,7 @@ export class ReleaseNotesService {
     organizationId: string, 
     data: UpdateReleaseNoteData
   ): Promise<ReleaseNote> {
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
 
     const allowedFields = [
       'title', 'description', 'content_markdown', 'content_html',

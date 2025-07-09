@@ -15,7 +15,7 @@ interface Notification {
 interface Modal {
   id: string
   type: string
-  data?: any
+  data?: Record<string, unknown>
   isOpen: boolean
 }
 
@@ -46,7 +46,7 @@ interface UIState {
   toggleSidebarCollapsed: () => void
   
   // Actions - Modals
-  openModal: (type: string, data?: any) => string
+  openModal: (type: string, data?: Record<string, unknown>) => string
   closeModal: (id: string) => void
   closeAllModals: () => void
   
@@ -95,7 +95,7 @@ export const useUIStore = create<UIState>()(
           set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }), false, 'toggleSidebarCollapsed'),
         
         // Modal actions
-        openModal: (type: string, data?: any) => {
+        openModal: (type: string, data?: Record<string, unknown>) => {
           const id = Math.random().toString(36).substr(2, 9)
           const modal: Modal = { id, type, data, isOpen: true }
           
