@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Toaster } from '@/components/ui/toast'
 import { FormSkeleton } from '@/components/ui/skeleton'
 
 // Type for organization settings
@@ -103,27 +102,22 @@ export default function ConfigurationPage() {
 
   if (authLoading || isLoading) {
     return (
-      <>
-        <Toaster />
-        <Card className="dark:bg-gray-800 rounded-lg shadow">
-          <CardHeader>
-            <div className="h-6 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
-          </CardHeader>
-          <CardContent>
-            <FormSkeleton />
-          </CardContent>
-        </Card>
-      </>
+      <Card className="dark:bg-gray-800 rounded-lg shadow">
+        <CardHeader>
+          <div className="h-6 w-32 bg-gray-300 dark:bg-gray-700 rounded animate-pulse"></div>
+        </CardHeader>
+        <CardContent>
+          <FormSkeleton />
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <>
-      <Toaster />
-      <Card className="dark:bg-gray-800 rounded-lg shadow">
-        <CardHeader>
-          <CardTitle>Configuration</CardTitle>
-        </CardHeader>
+    <Card className="dark:bg-gray-800 rounded-lg shadow">
+      <CardHeader>
+        <CardTitle>Configuration</CardTitle>
+      </CardHeader>
         <CardContent>
           {error && (
             <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/50">
@@ -188,6 +182,5 @@ export default function ConfigurationPage() {
           </div>
         </CardContent>
       </Card>
-    </>
   )
 }

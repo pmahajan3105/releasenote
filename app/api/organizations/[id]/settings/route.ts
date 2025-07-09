@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClientComponentClient({ cookies })
+    const supabase = createRouteHandlerClient({ cookies })
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -46,7 +46,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClientComponentClient({ cookies })
+    const supabase = createRouteHandlerClient({ cookies })
     
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
