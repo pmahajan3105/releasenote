@@ -39,6 +39,31 @@ const nextConfig: NextConfig = {
   // Experimental features for performance
   experimental: {
     optimizePackageImports: ['lucide-react', '@heroicons/react'],
+    // Optimize for Vercel deployment
+    optimizeServerReact: true,
+  },
+
+  // Output configuration for Vercel
+  output: 'standalone',
+
+  // Webpack configuration for better build stability
+  webpack: (config, { dev, isServer }) => {
+    // Optimize for production builds
+    if (!dev && !isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks.cacheGroups,
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            priority: 10,
+            chunks: 'all',
+          },
+        },
+      };
+    }
+    return config;
   },
   
   // TypeScript configuration

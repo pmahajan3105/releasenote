@@ -2,7 +2,6 @@ import './globals.css'
 import '@/components/editor/prism-theme.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { MainLayout } from '@/components/layout/main-layout'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PrismLoader } from '@/components/editor/prism-loader'
 import { initializeDatabaseOptimization } from '@/lib/database-config'
@@ -30,9 +29,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <PrismLoader />
         <ErrorBoundary>
-          <MainLayout>
-            {children}
-          </MainLayout>
+          {children}
         </ErrorBoundary>
       </body>
     </html>
