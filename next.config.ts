@@ -43,8 +43,8 @@ const nextConfig: NextConfig = {
     optimizeServerReact: true,
   },
 
-  // Output configuration for Vercel
-  output: 'standalone',
+  // Output configuration - let Vercel handle this automatically
+  // output: 'standalone',
 
   // Webpack configuration for better build stability
   webpack: (config, { dev, isServer }) => {
