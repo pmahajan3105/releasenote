@@ -25,11 +25,7 @@ type IntegrationStatus = {
   name: string // e.g., Jira domain or GitHub org/repo
 }
 
-interface DashboardClientWrapperProps {
-  children: React.ReactNode
-}
-
-export function DashboardClientWrapper({ children }: DashboardClientWrapperProps) {
+export default function DashboardClientContent() {
   const user = useAuthStore((state) => state.user)
   const { plan, isLoading: authLoading } = useAuthSelectors()
   const supabase = createClientComponentClient()
@@ -117,8 +113,6 @@ export function DashboardClientWrapper({ children }: DashboardClientWrapperProps
         </p>
       </section>
 
-      {/* Include the server-side content */}
-      {children}
 
       {/* 3. Recent Release Notes */} 
       <section>
