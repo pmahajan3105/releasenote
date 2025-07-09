@@ -20,7 +20,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 const navigation = [
-  { name: 'Home', href: '/dashboard', icon: HomeIcon },
+  { name: 'Home', href: '/', icon: HomeIcon },
   { name: 'Release Notes', href: '/releases', icon: DocumentTextIcon },
   { name: 'Configuration', href: '/configuration', icon: Cog6ToothIcon },
   { name: 'AI Context', href: '/ai-context', icon: PencilIcon },
@@ -64,7 +64,7 @@ export default function DashboardLayout({
           <li>
             <ul role="list" className="-mx-2 space-y-1">
               {navigation.map((item) => {
-                const current = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                const current = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
                 return (
                   <li key={item.name}>
                     <Link

@@ -6,7 +6,7 @@
 import { logger } from './logger'
 
 interface CacheItem {
-  value: any
+  value: unknown
   expiry: number
 }
 
@@ -14,7 +14,7 @@ class MemoryCache {
   private cache = new Map<string, CacheItem>()
   private maxSize = 1000
 
-  get(key: string): any | null {
+  get(key: string): unknown | null {
     const item = this.cache.get(key)
     if (!item) return null
 
@@ -26,7 +26,7 @@ class MemoryCache {
     return item.value
   }
 
-  set(key: string, value: any, ttlSeconds: number = 3600): void {
+  set(key: string, value: unknown, ttlSeconds: number = 3600): void {
     // Clean up expired items if cache is getting full
     if (this.cache.size >= this.maxSize) {
       this.cleanup()
@@ -81,7 +81,7 @@ class MemoryCache {
 
 class CacheManager {
   private memoryCache = new MemoryCache()
-  private redisClient: any = null
+  private redisClient: unknown = null
 
   constructor() {
     this.initializeRedis()
@@ -114,7 +114,7 @@ class CacheManager {
     }
   }
 
-  async get(key: string): Promise<any | null> {
+  async get(key: string): Promise<unknown | null> {
     try {
       // L1: Memory cache (fastest)
       const memoryResult = this.memoryCache.get(key)
@@ -140,7 +140,7 @@ class CacheManager {
     }
   }
 
-  async set(key: string, value: any, ttlSeconds: number = 3600): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds: number = 3600): Promise<void> {
     try {
       // Store in memory cache
       this.memoryCache.set(key, value, Math.min(ttlSeconds, 300)) // Max 5 minutes in memory
@@ -207,7 +207,7 @@ function generateCacheKey(orgSlug: string, releaseSlug: string): string {
 export async function getCachedReleaseNote(
   orgSlug: string, 
   releaseSlug: string
-): Promise<any | null> {
+): Promise<unknown | null> {
   const key = generateCacheKey(orgSlug, releaseSlug)
   return cacheManager.get(key)
 }
@@ -215,7 +215,7 @@ export async function getCachedReleaseNote(
 export async function setCachedReleaseNote(
   orgSlug: string, 
   releaseSlug: string, 
-  data: any, 
+  data: unknown, 
   ttlSeconds: number = 3600
 ): Promise<void> {
   const key = generateCacheKey(orgSlug, releaseSlug)
@@ -254,7 +254,7 @@ export async function getCache(key: string) {
   return cacheManager.get(key)
 }
 
-export async function setCache(key: string, value: any, ttlSeconds: number = 3600) {
+export async function setCache(key: string, value: unknown, ttlSeconds: number = 3600) {
   return cacheManager.set(key, value, ttlSeconds)
 }
 

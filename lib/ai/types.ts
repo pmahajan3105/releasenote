@@ -20,7 +20,7 @@ export interface AiProvider {
   ): Promise<string>
   
   generateReleaseNotes(
-    commits: any[],
+    commits: unknown[],
     options?: {
       template?: string
       tone?: 'professional' | 'casual' | 'technical'

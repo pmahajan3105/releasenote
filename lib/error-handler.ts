@@ -93,40 +93,50 @@ export class AppErrorHandler {
   }
 }
 
-export function handleSupabaseError(error: any): AppError {
-  if (error?.code) {
-    switch (error.code) {
+export function handleSupabaseError(error: unknown): AppError {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const err = error as { code: string; message?: string; details?: string };
+    switch (err.code) {
       case '23505': // unique_violation
         return {
           type: 'validation',
           message: 'This item already exists.',
-          details: error.message
+          details: err.message
         }
       case '23503': // foreign_key_violation
         return {
           type: 'validation',
           message: 'Cannot complete action due to related data.',
-          details: error.message
+          details: err.message
         }
       case 'PGRST116': // Row Level Security
         return {
           type: 'authorization',
           message: 'You don\'t have permission to access this data.',
-          details: error.message
+          details: err.message
         }
       default:
         return {
           type: 'server',
-          message: error.message || 'Database error occurred.',
-          details: error.details
+          message: err.message || 'Database error occurred.',
+          details: err.details
         }
     }
   }
   
+  let message = 'An unexpected database error occurred.'
+  let details: string | undefined = undefined
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message?: unknown }).message === 'string') {
+    message = (error as { message: string }).message
+    details = (error as { message: string }).message
+  } else if (typeof error === 'string') {
+    message = error
+    details = error
+  }
   return {
     type: 'generic',
-    message: error.message || 'An unexpected database error occurred.',
-    details: error.toString()
+    message,
+    details
   }
 }
 

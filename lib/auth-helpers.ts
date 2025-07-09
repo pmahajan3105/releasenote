@@ -3,11 +3,11 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
 export interface AuthContext {
-  user: any
-  session: any
+  user: Record<string, unknown>
+  session: Record<string, unknown>
   organizationId: string
   userRole: string
-  organization: any
+  organization: Record<string, unknown>
 }
 
 export interface AuthError {
@@ -81,7 +81,7 @@ export async function validateUserSession(request: NextRequest): Promise<AuthCon
 export async function validateOrganizationAccess(
   userId: string, 
   organizationId: string
-): Promise<{ organization: any; userRole: string } | AuthError> {
+): Promise<{ organization: Record<string, unknown>; userRole: string } | AuthError> {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -130,7 +130,7 @@ export async function validateOrganizationAccess(
  * })
  * ```
  */
-export function withAuth<T extends any[]>(
+export function withAuth<T extends unknown[]>(
   handler: (request: NextRequest, context: AuthContext, ...args: T) => Promise<Response>
 ) {
   return async (request: NextRequest, ...args: T): Promise<Response> => {
@@ -154,7 +154,7 @@ export function withAuth<T extends any[]>(
  * Higher-order function for API routes that need organization validation
  * Usage: export const POST = withOrgAuth(async (request, context, params) => { ... })
  */
-export function withOrgAuth<T extends any[]>(
+export function withOrgAuth<T extends unknown[]>(
   handler: (request: NextRequest, context: AuthContext, ...args: T) => Promise<Response>
 ) {
   return withAuth(async (request: NextRequest, context: AuthContext, ...args: T) => {

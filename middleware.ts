@@ -13,11 +13,12 @@ import {
 
 // Protected routes that require authentication
 const protectedRoutes = [
-  '/dashboard',
   '/releases',
   '/settings',
   '/integrations',
-  '/configuration'
+  '/configuration',
+  '/ai-context',
+  '/templates'
 ]
 
 // API routes that need rate limiting
@@ -82,8 +83,11 @@ export async function middleware(request: NextRequest) {
     )
   }
 
-  // Check for protected routes
-  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+  // Check for protected routes (including root dashboard)
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route)) || 
+                          pathname === '/'
+  
+  if (isProtectedRoute) {
     try {
       const supabase = createServerComponentClient({ cookies })
       const { data: { session } } = await supabase.auth.getSession()

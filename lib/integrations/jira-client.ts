@@ -86,14 +86,14 @@ export class JiraAPIClient {
   /**
    * Get accessible resources (Jira sites)
    */
-  async getAccessibleResources(token: string): Promise<any[]> {
+  async getAccessibleResources(token: string): Promise<unknown[]> {
     return this.request('/oauth/token/accessible-resources', { token })
   }
 
   /**
    * Get current user information
    */
-  async getCurrentUser(token: string, cloudId: string): Promise<any> {
+  async getCurrentUser(token: string, cloudId: string): Promise<unknown> {
     return this.request('/rest/api/3/myself', { token, cloudId })
   }
 
@@ -259,14 +259,14 @@ export class JiraAPIClient {
   /**
    * Get issue types for a project
    */
-  async getProjectIssueTypes(token: string, cloudId: string, projectId: string): Promise<any> {
+  async getProjectIssueTypes(token: string, cloudId: string, projectId: string): Promise<unknown> {
     return this.request(`/rest/api/3/project/${projectId}/statuses`, { token, cloudId })
   }
 
   /**
    * Get all issue types
    */
-  async getIssueTypes(token: string, cloudId: string): Promise<any> {
+  async getIssueTypes(token: string, cloudId: string): Promise<unknown> {
     return this.request('/rest/api/3/issuetype', { token, cloudId })
   }
 
@@ -326,8 +326,8 @@ export class JiraAPIClient {
    */
   async testConnection(token: string): Promise<{
     success: boolean
-    resources: any[]
-    user?: any
+    resources: unknown[]
+    user?: unknown
     error?: string
   }> {
     try {
@@ -367,7 +367,7 @@ export class JiraAPIError extends Error {
   constructor(
     message: string,
     public status: number,
-    public data?: any
+    public data?: unknown
   ) {
     super(message)
     this.name = 'JiraAPIError'
