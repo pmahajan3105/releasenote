@@ -6,6 +6,10 @@
 -- 1. ADVANCED INDEXING STRATEGY
 -- ======================================
 
+
+-- Ensure is_public column exists
+ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+
 -- Release Notes Performance Indexes
 -- Primary query pattern: organization_id + status + created_at (filtering and sorting)
 CREATE INDEX IF NOT EXISTS idx_release_notes_org_status_created 
@@ -34,9 +38,9 @@ CREATE INDEX IF NOT EXISTS idx_release_notes_org_version
 ON release_notes (organization_id, version) 
 WHERE version IS NOT NULL;
 
--- Author-based queries
-CREATE INDEX IF NOT EXISTS idx_release_notes_author_created 
-ON release_notes (author_id, created_at DESC);
+-- Published by queries
+CREATE INDEX IF NOT EXISTS idx_release_notes_published_by_created 
+ON release_notes (published_by, created_at DESC);
 
 -- ======================================
 -- Organization Performance Indexes
@@ -58,7 +62,7 @@ WHERE settings->>'custom_domain' IS NOT NULL;
 
 -- Integration type and status queries
 CREATE INDEX IF NOT EXISTS idx_integrations_org_type_status 
-ON integrations (organization_id, type, (config->>'status')) 
+ON integrations (org_id, type, (config->>'status')) 
 WHERE config->>'status' IS NOT NULL;
 
 -- External ID lookup for integration sync
@@ -93,11 +97,11 @@ WHERE type IS NOT NULL;
 
 -- User role-based queries (most common pattern)
 CREATE INDEX IF NOT EXISTS idx_org_members_user_role 
-ON organization_members (user_id, role, organization_id);
+ON organization_members (user_id, role, org_id);
 
 -- Organization member listing
 CREATE INDEX IF NOT EXISTS idx_org_members_org_role_created 
-ON organization_members (organization_id, role, created_at DESC);
+ON organization_members (org_id, role, created_at DESC);
 
 -- ======================================
 -- Subscribers Performance Indexes
@@ -105,7 +109,7 @@ ON organization_members (organization_id, role, created_at DESC);
 
 -- Active subscribers for email campaigns
 CREATE INDEX IF NOT EXISTS idx_subscribers_org_active 
-ON subscribers (organization_id, created_at DESC) 
+ON subscribers (org_id, created_at DESC) 
 WHERE status = 'active';
 
 -- Email lookup for subscription management
@@ -119,7 +123,7 @@ WHERE status = 'active';
 
 -- Function for optimized release notes search with ranking
 CREATE OR REPLACE FUNCTION search_release_notes(
-  p_organization_id UUID,
+  p_org_id UUID,
   p_search_query TEXT,
   p_status TEXT DEFAULT NULL,
   p_limit INTEGER DEFAULT 20,
@@ -132,7 +136,7 @@ RETURNS TABLE (
   content_markdown TEXT,
   status TEXT,
   created_at TIMESTAMPTZ,
-  published_at TIMESTAMPTZ,
+  publish_date TIMESTAMPTZ,
   rank REAL
 ) AS $$
 BEGIN
@@ -144,13 +148,13 @@ BEGIN
     rn.content_markdown,
     rn.status,
     rn.created_at,
-    rn.published_at,
+    rn.publish_date,
     ts_rank(
       to_tsvector('english', rn.title || ' ' || COALESCE(rn.content_markdown, '')),
       plainto_tsquery('english', p_search_query)
     ) as rank
   FROM release_notes rn
-  WHERE rn.organization_id = p_organization_id
+  WHERE rn.org_id = p_org_id
     AND (p_status IS NULL OR rn.status = p_status)
     AND (
       to_tsvector('english', rn.title) @@ plainto_tsquery('english', p_search_query)
@@ -163,7 +167,7 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 -- Function for getting organization dashboard stats (optimized)
-CREATE OR REPLACE FUNCTION get_organization_stats(p_organization_id UUID)
+CREATE OR REPLACE FUNCTION get_organization_stats(p_org_id UUID)
 RETURNS TABLE (
   total_release_notes INTEGER,
   published_notes INTEGER,
@@ -174,17 +178,17 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   SELECT 
-    (SELECT COUNT(*)::INTEGER FROM release_notes WHERE organization_id = p_organization_id),
-    (SELECT COUNT(*)::INTEGER FROM release_notes WHERE organization_id = p_organization_id AND status = 'published'),
-    (SELECT COUNT(*)::INTEGER FROM release_notes WHERE organization_id = p_organization_id AND status = 'draft'),
-    (SELECT COUNT(*)::INTEGER FROM subscribers WHERE organization_id = p_organization_id AND status = 'active'),
-    (SELECT COUNT(*)::INTEGER FROM integrations WHERE organization_id = p_organization_id AND config->>'status' = 'active');
+    (SELECT COUNT(*)::INTEGER FROM release_notes WHERE org_id = p_org_id),
+    (SELECT COUNT(*)::INTEGER FROM release_notes WHERE org_id = p_org_id AND status = 'published'),
+    (SELECT COUNT(*)::INTEGER FROM release_notes WHERE org_id = p_org_id AND status = 'draft'),
+    (SELECT COUNT(*)::INTEGER FROM subscribers WHERE org_id = p_org_id AND status = 'active'),
+    (SELECT COUNT(*)::INTEGER FROM integrations WHERE org_id = p_org_id AND config->>'status' = 'active');
 END;
 $$ LANGUAGE plpgsql STABLE;
 
 -- Function for recent activity feed (optimized with UNION ALL)
 CREATE OR REPLACE FUNCTION get_recent_activity(
-  p_organization_id UUID,
+  p_org_id UUID,
   p_limit INTEGER DEFAULT 10
 )
 RETURNS TABLE (
@@ -202,7 +206,7 @@ BEGIN
       title,
       created_at
     FROM release_notes 
-    WHERE organization_id = p_organization_id
+    WHERE org_id = p_org_id
     ORDER BY created_at DESC
     LIMIT p_limit
   )
@@ -214,7 +218,7 @@ BEGIN
       COALESCE(name, email) as title,
       created_at
     FROM subscribers 
-    WHERE organization_id = p_organization_id
+    WHERE org_id = p_org_id
     ORDER BY created_at DESC
     LIMIT p_limit
   )

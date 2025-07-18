@@ -141,12 +141,10 @@ CREATE POLICY subscribers_policy ON subscribers
     )
   );
 
--- Organization Members: Users can only see members of organizations they belong to
+-- Organization Members: Users can only see their own memberships
 CREATE POLICY organization_members_policy ON organization_members
   FOR ALL USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
-    )
+    user_id = auth.uid()
   );
 
 -- Create function to update updated_at timestamp

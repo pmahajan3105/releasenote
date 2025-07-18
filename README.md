@@ -33,7 +33,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/pmahajan3105/releasenote.git
+git clone____________________
 cd releasenote
 
 # Install dependencies

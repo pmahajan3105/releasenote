@@ -26,7 +26,7 @@ END $$;
 -- Update existing records to have organization_id (if possible)
 UPDATE ticket_cache 
 SET organization_id = (
-    SELECT i.organization_id 
+    SELECT i.org_id 
     FROM integrations i 
     WHERE i.id = ticket_cache.integration_id
     LIMIT 1

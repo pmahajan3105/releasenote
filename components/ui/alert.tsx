@@ -11,6 +11,7 @@ const alertVariants = cva(
         default: "bg-background text-foreground",
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        brand: "bg-primary-50 border-primary-200 text-primary-800 dark:bg-primary-900 dark:border-primary-800 dark:text-primary-200",
       },
     },
     defaultVariants: {
@@ -19,17 +20,39 @@ const alertVariants = cva(
   }
 )
 
-const Alert = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
->(({ className, variant, ...props }, ref) => (
-  <div
-    ref={ref}
-    role="alert"
-    className={cn(alertVariants({ variant }), className)}
-    {...props}
-  />
-))
+interface AlertProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof alertVariants> {
+  title?: string
+  description?: string
+  actions?: React.ReactNode
+}
+
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
+  ({ className, variant, title, description, actions, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      role="alert"
+      className={cn(alertVariants({ variant }), className)}
+      {...props}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          {title && (
+            <AlertTitle>{title}</AlertTitle>
+          )}
+          {description && (
+            <AlertDescription>{description}</AlertDescription>
+          )}
+          {children}
+        </div>
+        {actions && (
+          <div className="ml-4 flex-shrink-0">
+            {actions}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+)
 Alert.displayName = "Alert"
 
 const AlertTitle = React.forwardRef<
@@ -56,4 +79,23 @@ const AlertDescription = React.forwardRef<
 ))
 AlertDescription.displayName = "AlertDescription"
 
-export { Alert, AlertTitle, AlertDescription }
+const AlertActions = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex gap-2", className)}
+    {...props}
+  />
+))
+AlertActions.displayName = "AlertActions"
+
+// Compound component pattern
+const AlertNamespace = Object.assign(Alert, {
+  Title: AlertTitle,
+  Description: AlertDescription,
+  Actions: AlertActions,
+})
+
+export { AlertNamespace as Alert, AlertTitle, AlertDescription, AlertActions }

@@ -14,6 +14,8 @@ BEGIN
 END $$;
 
 -- Add version control and publishing workflow fields
+ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE organization_members ADD COLUMN IF NOT EXISTS org_id UUID;
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS version_number TEXT;
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS is_major_version BOOLEAN DEFAULT false;
 ALTER TABLE release_notes ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP WITH TIME ZONE;

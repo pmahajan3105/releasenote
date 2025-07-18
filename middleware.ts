@@ -13,6 +13,7 @@ import {
 
 // Protected routes that require authentication
 const protectedRoutes = [
+  '/dashboard',
   '/releases',
   '/settings',
   '/integrations',
@@ -83,9 +84,8 @@ export async function middleware(request: NextRequest) {
     )
   }
 
-  // Check for protected routes (including root dashboard)
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route)) || 
-                          pathname === '/'
+  // Check for protected routes (excluding root landing page)
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
   
   if (isProtectedRoute) {
     try {

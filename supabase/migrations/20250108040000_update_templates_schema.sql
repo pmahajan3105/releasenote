@@ -1,6 +1,17 @@
 -- Update templates table to match AITemplate interface
 -- This migration expands the basic templates table to support the full AITemplate structure
 
+-- Create templates table if it doesn't exist
+CREATE TABLE IF NOT EXISTS templates (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  name TEXT NOT NULL,
+  content TEXT NOT NULL,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  is_public BOOLEAN DEFAULT false,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Add new columns to templates table
 ALTER TABLE templates 
 ADD COLUMN IF NOT EXISTS description TEXT,
@@ -11,7 +22,8 @@ ADD COLUMN IF NOT EXISTS user_prompt_template TEXT,
 ADD COLUMN IF NOT EXISTS output_format TEXT DEFAULT 'html',
 ADD COLUMN IF NOT EXISTS tone TEXT DEFAULT 'professional',
 ADD COLUMN IF NOT EXISTS target_audience TEXT DEFAULT 'mixed',
-ADD COLUMN IF NOT EXISTS example_output TEXT;
+ADD COLUMN IF NOT EXISTS example_output TEXT,
+ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT false;
 
 -- Update existing templates to have proper values
 UPDATE templates 

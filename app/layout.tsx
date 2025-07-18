@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PrismLoader } from '@/components/editor/prism-loader'
+import { AuthProvider } from '@/components/providers/auth-provider'
 import { initializeDatabaseOptimization } from '@/lib/database-config'
 import '@/lib/startup-validation' // Run startup validation
 
@@ -31,7 +32,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <PrismLoader />
         <ErrorBoundary>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ErrorBoundary>
         <SpeedInsights />
       </body>

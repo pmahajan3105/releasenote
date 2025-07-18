@@ -8,6 +8,7 @@ import { handleApiError, handleAsyncOperation } from '../../../lib/error-handler
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { EmptyState } from '../../../components/ui/empty-state'
 import { Button } from '../../../components/ui/button'
+import { TextField } from '../../../components/ui/text-field'
 import { PlusIcon } from 'lucide-react'
 
 export default function SettingsPageComponent() {
@@ -100,6 +101,23 @@ export default function SettingsPageComponent() {
       <p className="text-gray-600 dark:text-gray-400">
         Configure default templates, user preferences, and other settings.
       </p>
+      
+      {/* Quick Navigation */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/dashboard/settings/organization">
+              <Button variant="outline" className="flex items-center gap-2">
+                Organization Settings
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+      
       <Card>
         <CardHeader>
           <CardTitle>Organization Branding</CardTitle>
@@ -253,39 +271,40 @@ function DomainSettingsSection({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {loading ? (
         <span className="text-gray-500">Loading domain settings...</span>
       ) : error ? (
         <span className="text-red-500">{error}</span>
       ) : (
         <>
-          <div>
-            <label className="block text-sm font-medium">Public Portal URL</label>
-            <input
-              className="w-full mt-1 rounded border px-3 py-2 bg-gray-100 text-gray-700"
+          <TextField>
+            <TextField.Input
               value={publicUrl}
               disabled
               readOnly
+              className="bg-gray-100 text-gray-700"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Custom Domain</label>
-            <input
-              className="w-full mt-1 rounded border px-3 py-2"
+            <TextField.Label>Public Portal URL</TextField.Label>
+          </TextField>
+          
+          <TextField>
+            <TextField.Input
               value={customDomain}
               onChange={e => setCustomDomain(e.target.value)}
               placeholder="yourcompany.com"
               disabled={saving}
             />
-          </div>
-          <button
-            className="mt-2 px-4 py-2 rounded bg-primary-600 text-white disabled:opacity-60"
+            <TextField.Label>Custom Domain</TextField.Label>
+          </TextField>
+          
+          <Button
             onClick={handleSave}
             disabled={saving}
+            className="mt-2"
           >
             {saving ? 'Saving...' : 'Save Domain'}
-          </button>
+          </Button>
         </>
       )}
     </div>
@@ -332,40 +351,40 @@ function SSOSettingsSection({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {loading ? (
         <span className="text-gray-500">Loading SSO settings...</span>
       ) : error ? (
         <span className="text-red-500">{error}</span>
       ) : (
         <>
-          <div>
-            <label className="block text-sm font-medium">SSO URL</label>
-            <input
-              className="w-full mt-1 rounded border px-3 py-2"
+          <TextField>
+            <TextField.Input
               value={url}
               onChange={e => setUrl(e.target.value)}
               placeholder="https://sso.provider.com/..."
               disabled={saving}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">SSO Code</label>
-            <input
-              className="w-full mt-1 rounded border px-3 py-2"
+            <TextField.Label>SSO URL</TextField.Label>
+          </TextField>
+          
+          <TextField>
+            <TextField.Input
               value={code}
               onChange={e => setCode(e.target.value)}
               placeholder="SSO Code"
               disabled={saving}
             />
-          </div>
-          <button
-            className="mt-2 px-4 py-2 rounded bg-primary-600 text-white disabled:opacity-60"
+            <TextField.Label>SSO Code</TextField.Label>
+          </TextField>
+          
+          <Button
             onClick={handleSave}
             disabled={saving}
+            className="mt-2"
           >
             {saving ? 'Saving...' : 'Save SSO Settings'}
-          </button>
+          </Button>
         </>
       )}
     </div>

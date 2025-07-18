@@ -18,6 +18,9 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        "neutral-secondary": "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700",
+        "neutral-tertiary": "bg-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800",
+        "brand-tertiary": "bg-transparent text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -37,17 +40,35 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  icon?: React.ReactNode
+  iconRight?: React.ReactNode
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, icon, iconRight, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
-      />
+      >
+        {icon && (
+          <span className="mr-2 flex-shrink-0">
+            {React.cloneElement(icon as React.ReactElement, {
+              className: "h-4 w-4"
+            })}
+          </span>
+        )}
+        {children}
+        {iconRight && (
+          <span className="ml-2 flex-shrink-0">
+            {React.cloneElement(iconRight as React.ReactElement, {
+              className: "h-4 w-4"
+            })}
+          </span>
+        )}
+      </Comp>
     )
   }
 )

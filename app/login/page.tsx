@@ -160,6 +160,17 @@ export default function LoginPage() {
             )}
           </CardContent>
         </Card>
+        
+        {/* Demo Links */}
+        <div className="text-center space-y-2">
+          <p className="text-xs text-gray-500">Demo Components:</p>
+          <Link
+            href="/auth/verify"
+            className="text-xs text-primary-600 hover:text-primary-500 underline"
+          >
+            View 2FA Verification Demo
+          </Link>
+        </div>
       </div>
     </div>
   )

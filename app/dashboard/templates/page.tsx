@@ -1,346 +1,40 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { EmptyState } from "@/components/ui/empty-state"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash, Eye, Upload, Download } from "lucide-react"
-import { AI_TEMPLATES, AITemplate } from "@/lib/ai/templates"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { CardSkeleton } from "@/components/ui/skeleton"
-import { toast } from "sonner"
-
-function TemplateForm({ template, onSave, onCancel }: {
-  template?: Partial<AITemplate>
-  onSave: (t: AITemplate) => void
-  onCancel: () => void
-}) {
-  const [form, setForm] = useState<Partial<AITemplate>>(template || {})
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
-
-  const handleSubmit = () => {
-    if (!form.name || !form.id || !form.description) {
-      toast.error("Name, ID, and Description are required.")
-      return
-    }
-    onSave(form as AITemplate)
-  }
-
-  return (
-    <div className="space-y-3">
-      <Input name="id" placeholder="ID" value={form.id || ""} onChange={handleChange} />
-      <Input name="name" placeholder="Name" value={form.name || ""} onChange={handleChange} />
-      <Textarea name="description" placeholder="Description" value={form.description || ""} onChange={handleChange} />
-      <Input name="icon" placeholder="Icon (emoji)" value={form.icon || ""} onChange={handleChange} />
-      <Input name="category" placeholder="Category" value={form.category || ""} onChange={handleChange} />
-      <Input name="tone" placeholder="Tone" value={form.tone || ""} onChange={handleChange} />
-      <Input name="targetAudience" placeholder="Target Audience" value={form.targetAudience || ""} onChange={handleChange} />
-      <Input name="outputFormat" placeholder="Output Format" value={form.outputFormat || ""} onChange={handleChange} />
-      <Textarea name="systemPrompt" placeholder="System Prompt" value={form.systemPrompt || ""} onChange={handleChange} />
-      <Textarea name="userPromptTemplate" placeholder="User Prompt Template" value={form.userPromptTemplate || ""} onChange={handleChange} />
-      <Textarea name="exampleOutput" placeholder="Example Output" value={form.exampleOutput || ""} onChange={handleChange} />
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button onClick={handleSubmit}>Save</Button>
-      </div>
-    </div>
-  )
-}
-
-export default function TemplateManagementPage() {
-  const [templates, setTemplates] = useState<AITemplate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [showDialog, setShowDialog] = useState(false)
-  const [editing, setEditing] = useState<AITemplate | null>(null)
-  const [preview, setPreview] = useState<AITemplate | null>(null)
-  const [importFile, setImportFile] = useState<File | null>(null)
-
-  // Fetch templates from API on mount
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await fetch('/api/templates')
-        const json: any = await res.json()
-        if (!res.ok) throw new Error(json.error || 'Failed to fetch templates')
-        setTemplates(json.templates)
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch templates')
-        toast.error(err.message || 'Failed to fetch templates')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchTemplates()
-  }, [])
-
-  const handleAdd = () => {
-    setEditing({} as AITemplate)
-    setShowDialog(true)
-  }
-
-  const handleEdit = (t: AITemplate) => {
-    setEditing(t)
-    setShowDialog(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    try {
-      const res = await fetch(`/api/templates/${id}`, {
-        method: 'DELETE',
-      })
-      const json: any = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to delete template')
-      setTemplates(prev => prev.filter(t => t.id !== id))
-      toast.success('Template deleted')
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete template')
-    }
-  }
-
-  const handleSave = async (t: AITemplate) => {
-    let res, json: any
-    const isEdit = !!t.id && templates.some(pt => pt.id === t.id)
-    try {
-      if (isEdit) {
-        res = await fetch(`/api/templates/${t.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(t),
-        })
-        json = await res.json() as any
-        if (!res.ok) throw new Error(json.error || 'Failed to update template')
-        setTemplates(prev => prev.map(pt => pt.id === t.id ? json.template : pt))
-        toast.success('Template updated')
-      } else {
-        res = await fetch('/api/templates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(t),
-        })
-        json = await res.json() as any
-        if (!res.ok) throw new Error(json.error || 'Failed to create template')
-        setTemplates(prev => [...prev, json.template])
-        toast.success('Template created')
-      }
-      setShowDialog(false)
-      setEditing(null)
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to save template')
-    }
-  }
-
-  const handleExport = () => {
-    if (templates.length === 0) {
-      toast.error('No templates to export')
-      return
-    }
-    
-    const exportData = {
-      version: '1.0',
-      exported_at: new Date().toISOString(),
-      templates: templates.map(t => ({
-        ...t,
-        // Remove organization-specific fields
-        id: undefined,
-        organization_id: undefined,
-        created_at: undefined,
-        updated_at: undefined,
-      }))
-    }
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `templates-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    toast.success('Templates exported successfully')
-  }
-
-  const handleImport = async (file: File) => {
-    try {
-      const text = await file.text()
-      const importData = JSON.parse(text)
-      
-      if (!importData.templates || !Array.isArray(importData.templates)) {
-        throw new Error('Invalid template file format')
-      }
-      
-      let imported = 0
-      for (const template of importData.templates) {
-        try {
-          // Generate new ID and add required fields
-          const newTemplate = {
-            ...template,
-            id: crypto.randomUUID(),
-          }
-          
-          const res = await fetch('/api/templates', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newTemplate),
-          })
-          
-          if (res.ok) {
-            const json = await res.json()
-            setTemplates(prev => [...prev, json.template])
-            imported++
-          }
-        } catch (err) {
-          console.error('Failed to import template:', template.name, err)
-        }
-      }
-      
-      toast.success(`Successfully imported ${imported} template${imported !== 1 ? 's' : ''}`)
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to import templates')
-    }
-  }
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      if (file.type !== 'application/json') {
-        toast.error('Please select a JSON file')
-        return
-      }
-      setImportFile(file)
-      handleImport(file)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-3xl mx-auto py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
-          <div className="flex gap-2">
-            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-        </div>
-        <div className="grid gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <CardSkeleton key={i} />
-          ))}
-        </div>
-      </div>
-    )
-  }
-  if (error) {
-    return <div className="max-w-3xl mx-auto py-8 text-center text-red-500">{error}</div>
-  }
-  return (
-    <div className="max-w-3xl mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Template Management</h1>
-        <div className="flex gap-2">
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="import-file"
-          />
-          <Button
-            onClick={() => document.getElementById('import-file')?.click()}
-            variant="outline"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Import
-          </Button>
-          <Button onClick={handleExport} variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button onClick={handleAdd} variant="default">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Template
-          </Button>
-        </div>
-      </div>
-      <div className="grid gap-4">
-        {templates.length === 0 ? (
-          <Card>
-            <CardContent>
-              <EmptyState
-                icon={<Plus className="w-10 h-10 mx-auto" />}
-                headline="No Templates Yet"
-                subtext="Create your first AI template to get started."
-                action={
-                  <Button onClick={handleAdd}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Template
-                  </Button>
-                }
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          templates.map(t => (
-            <Card key={t.id} className="relative group">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{t.icon}</span>
-                  <div>
-                    <CardTitle className="text-lg font-medium">{t.name}</CardTitle>
-                    <div className="text-xs text-gray-500">{t.description}</div>
-                  </div>
-                </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button size="icon" variant="ghost" onClick={() => setPreview(t)}><Eye className="w-4 h-4" /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleEdit(t)}><Edit className="w-4 h-4" /></Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)}><Trash className="w-4 h-4" /></Button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex gap-2 mt-2">
-                <Badge variant="outline" className="text-xs">{t.category}</Badge>
-                <Badge className="text-xs">{t.tone}</Badge>
-                <Badge className="text-xs">{t.targetAudience}</Badge>
-                <Badge variant="outline" className="text-xs">{t.outputFormat}</Badge>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing?.id ? "Edit Template" : "Add Template"}</DialogTitle>
-          </DialogHeader>
-          <TemplateForm
-            template={editing || {}}
-            onSave={handleSave}
-            onCancel={() => { setShowDialog(false); setEditing(null) }}
-          />
-        </DialogContent>
-      </Dialog>
-      <Dialog open={!!preview} onOpenChange={() => setPreview(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Preview: {preview?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-600 max-h-60 overflow-y-auto whitespace-pre-wrap font-mono">
-            {preview?.exampleOutput || "No example output."}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPreview(null)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
+import React from "react";
+import { SettingsMenu } from "@/components/ui/settings-menu";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
+import {
+  Building,
+  Image,
+  FileText,
+  Globe,
+  Lock,
+  Users,
+  X,
+  Search,
+  ChevronDown,
+  Plus,
+  Clock,
+  Layout,
+  MessageCircle,
+  Copy,
+  Eye,
+  Edit2,
+  MoreVertical,
+  Download,
+  Trash,
+  TrendingUp,
+  Code
+} from "lucide-react";export default function TemplatesPage() {  return (    <div className="flex h-full w-full">      {/* Settings Sidebar */}      <SettingsMenu className="w-64 border-r bg-card">        <div className="space-y-6">          <h2 className="text-lg font-semibold">Settings</h2>                    <div className="space-y-4">            <div className="space-y-2">              <h3 className="text-sm font-medium text-muted-foreground">Organization</h3>              <div className="space-y-1">                <Link href="/dashboard/settings/organization" className="block">                  <SettingsMenu.Item icon={<Building size={16} />} label="Organization Settings" />                </Link>                <Link href="/dashboard/settings/branding" className="block">                  <SettingsMenu.Item icon={<Image size={16} />} label="Branding" />                </Link>                <Link href="/dashboard/templates" className="block">                  <SettingsMenu.Item icon={<FileText size={16} />} label="Templates" selected />                </Link>              </div>            </div>            <div className="space-y-2">              <h3 className="text-sm font-medium text-muted-foreground">Access</h3>              <div className="space-y-1">                <Link href="/dashboard/settings/domain" className="block">                  <SettingsMenu.Item icon={<Globe size={16} />} label="Domain" />                </Link>                <Link href="/dashboard/settings/sso" className="block">                  <SettingsMenu.Item icon={<Lock size={16} />} label="SSO" />                </Link>                <Link href="/dashboard/settings/team" className="block">                  <SettingsMenu.Item icon={<Users size={16} />} label="Team Members" />                </Link>              </div>            </div>          </div>        </div>      </SettingsMenu>      {/* Main Content */}      <div className="flex-1 overflow-auto">        <div className="container max-w-4xl mx-auto p-6 space-y-8">          {/* Header */}          <div className="space-y-2">            <h1 className="text-3xl font-bold">Templates</h1>            <p className="text-muted-foreground">              Manage your release note templates            </p>          </div>          <div className="space-y-6">            {/* Info Alert */}            <Alert className="border-blue-200 bg-blue-50">              <FileText className="h-4 w-4 text-blue-600" />              <div className="flex-1">                <h4 className="font-medium text-blue-900">Manage Templates</h4>                <AlertDescription className="text-blue-700">                  Create and customize templates for your release notes. Import existing templates or create new ones from scratch.                </AlertDescription>              </div>              <Button variant="ghost" size="sm" className="h-auto p-1">                <X className="h-4 w-4" />              </Button>            </Alert>            {/* Search and Filters */}            <div className="flex items-center gap-4 flex-wrap">              <div className="relative flex-1 min-w-[200px]">                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />                <Input                   placeholder="Search templates..."                   className="pl-10"                />              </div>                            <DropdownMenu>                <DropdownMenuTrigger asChild>                  <Button variant="outline" className="gap-2">                    All categories                    <ChevronDown className="h-4 w-4" />                  </Button>                </DropdownMenuTrigger>                <DropdownMenuContent>                  <DropdownMenuItem>All categories</DropdownMenuItem>                  <DropdownMenuItem>Traditional</DropdownMenuItem>                  <DropdownMenuItem>Modern</DropdownMenuItem>                  <DropdownMenuItem>Technical</DropdownMenuItem>                  <DropdownMenuItem>Marketing</DropdownMenuItem>                </DropdownMenuContent>              </DropdownMenu>              <Button className="gap-2">                <Plus className="h-4 w-4" />                New Template              </Button>            </div>            {/* Templates Grid */}            <div className="space-y-6">              {/* Traditional Release Notes Template */}              <Card>                <CardContent className="p-6 space-y-6">                  <div className="space-y-4">                    <div className="flex items-start justify-between">                      <div className="space-y-2 flex-1">                        <h3 className="text-xl font-semibold">Traditional Release Notes</h3>                        <p className="text-muted-foreground">                          Professional format for enterprise software updates                        </p>                      </div>                      <Badge variant="secondary" className="gap-1 ml-4">                        <Clock className="h-3 w-3" />                        Last edited 2d ago                      </Badge>                    </div>                    <div className="space-y-4">                      <div className="flex flex-wrap gap-2">                        <Badge variant="outline" className="gap-1">                          <Layout className="h-3 w-3" />                          Traditional                        </Badge>                        <Badge variant="outline" className="gap-1">                          <Users className="h-3 w-3" />                          Developers                        </Badge>                        <Badge variant="outline" className="gap-1">                          <FileText className="h-3 w-3" />                          Markdown                        </Badge>                        <Badge variant="outline" className="gap-1">                          <MessageCircle className="h-3 w-3" />                          Professional                        </Badge>                      </div>                      <div className="flex items-center gap-4 text-sm text-muted-foreground">                        <div className="flex items-center gap-1">                          <FileText className="h-4 w-4" />                          <span>2,450 words</span>                        </div>                        <div className="flex items-center gap-1">                          <Copy className="h-4 w-4" />                          <span>48 uses</span>                        </div>                      </div>                    </div>                  </div>                  <div className="flex items-center justify-end gap-2">                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">                      <Eye className="h-4 w-4" />                    </Button>                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">                      <Edit2 className="h-4 w-4" />                    </Button>                    <DropdownMenu>                      <DropdownMenuTrigger asChild>                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">                          <MoreVertical className="h-4 w-4" />                        </Button>                      </DropdownMenuTrigger>                      <DropdownMenuContent align="end">                        <DropdownMenuItem className="gap-2">                          <Copy className="h-4 w-4" />                          Duplicate                        </DropdownMenuItem>                        <DropdownMenuItem className="gap-2">                          <Download className="h-4 w-4" />                          Export                        </DropdownMenuItem>                        <DropdownMenuSeparator />                        <DropdownMenuItem className="gap-2 text-destructive">                          <Trash className="h-4 w-4" />                          Delete                        </DropdownMenuItem>                      </DropdownMenuContent>                    </DropdownMenu>                  </div>                </CardContent>              </Card>              {/* Modern Changelog Template */}              <Card>                <CardContent className="p-6 space-y-6">                  <div className="space-y-4">                    <div className="flex items-start justify-between">                      <div className="space-y-2 flex-1">                        <h3 className="text-xl font-semibold">Modern Changelog</h3>                        <p className="text-muted-foreground">                          Contemporary style with emojis and casual tone                        </p>                      </div>                      <Badge variant="secondary" className="gap-1 ml-4">                        <Clock className="h-3 w-3" />                        Last edited 5h ago                      </Badge>                    </div>                    <div className="space-y-4">                      <div className="flex flex-wrap gap-2">                        <Badge variant="outline" className="gap-1">                          <TrendingUp className="h-3 w-3" />                          Modern                        </Badge>                        <Badge variant="outline" className="gap-1">                          <Users className="h-3 w-3" />                          Mixed                        </Badge>                        <Badge variant="outline" className="gap-1">                          <Code className="h-3 w-3" />                          HTML                        </Badge>                        <Badge variant="outline" className="gap-1">                          <MessageCircle className="h-3 w-3" />                          Casual                        </Badge>                      </div>                      <div className="flex items-center gap-4 text-sm text-muted-foreground">                        <div className="flex items-center gap-1">                          <FileText className="h-4 w-4" />                          <span>1,850 words</span>                        </div>                        <div className="flex items-center gap-1">                          <Copy className="h-4 w-4" />                          <span>36 uses</span>                        </div>                      </div>                    </div>                  </div>                  <div className="flex items-center justify-end gap-2">                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">                      <Eye className="h-4 w-4" />                    </Button>                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">                      <Edit2 className="h-4 w-4" />                    </Button>                    <DropdownMenu>                      <DropdownMenuTrigger asChild>                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">                          <MoreVertical className="h-4 w-4" />                        </Button>                      </DropdownMenuTrigger>                      <DropdownMenuContent align="end">                        <DropdownMenuItem className="gap-2">                          <Copy className="h-4 w-4" />                          Duplicate                        </DropdownMenuItem>                        <DropdownMenuItem className="gap-2">                          <Download className="h-4 w-4" />                          Export                        </DropdownMenuItem>                        <DropdownMenuSeparator />                        <DropdownMenuItem className="gap-2 text-destructive">                          <Trash className="h-4 w-4" />                          Delete                        </DropdownMenuItem>                      </DropdownMenuContent>                    </DropdownMenu>                  </div>                </CardContent>              </Card>            </div>          </div>        </div>      </div>    </div>  );}
