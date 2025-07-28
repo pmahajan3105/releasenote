@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/components/Button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash, Eye, Upload, Download } from "lucide-react"
 import { AI_TEMPLATES, AITemplate } from "@/lib/ai/templates"

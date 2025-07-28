@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 import { Badge } from '@/components/ui/badge'
 import { GitHubRepositoryManager } from '@/components/integrations/github-repository-manager'
 import { JiraProjectManager } from '@/components/integrations/jira-project-manager'

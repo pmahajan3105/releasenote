@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/components/Button"
 import { FormSkeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 

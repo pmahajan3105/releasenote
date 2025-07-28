@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card'
+import { Button } from '@/components/ui/components/Button'
+import { Textarea } from '@/ui/textarea'
+import { Switch } from '@/ui/switch'
+import { Badge } from '@/ui/badge'
+import { Alert, AlertDescription } from '@/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs'
 import { 
   PaletteIcon, 
   CodeIcon, 

@@ -17,7 +17,7 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import { Callout } from './extensions/callout'
 import { CodeBlockEnhanced } from './extensions/code-block-enhanced'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 import { 
   BoldIcon, 
   ItalicIcon, 

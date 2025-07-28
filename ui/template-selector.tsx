@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 import { Badge } from '@/components/ui/badge'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { AITemplate } from '@/lib/ai/templates'

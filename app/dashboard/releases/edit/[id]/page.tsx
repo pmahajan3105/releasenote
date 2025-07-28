@@ -7,7 +7,7 @@ import { useAuthStore } from '@/lib/store/use-auth'
 import ReleaseNoteEditor from '@/components/features/ReleaseNoteEditor' // Import the editor
 import { ArrowUpTrayIcon, PhotoIcon, EyeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 import { Input } from '@/components/ui/input'
 import { RichTextEditor } from '@/components/editor/rich-text-editor'
 import { ReleaseNotePreview } from '@/components/editor/release-note-preview'

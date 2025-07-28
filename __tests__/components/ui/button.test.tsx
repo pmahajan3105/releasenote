@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 
 describe('Button Component', () => {
   describe('Basic Rendering', () => {

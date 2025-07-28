@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react'
 import { NodeViewWrapper, NodeViewContent } from '@tiptap/react'
 import { CopyIcon, CheckIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 
 interface CodeBlockComponentProps {
   node: {

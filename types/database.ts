@@ -105,11 +105,12 @@ export interface Database {
           content?: string
           content_markdown?: string
           content_html?: string
-          status: 'draft' | 'published' | 'scheduled'
+          status: 'draft' | 'published' | 'scheduled' | 'archived'
           author_id?: string
           published_at?: string
           source_ticket_ids?: string[]
           views: number
+          scheduled_at?: string | null
         }
         Insert: {
           id?: string
@@ -122,11 +123,12 @@ export interface Database {
           content?: string
           content_markdown?: string
           content_html?: string
-          status?: 'draft' | 'published' | 'scheduled'
+          status?: 'draft' | 'published' | 'scheduled' | 'archived'
           author_id?: string
           published_at?: string
           source_ticket_ids?: string[]
           views?: number
+          scheduled_at?: string | null
         }
         Update: {
           id?: string
@@ -139,11 +141,12 @@ export interface Database {
           content?: string
           content_markdown?: string
           content_html?: string
-          status?: 'draft' | 'published' | 'scheduled'
+          status?: 'draft' | 'published' | 'scheduled' | 'archived'
           author_id?: string
           published_at?: string
           source_ticket_ids?: string[]
           views?: number
+          scheduled_at?: string | null
         }
       }
       templates: {

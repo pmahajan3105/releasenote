@@ -12,7 +12,7 @@ import { GitHubReleaseGenerator } from '@/components/features/GitHubReleaseGener
 import { handleApiError } from '@/lib/error-handler-standard'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 
 // Define the Jira ticket type

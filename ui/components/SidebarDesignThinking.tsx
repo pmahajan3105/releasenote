@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter, usePathname } from 'next/navigation';
 import { TreeView } from "@/ui/components/TreeView";
 import { Avatar } from "@/ui/components/Avatar";
-import { DropdownMenu } from "@/ui/components/DropdownMenu";
+import DropdownMenu  from "@/ui/components/DropdownMenu";
 import { FeatherUser } from "@subframe/core";
 import { FeatherLogOut } from "@subframe/core";
 import * as SubframeCore from "@subframe/core";
@@ -97,19 +97,19 @@ function SidebarDesignThinking() {
               asChild={true}
             >
               <DropdownMenu>
-                <DropdownMenu.DropdownItem 
+                <DropdownMenu.Item 
                   icon={<FeatherUser />}
                   onClick={handleProfileClick}
                 >
                   Profile
-                </DropdownMenu.DropdownItem>
-                <DropdownMenu.DropdownDivider />
-                <DropdownMenu.DropdownItem 
+                </DropdownMenu.Item>
+                <hr className="my-2 border-t border-neutral-border" />
+                <DropdownMenu.Item 
                   icon={<FeatherLogOut />}
                   onClick={handleSignOut}
                 >
                   Sign out
-                </DropdownMenu.DropdownItem>
+                </DropdownMenu.Item>
               </DropdownMenu>
             </SubframeCore.DropdownMenu.Content>
           </SubframeCore.DropdownMenu.Portal>

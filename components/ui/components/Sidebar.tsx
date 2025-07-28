@@ -3,8 +3,8 @@
 import React from "react";
 import { TreeView } from "@/ui/components/TreeView";
 
-import Avatar from "@/components/ui/components/Avatar";
-import DropdownMenu from "@/components/ui/components/DropdownMenu";
+import { Avatar } from "@/ui/components/Avatar";
+import { DropdownMenu } from "@/ui/components/DropdownMenu";
 import { FeatherUser, FeatherLogOut } from "@subframe/core";
 import * as SubframeCore from "@subframe/core";
 

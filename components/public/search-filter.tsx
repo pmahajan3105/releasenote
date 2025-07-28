@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { SearchIcon, FilterIcon, XIcon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/components/Button'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,

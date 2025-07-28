@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card'
+import { Button } from '@/components/ui/components/Button'
+import { Input } from '@/ui/input'
+import { Badge } from '@/ui/badge'
+import { Switch } from '@/ui/switch'
+import { Alert, AlertDescription } from '@/ui/alert'
 import { 
   GlobeIcon, 
   ShieldCheckIcon, 

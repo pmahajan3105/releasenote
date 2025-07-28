@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/components/Button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/ui/dropdown-menu'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/alert-dialog'
 import { ChevronDownIcon, SendIcon, ClockIcon, EyeOffIcon, ArchiveIcon, EditIcon, CopyIcon, HistoryIcon } from 'lucide-react'
 import { useReleaseNotesActions } from '@/lib/store'
 import type { ReleaseNote } from '@/types/database'
@@ -18,7 +18,7 @@ interface PublishButtonProps {
 }
 
 interface PublishingData {
-  status: 'published' | 'scheduled'
+  status: 'published' | 'scheduled' | 'draft' | 'archived' | undefined;
   scheduledAt?: Date
   metaTitle?: string
   metaDescription?: string
@@ -45,6 +45,7 @@ export function PublishButton({
     try {
       const updateData: Partial<ReleaseNote> = {
         status: data.status,
+        
         ...(data.scheduledAt && { scheduled_at: data.scheduledAt.toISOString() }),
         ...(data.status === 'published' && { published_at: new Date().toISOString() })
       }
@@ -54,7 +55,9 @@ export function PublishButton({
       const actionText = data.status === 'published' ? 'published' : 'scheduled'
       toast.success(`Release note ${actionText} successfully!`)
       
-      onAction?.(data.status, data)
+      if (data.status) {
+        onAction?.(data.status, data)
+      }
     } catch (error) {
       toast.error('Failed to publish release note')
       console.error('Publishing error:', error)
@@ -68,7 +71,7 @@ export function PublishButton({
     try {
       await updateReleaseNote(releaseNote.id, { 
         status: 'draft',
-        published_at: null,
+        published_at: undefined,
         scheduled_at: null
       })
       toast.success('Release note unpublished successfully!')
@@ -153,26 +156,32 @@ export function PublishButton({
   const MainIcon = mainButton.icon
 
   const getDropdownItems = () => {
-    const commonItems = [
-      {
-        icon: EditIcon,
-        label: 'Edit',
-        action: () => onAction?.('edit'),
-        show: true
-      },
-      {
-        icon: CopyIcon,
-        label: 'Duplicate',
-        action: handleDuplicate,
-        show: true
-      },
-      {
-        icon: HistoryIcon,
-        label: 'View History',
-        action: () => onAction?.('history'),
-        show: true
-      }
-    ]
+      const commonItems: Array<{
+        icon: React.ComponentType<any>
+        label: string
+        action: () => void | undefined
+        show: boolean
+        destructive?: boolean
+      }> = [
+        {
+          icon: EditIcon,
+          label: 'Edit',
+          action: () => onAction?.('edit'),
+          show: true
+        },
+        {
+          icon: CopyIcon,
+          label: 'Duplicate',
+          action: () => { handleDuplicate(); },
+          show: true
+        },
+        {
+          icon: HistoryIcon,
+          label: 'View History',
+          action: () => onAction?.('history'),
+          show: true
+        }
+      ]
 
     switch (releaseNote.status) {
       case 'draft':
@@ -290,7 +299,7 @@ export function PublishButton({
       <div className="flex items-center">
         <Button
           variant={variant}
-          size={size}
+          size={size === 'md' ? 'default' : size}
           onClick={mainButton.action}
           disabled={loading}
           className={mainButton.className}
@@ -303,7 +312,7 @@ export function PublishButton({
           <DropdownMenuTrigger asChild>
             <Button
               variant={variant}
-              size={size}
+              size={size === 'md' ? 'default' : size}
               className={`${mainButton.className} ml-1 px-2`}
               disabled={loading}
             >

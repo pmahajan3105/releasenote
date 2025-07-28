@@ -1,6 +1,6 @@
 'use client'
 
-import { BrandVoiceManager } from '@/components/ui/brand-voice-manager'
+import { BrandVoiceManager } from '@/ui/brand-voice-manager'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { SparklesIcon } from '@heroicons/react/24/outline'
 

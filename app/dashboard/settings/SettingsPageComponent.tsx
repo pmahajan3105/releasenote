@@ -5,10 +5,12 @@ import { LogoFaviconUploader } from '../../../components/settings/logo-favicon-u
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { toast } from '../../../lib/toast'
 import { handleApiError, handleAsyncOperation } from '../../../lib/error-handler-standard'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
-import { EmptyState } from '../../../components/ui/empty-state'
-import { Button } from '../../../components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card'
+import { EmptyState } from '../../../ui/empty-state'
+import { Button } from '../../../ui/button'
 import { PlusIcon } from 'lucide-react'
+
+
 
 export default function SettingsPageComponent() {
   const user = useAuthStore(state => state.user)

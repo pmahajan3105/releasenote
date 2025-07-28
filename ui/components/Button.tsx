@@ -10,6 +10,7 @@ interface ButtonProps {
   iconRight?: React.ReactNode;
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export function Button({ 
@@ -19,7 +20,8 @@ export function Button({
   icon,
   iconRight,
   onClick, 
-  className 
+  className,
+  disabled
 }: ButtonProps) {
   const sizeClasses = {
     small: "px-3 py-1.5 text-sm",
@@ -38,6 +40,7 @@ export function Button({
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={`
         font-['Inter'] font-[500] rounded-lg transition-colors flex items-center gap-2
         ${sizeClasses[size]} 
