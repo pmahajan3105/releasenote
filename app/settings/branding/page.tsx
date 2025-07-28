@@ -9,7 +9,7 @@ import {
   FeatherDroplet, FeatherDownload 
 } from "@subframe/core";
 import TextField from "@/components/ui/components/TextField";
-import Select from "@/components/ui/components/Select";
+import { Select } from "@/components/ui/components/Select";
 import TextArea from "@/components/ui/components/TextArea";
 import Button from "@/components/ui/components/Button";
 
@@ -115,7 +115,6 @@ export default function BrandShowcasePage() {
             <div className="flex flex-col items-start gap-1">
               <label className="text-body-bold font-body-bold text-default-font">Primary Font</label>
               <Select
-                label="Primary Font"
                 value=""
                 aria-label="Choose your brand's primary typeface"
                 onValueChange={(value) => {

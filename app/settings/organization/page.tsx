@@ -12,7 +12,7 @@ import { IconButton } from "@/ui/components/IconButton";
 import Alert from "@/ui/components/Alert";
 import TextArea from "@/components/ui/components/TextArea";
 import TextField from "@/components/ui/components/TextField";
-import Select from "@/components/ui/components/Select";
+import { Select } from "@/components/ui/components/Select";
 import Button from "@/components/ui/components/Button";
 
 export default function OrganizationSettingsPage() {
@@ -86,11 +86,17 @@ export default function OrganizationSettingsPage() {
           <TextField label="Public Name" helpText="This name will be visible to your users">
             <TextField.Input placeholder="Enter your organization's public name" value="" onChange={() => {}} />
           </TextField>
-          <Select label="Default Template" value={undefined} onValueChange={() => {}} placeholder="Select a default template" helpText="Choose the default template for new release notes">
-            <Select.Item value="traditional">traditional</Select.Item>
-            <Select.Item value="modern">modern</Select.Item>
-            <Select.Item value="minimal">minimal</Select.Item>
-          </Select>
+          <div>
+            <label className="text-body-bold font-body-bold text-default-font">Default Template</label>
+            <p className="text-caption font-caption text-subtext-color">Choose the default template for new release notes</p>
+            <Select value={undefined} onValueChange={() => {}}>
+              <option value="" disabled selected>
+                Select a default template
+              </option>
+              <option value="modern">modern</option>
+              <option value="minimal">minimal</option>
+            </Select>
+          </div>
           <div className="flex w-full justify-between items-center mt-8">
             <Button variant="neutral-tertiary" icon={<FeatherHelpCircle />} onClick={() => {}}>
               View documentation
