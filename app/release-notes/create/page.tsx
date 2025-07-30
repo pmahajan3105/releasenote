@@ -4,16 +4,16 @@ import { CalendarIcon, SaveIcon, SendIcon, WandIcon } from "lucide-react"
 import { useState } from "react"
 import { useReleaseNotesStore, useReleaseNotesActions } from "@/lib/store"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/components/Button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import Button from "@/components/ui/components/Button"
+import { Card, CardContent, CardHeader } from "@/ui/card"
+import { Input } from "@/ui/input"
+import { Textarea } from "@/ui/textarea"
 import { RichTextEditor } from "@/components/editor/rich-text-editor"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ErrorState } from "@/components/ui/error-state"
-import { TemplateSelector } from "@/components/ui/template-selector"
-import { ContentImprover } from "@/components/ui/content-improver"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/components/select"
+import { Checkbox } from "@/ui/checkbox"
+import { ErrorState } from "@/ui/error-state"
+import { TemplateSelector } from "@/ui/template-selector"
+import { ContentImprover } from "@/ui/content-improver"
 import { AI_TEMPLATES } from "@/lib/ai/templates"
 
 export default function CreateReleaseNotePage() {
@@ -151,7 +151,8 @@ export default function CreateReleaseNotePage() {
         {/* Error Display */}
         {error && (
           <ErrorState
-            type="validation"
+            // type="validation"
+            type="generic"
             message={error}
             onRetry={() => setError(null)}
             showRetry={false}
@@ -166,7 +167,8 @@ export default function CreateReleaseNotePage() {
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-[#101828]">Release Note Details</h2>
-                  <Button variant="outline" size="sm" onClick={handleAIGenerate}>
+                  {/* <Button variant="outline" size="sm" onClick={handleAIGenerate}> */}
+                  <Button variant="secondary" onClick={handleAIGenerate}>
                     <WandIcon className="w-4 h-4 mr-2" />
                     AI Generate
                   </Button>
@@ -191,7 +193,8 @@ export default function CreateReleaseNotePage() {
                       Template Style
                     </label>
                     <Button 
-                      variant="outline" 
+                      // variant="outline" 
+                      variant="outline"
                       size="sm"
                       onClick={() => setShowTemplateSelector(!showTemplateSelector)}
                     >

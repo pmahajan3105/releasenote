@@ -39,7 +39,7 @@ export const POST = withOrgAuth(async (request: NextRequest, context: AuthContex
 
     const {
       title,
-      description,
+      // Removed description as it is not part of CreateReleaseNoteData
       content_markdown,
       content_html,
       version,
@@ -59,12 +59,12 @@ export const POST = withOrgAuth(async (request: NextRequest, context: AuthContex
       context.user.id,
       {
         title,
-        description,
+        // Removed description as it is not part of CreateReleaseNoteData
         content_markdown,
         content_html,
         version,
         status,
-        is_public
+        // Removed is_public as it is not part of CreateReleaseNoteData
       }
     )
 

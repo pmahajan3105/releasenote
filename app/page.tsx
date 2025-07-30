@@ -1,5 +1,5 @@
-import ReleaseNoteLanding from "@/ui/components/ReleaseNoteLanding";
+// import ReleaseNoteLanding from "@/ui/components/ReleaseNoteLanding";
 
-export default function HomePage() {
-  return <ReleaseNoteLanding />;
-}
+// export default function HomePage() {
+//   return <ReleaseNoteLanding />;
+// }

@@ -62,10 +62,10 @@ function SidebarDesignThinking() {
             onClick={() => router.push('/dashboard/integrations')}
           />
           <TreeView.Item 
-            selected={pathname.startsWith('/dashboard/release-notes')} 
+            selected={pathname === '/release-notes'} 
             label="Release Notes" 
             icon={null}
-            onClick={() => router.push('/dashboard/release-notes')}
+            onClick={() => router.push('/release-notes')}
           />
           <TreeView.Item 
             selected={pathname.startsWith('/dashboard/settings')} 

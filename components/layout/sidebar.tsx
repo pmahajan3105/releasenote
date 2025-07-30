@@ -17,14 +17,14 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@/components/ui/avatar"
-import { Button } from "@/components/ui/components/Button"
+} from "@/ui/avatar"
+import { Button } from "@/ui/components/Button"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import { Input } from "@/components/ui/input"
+} from "@/ui/collapsible"
+import { Input } from "@/ui/input"
 import Link from "next/link"
 import { useAuthStore } from "@/lib/store/use-auth"
 
@@ -174,7 +174,7 @@ export const Sidebar = (): JSX.Element | null => {
                           {item.subItems.map((subItem, subIndex) => (
                             <Link key={subIndex} href={subItem.path}>
                               <Button
-                                variant="ghost"
+                                variant="neutral-secondary"
                                 className={`justify-start px-3 py-2 h-auto w-full ${
                                   isActive(subItem.path)
                                     ? "bg-[#f4ebff] font-text-md-semibold text-[#18212f]"
@@ -192,7 +192,7 @@ export const Sidebar = (): JSX.Element | null => {
                 ) : (
                   <Link key={index} href={item.path!}>
                     <Button
-                      variant="ghost"
+                      variant="neutral-secondary"
                       className={`justify-start w-full px-3 py-2 h-auto ${
                         item.active
                           ? "bg-[#f4ebff] font-text-md-semibold text-[#18212f]"
@@ -216,7 +216,7 @@ export const Sidebar = (): JSX.Element | null => {
             {footerItems.map((item, index) => (
               <Link key={index} href={item.path}>
                 <Button
-                  variant="ghost"
+                  variant="neutral-secondary"
                   className={`justify-start w-full px-3 py-2 h-auto ${
                     isActive(item.path)
                       ? "bg-[#f4ebff] font-text-md-semibold text-[#18212f]"
@@ -257,8 +257,7 @@ export const Sidebar = (): JSX.Element | null => {
             </div>
 
             <Button
-              variant="ghost"
-              size="icon"
+              variant="neutral-secondary"
               className="p-2 absolute top-4 right-0"
               onClick={() => signOut()}
               title="Sign out"
