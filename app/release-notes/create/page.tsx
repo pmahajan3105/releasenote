@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/ui/card"
 import { Input } from "@/ui/input"
 import { Textarea } from "@/ui/textarea"
 import { RichTextEditor } from "@/components/editor/rich-text-editor"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/components/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/components/Select";
 import { Checkbox } from "@/ui/checkbox"
 import { ErrorState } from "@/ui/error-state"
 import { TemplateSelector } from "@/ui/template-selector"
@@ -53,7 +53,7 @@ export default function CreateReleaseNotePage() {
         changes: `Release notes for: ${title}`,
         date: new Date().toISOString().split('T')[0]
       })
-      setContent(aiContent)
+      setContent(aiContent || "");
     } catch (error) {
       console.error('AI generation failed:', error)
       alert('Failed to generate content. Please try again.')
@@ -77,7 +77,9 @@ export default function CreateReleaseNotePage() {
         status: 'draft',
         slug: title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
       })
-      router.push(`/releases/edit/${releaseNote.id}`)
+      if (releaseNote) {
+        router.push(`/releases/edit/${releaseNote.id}`);
+      }
     } catch (error) {
       console.error('Save failed:', error)
       setError(error instanceof Error ? error.message : 'Failed to save draft. Please try again.')
@@ -111,9 +113,11 @@ export default function CreateReleaseNotePage() {
       // Send email notifications if publishing
       if (status === 'published') {
         try {
-          await fetch(`/api/release-notes/${releaseNote.id}/notify`, {
-            method: 'POST'
-          })
+          if (releaseNote) {
+            await fetch(`/api/release-notes/${releaseNote.id}/notify`, {
+              method: "POST",
+            });
+          }
         } catch (err) {
           console.warn('Failed to send notifications:', err)
         }
@@ -137,7 +141,7 @@ export default function CreateReleaseNotePage() {
             Create Release Note
           </h1>
           <div className="flex gap-3">
-            <Button variant="outline" className="border-[#d0d5dd]" onClick={handleSaveDraft}>
+            <Button variant="neutral-secondary" className="border-[#d0d5dd]" onClick={handleSaveDraft}>
               <SaveIcon className="w-4 h-4 mr-2" />
               Save Draft
             </Button>
@@ -168,7 +172,7 @@ export default function CreateReleaseNotePage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-[#101828]">Release Note Details</h2>
                   {/* <Button variant="outline" size="sm" onClick={handleAIGenerate}> */}
-                  <Button variant="secondary" onClick={handleAIGenerate}>
+                  <Button variant="neutral-secondary" onClick={handleAIGenerate}>
                     <WandIcon className="w-4 h-4 mr-2" />
                     AI Generate
                   </Button>
@@ -194,8 +198,7 @@ export default function CreateReleaseNotePage() {
                     </label>
                     <Button 
                       // variant="outline" 
-                      variant="outline"
-                      size="sm"
+                      variant="neutral-secondary"
                       onClick={() => setShowTemplateSelector(!showTemplateSelector)}
                     >
                       {showTemplateSelector ? 'Hide Templates' : 'Choose Template'}
@@ -309,12 +312,12 @@ export default function CreateReleaseNotePage() {
                 <h3 className="text-lg font-semibold text-[#101828]">AI Assistant</h3>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" onClick={handleAIGenerate} disabled={isLoading}>
+                <Button variant="neutral-secondary" className="w-full justify-start" onClick={handleAIGenerate} disabled={isLoading}>
                   <WandIcon className="w-4 h-4 mr-2" />
                   Generate with Template
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant="neutral-secondary" 
                   className="w-full justify-start" 
                   onClick={() => setShowContentImprover(!showContentImprover)}
                   disabled={isLoading}
@@ -322,11 +325,11 @@ export default function CreateReleaseNotePage() {
                   <WandIcon className="w-4 h-4 mr-2" />
                   {showContentImprover ? 'Hide' : 'Show'} Content Analysis
                 </Button>
-                <Button variant="outline" className="w-full justify-start" disabled={isLoading}>
+                <Button variant="neutral-secondary" className="w-full justify-start" disabled={isLoading}>
                   <WandIcon className="w-4 h-4 mr-2" />
                   Generate from Git Commits
                 </Button>
-                <Button variant="outline" className="w-full justify-start" disabled={isLoading}>
+                <Button variant="neutral-secondary" className="w-full justify-start" disabled={isLoading}>
                   <WandIcon className="w-4 h-4 mr-2" />
                   Suggest Categories
                 </Button>

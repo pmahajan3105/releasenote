@@ -67,7 +67,7 @@ function ReleaseNotesPage() {
                   Manage and publish your product updates
                 </span>
               </div>
-              <Button onClick={() => router.push("/release-notes/create")}>
+              <Button onClick={() => router.push("/release-notes/start")}>
                 Create New Release
               </Button>
             </div>
