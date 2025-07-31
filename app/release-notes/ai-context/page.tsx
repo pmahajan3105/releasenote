@@ -13,6 +13,12 @@ import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 
 function AiContextPage() {
   const [isAlertVisible, setIsAlertVisible] = useState(true);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [userPromptTemplate, setUserPromptTemplate] = useState("");
+  const [exampleOutput, setExampleOutput] = useState("");
+  const [tone, setTone] = useState("");
+  const [audience, setAudience] = useState("");
+  const [outputFormat, setOutputFormat] = useState("");
 
   return (
     <DefaultPageLayout>
@@ -34,16 +40,19 @@ function AiContextPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="neutral-secondary"
-                    onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
+                    variant="primary" // Ensure the button has a clear, clickable style
+                    onClick={() => {
+                      setSystemPrompt("");
+                      setUserPromptTemplate("");
+                      setExampleOutput("");
+                      setTone("");
+                      setAudience("");
+                      setOutputFormat("");
+                    }}
                   >
                     Reset defaults
                   </Button>
-                  <Button
-                    onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
-                  >
-                    Save changes
-                  </Button>
+                  <Button onClick={() => {}}>Save changes</Button>
                 </div>
               </div>
               {isAlertVisible && (
@@ -71,7 +80,7 @@ function AiContextPage() {
                   <Button
                     variant="neutral-tertiary"
                     icon={<FeatherHelpCircle />}
-                    onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
+                    onClick={() => {}}
                   >
                     View documentation
                   </Button>
@@ -84,8 +93,8 @@ function AiContextPage() {
                   <TextArea.Input
                     className="h-auto min-h-[120px] sm:min-h-[160px] w-full flex-none"
                     placeholder="You are an expert technical writer specializing in release notes..."
-                    value=""
-                    onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {}}
+                    value={systemPrompt}
+                    onChange={(event) => setSystemPrompt(event.target.value)}
                   />
                 </TextArea>
                 <TextArea
@@ -95,9 +104,9 @@ function AiContextPage() {
                 >
                   <TextArea.Input
                     className="h-auto min-h-[80px] sm:min-h-[112px] w-full flex-none"
-                    placeholder="Generate release notes for the following changes: {{changes}}"
-                    value=""
-                    onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {}}
+                    placeholder="Generate release notes for the following changes."
+                    value={userPromptTemplate}
+                    onChange={(event) => setUserPromptTemplate(event.target.value)}
                   />
                 </TextArea>
                 <TextArea
@@ -108,8 +117,8 @@ function AiContextPage() {
                   <TextArea.Input
                     className="h-auto min-h-[100px] sm:min-h-[144px] w-full flex-none"
                     placeholder="# Release Notes - v1.0.0..."
-                    value=""
-                    onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {}}
+                    value={exampleOutput}
+                    onChange={(event) => setExampleOutput(event.target.value)}
                   />
                 </TextArea>
               </div>
@@ -126,8 +135,8 @@ function AiContextPage() {
                 >
                   <TextField.Input
                     placeholder="e.g. professional, technical, casual"
-                    value=""
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {}}
+                    value={tone}
+                    onChange={(event) => setTone(event.target.value)}
                   />
                 </TextField>
                 <TextField
@@ -137,8 +146,8 @@ function AiContextPage() {
                 >
                   <TextField.Input
                     placeholder="e.g. developers, business users"
-                    value=""
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {}}
+                    value={audience}
+                    onChange={(event) => setAudience(event.target.value)}
                   />
                 </TextField>
                 <TextField
@@ -148,8 +157,8 @@ function AiContextPage() {
                 >
                   <TextField.Input
                     placeholder="e.g. markdown, html"
-                    value=""
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {}}
+                    value={outputFormat}
+                    onChange={(event) => setOutputFormat(event.target.value)}
                   />
                 </TextField>
               </div>
