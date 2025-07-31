@@ -20,6 +20,7 @@ import { FeatherEdit2 } from "@subframe/core";
 import { FeatherFeather } from "@subframe/core";
 import { FeatherMaximize } from "@subframe/core";
 import { FeatherPenTool } from "@subframe/core";
+import { useRouter } from "next/navigation";
 
 const buttonBaseStyles =
   "flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
@@ -28,6 +29,7 @@ const buttonVariants = {
 };
 
 function ReleaseJourneyStart() {
+  const router = useRouter();
   const [showAlert, setShowAlert] = useState(true);
 
   return (
@@ -104,7 +106,7 @@ function ReleaseJourneyStart() {
                   <Button
                     className={`${buttonBaseStyles} ${buttonVariants.neutral}`}
                     icon={<FeatherArrowRight />}
-                    onClick={(event: React.MouseEvent<HTMLButtonElement>) => {}}
+                    onClick={() => router.push("/release-notes/ai-context")}
                   >
                     Start with AI
                   </Button>
