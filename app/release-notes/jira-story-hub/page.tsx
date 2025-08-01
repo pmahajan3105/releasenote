@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { FeatherClipboard } from "@subframe/core";
-import Tabs from "@/components/ui/components/Tabs";
 import { FeatherGithub } from "@subframe/core";
 import { FeatherTrello } from "@subframe/core";
 import { Badge } from "@/components/ui/components/Badge";
@@ -12,9 +12,18 @@ import { Button } from "@/ui/components/Button";
 import { Checkbox } from "@/ui/components/Checkbox";
 import { FeatherRefreshCw } from "@subframe/core";
 import { TextArea } from "@/components/ui/components/TextArea";
-import IntegrationTabs from "@/components/ui/IntegrationTabs";
 
 function JiraStoryHub() {
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  const handleTabChange = (index: number) => {
+    if (index === 0) { // GitHub tab
+      router.push('/release-notes/ai-release-notes');
+    }
+    // For Jira tab (index 1), we're already on the correct page
+  };
+
   return (
     <DefaultPageLayout>
       <div className="container max-w-none flex h-full w-full flex-col items-start">
@@ -30,7 +39,33 @@ function JiraStoryHub() {
               Manage and generate release notes from Jira issues
             </span>
           </div>
-          <IntegrationTabs />
+          <div className="flex w-full flex-col items-start gap-4">
+            <span className="text-body-bold font-body-bold text-default-font">
+              Choose Integration Source
+            </span>
+            <div className="flex border-b border-neutral-border h-auto w-full max-w-[448px] flex-none">
+              <button
+                onClick={() => handleTabChange(0)}
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors cursor-pointer ${
+                  pathname.includes('ai-release-notes')
+                    ? "border-brand text-brand"
+                    : "border-transparent text-neutral-600 hover:text-brand hover:border-brand"
+                }`}
+              >
+                GitHub
+              </button>
+              <button
+                onClick={() => handleTabChange(1)}
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors cursor-pointer ${
+                  pathname.includes('jira-story-hub')
+                    ? "border-brand text-brand"
+                    : "border-transparent text-neutral-600 hover:text-brand hover:border-brand"
+                }`}
+              >
+                Jira
+              </button>
+            </div>
+          </div>
         </div>
         <div className="container max-w-none flex w-full grow shrink-0 basis-0 flex-col items-start gap-8 bg-default-background py-12 overflow-auto">
           <div className="flex w-full max-w-[1024px] flex-col items-start gap-8">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { FeatherZap } from "@subframe/core";
 import { Button } from "@/ui/components/Button";
 import { IconButton } from "@/ui/components/IconButton";
@@ -12,6 +13,7 @@ import { TextField } from "@/components/ui/components/TextField";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 
 function AiContextPage() {
+  const router = useRouter();
   const [isAlertVisible, setIsAlertVisible] = useState(true);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [userPromptTemplate, setUserPromptTemplate] = useState("");
@@ -52,7 +54,15 @@ function AiContextPage() {
                   >
                     Reset defaults
                   </Button>
-                  <Button onClick={() => {}}>Save changes</Button>
+                  <Button 
+                    onClick={() => {
+                      // Save the changes here (you can add your save logic)
+                      // Then redirect to ai-release-notes page
+                      router.push('/release-notes/ai-release-notes');
+                    }}
+                  >
+                    Save changes
+                  </Button>
                 </div>
               </div>
               {isAlertVisible && (
