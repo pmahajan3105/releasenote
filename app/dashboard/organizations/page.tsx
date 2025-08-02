@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
+import { Button } from "@/ui/components/Button";
 import { IconButton } from "@/ui/components/IconButton";
 import { FeatherX, FeatherHelpCircle } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
@@ -13,11 +14,31 @@ import {
   SelectContent,
   SelectItem,
 } from "@/ui/components/Select";
-import { Button } from "@/ui/components/Button";
+
+// Define the organization type
+interface Organization {
+  id: string;
+  logo?: string;
+  name: string;
+  memberCount: number;
+  role: string;
+}
 
 export default function ConfigurationPage() {
   const [companyDetails, setCompanyDetails] = useState("");
   const [aiTone, setAiTone] = useState("");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+
+  useEffect(() => {
+    // Fetch organizations dynamically (replace with actual API call)
+    const fetchOrganizations = async () => {
+      const response = await fetch("/api/organizations");
+      const data = await response.json();
+      setOrganizations(data);
+    };
+
+    fetchOrganizations();
+  }, []);
 
   const onSave = () => {
     // Implement your save logic here
@@ -26,13 +47,63 @@ export default function ConfigurationPage() {
 
   return (
     <DefaultPageLayout>
-      <div className="flex h-full w-full flex-col items-start gap-2 bg-default-background px-6 py-6 mobile:container mobile:max-w-none">
-        <div className="flex w-full flex-col items-start gap-1">
-          <h2 className="text-heading-2 font-heading-2 text-default-font">Configuration</h2>
+      <div className="flex flex-col h-full w-full overflow-y-auto px-6 py-6">
+        <div className="flex w-full flex-col items-start gap-1 mb-4">
+          <h2 className="text-heading-2 font-heading-2 text-default-font">
+            Configuration
+          </h2>
           <p className="text-body font-body text-subtext-color">
             Manage your organization settings and AI preferences
           </p>
         </div>
+
+        {organizations.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {organizations.map((org) => (
+              <div
+                key={org.id}
+                className="flex flex-col items-start p-4 border border-neutral-border rounded-md bg-default-background"
+              >
+                {org.logo ? (
+                  <img
+                    src={org.logo}
+                    alt={`${org.name} logo`}
+                    className="w-16 h-16 object-cover mb-2"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-neutral-border flex items-center justify-center mb-2">
+                    <span className="text-body font-body text-subtext-color">
+                      No Logo
+                    </span>
+                  </div>
+                )}
+                <h3 className="text-heading-3 font-heading-3 text-default-font">
+                  {org.name}
+                </h3>
+                <p className="text-body font-body text-subtext-color">
+                  {org.memberCount} members
+                </p>
+                <p className="text-body-small text-subtext-color">
+                  Role: {org.role}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full mb-8">
+            <p className="text-body font-body text-subtext-color mb-4">
+              No organizations found.
+            </p>
+            <Button
+              className="bg-black text-white"
+              onClick={() =>
+                (window.location.href = "/dashboard/create-organization")
+              }
+            >
+              Create your first organization
+            </Button>
+          </div>
+        )}
 
         <div className="container max-w-none flex w-full grow shrink-0 basis-0 flex-col items-center gap-6 bg-default-background py-12 shadow-sm">
           <div className="flex w-full max-w-[576px] flex-col items-start gap-12">

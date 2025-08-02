@@ -11,6 +11,13 @@ import { FeatherHelpCircle } from "@subframe/core";
 import { TextArea } from "@/components/ui/components/TextArea";
 import { TextField } from "@/components/ui/components/TextField";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/ui/components/Select";
 
 function AiContextPage() {
   const router = useRouter();
@@ -21,6 +28,27 @@ function AiContextPage() {
   const [tone, setTone] = useState("");
   const [audience, setAudience] = useState("");
   const [outputFormat, setOutputFormat] = useState("");
+
+  const handleSave = () => {
+    if (!systemPrompt || !userPromptTemplate || !exampleOutput || !tone || !audience || !outputFormat) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    const payload = {
+      systemPrompt,
+      userPromptTemplate,
+      exampleOutput,
+      tone,
+      audience,
+      outputFormat,
+    };
+
+    // Replace with actual API call
+    console.log("Saving settings:", payload);
+
+    router.push("/release-notes/ai-release-notes");
+  };
 
   return (
     <DefaultPageLayout>
@@ -55,11 +83,7 @@ function AiContextPage() {
                     Reset defaults
                   </Button>
                   <Button 
-                    onClick={() => {
-                      // Save the changes here (you can add your save logic)
-                      // Then redirect to ai-release-notes page
-                      router.push('/release-notes/ai-release-notes');
-                    }}
+                    onClick={handleSave}
                   >
                     Save changes
                   </Button>
@@ -138,17 +162,21 @@ function AiContextPage() {
                     AI Behavior
                   </span>
                 </div>
-                <TextField
-                  className="h-auto w-auto min-w-[320px] sm:min-w-[448px] flex-none"
-                  label="Tone"
-                  helpText="Writing style for generated content"
+                <Select
+                  value={tone}
+                  onValueChange={(value) => setTone(value)}
                 >
-                  <TextField.Input
-                    placeholder="e.g. professional, technical, casual"
-                    value={tone}
-                    onChange={(event) => setTone(event.target.value)}
-                  />
-                </TextField>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Tone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Formal">Formal</SelectItem>
+                    <SelectItem value="Informal">Informal</SelectItem>
+                    <SelectItem value="Concise">Concise</SelectItem>
+                    <SelectItem value="Technical">Technical</SelectItem>
+                    <SelectItem value="Marketing-friendly">Marketing-friendly</SelectItem>
+                  </SelectContent>
+                </Select>
                 <TextField
                   className="h-auto w-auto min-w-[320px] sm:min-w-[448px] flex-none"
                   label="Audience"

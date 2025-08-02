@@ -15,20 +15,24 @@ import { FeatherLink } from "@subframe/core";
 function Dashboard() {
   const router = useRouter();
 
-  const handleCreateReleaseNote = () => {
-    router.push('/dashboard/release-notes/create');
+  const handleCreateRelease = () => {
+    router.push('/release-notes/start');
   };
 
   const handleSetupIntegration = () => {
     router.push('/dashboard/integrations');
   };
 
-  const handleAIContextSettings = () => {
-    router.push('/dashboard/settings/ai-context');
+  const handleAIContextSetting = () => {
+    router.push('/release-notes/ai-context');
   };
 
   const handleTemplateManagement = () => {
-    router.push('/dashboard/templates');
+    router.push('/settings/templates');
+  };
+
+  const handleSettings = () => {
+    router.push('/settings/organization');
   };
 
   const handleSupportHelp = () => {
@@ -45,10 +49,6 @@ function Dashboard() {
 
   const handleNotifications = () => {
     router.push('/dashboard/notifications');
-  };
-
-  const handleSettings = () => {
-    router.push('/dashboard/settings');
   };
 
   const handleConnectIntegration = () => {
@@ -104,21 +104,21 @@ function Dashboard() {
             <div className="flex w-full flex-wrap items-start gap-6">
               <Button
                 variant="neutral-secondary"
-                onClick={handleCreateReleaseNote}
+                onClick={handleCreateRelease}
               >
-                Create Release Note
+                Create release
               </Button>
               <Button
                 variant="neutral-secondary"
                 onClick={handleSetupIntegration}
               >
-                Setup Integration
+                Setup integration
               </Button>
               <Button
                 variant="neutral-secondary"
-                onClick={handleAIContextSettings}
+                onClick={handleAIContextSetting}
               >
-                AI Context Settings
+                AI context setting
               </Button>
               <Button
                 variant="neutral-secondary"
@@ -141,11 +141,14 @@ function Dashboard() {
               Recent Release Notes
             </span>
             <div className="flex w-full flex-col items-center gap-4 rounded-md border border-solid border-neutral-border bg-default-background px-8 py-16">
-              <IconWithBackground size="large" icon={<FeatherFileText />} />
+              <IconWithBackground size="large" icon={<FeatherFileText className="text-black" />} />
               <span className="text-body font-body text-subtext-color">
                 No release notes created yet.
               </span>
-              <Button onClick={handleCreateReleaseNote}>
+              <Button
+                className="bg-black text-white"
+                onClick={handleCreateRelease}
+              >
                 Create your first one
               </Button>
             </div>
@@ -164,11 +167,14 @@ function Dashboard() {
               Integrations Status
             </span>
             <div className="flex w-full flex-col items-center gap-4 rounded-md border border-solid border-neutral-border bg-default-background px-8 py-16">
-              <IconWithBackground size="large" icon={<FeatherLink />} />
+              <IconWithBackground size="large" icon={<FeatherLink className="text-black" />} />
               <span className="text-body font-body text-subtext-color">
                 No integrations connected yet.
               </span>
-              <Button onClick={handleConnectIntegration}>
+              <Button
+                className="bg-black text-white"
+                onClick={handleSetupIntegration}
+              >
                 Connect your first integration
               </Button>
             </div>
@@ -186,47 +192,47 @@ function Dashboard() {
             <span className="text-heading-2 font-heading-2 text-default-font">
               Getting Started Checklist
             </span>
-            <div className="flex w-full flex-col items-start gap-4">
-              <div className="flex w-full items-center justify-between border-b border-solid border-neutral-border py-4">
+            <div className="flex flex-col space-y-4">
+              <div className="flex justify-between items-center">
                 <span className="text-body font-body text-default-font">
                   Connect an integration (Jira, GitHub, etc.)
                 </span>
                 <Button
                   variant="neutral-tertiary"
-                  onClick={handleConnectIntegration}
+                  onClick={handleSetupIntegration}
                 >
                   Setup
                 </Button>
               </div>
-              <div className="flex w-full items-center justify-between border-b border-solid border-neutral-border py-4">
+              <div className="flex justify-between items-center">
                 <span className="text-body font-body text-default-font">
                   Configure your AI Context
                 </span>
                 <Button
                   variant="neutral-tertiary"
-                  onClick={handleConfigureAI}
+                  onClick={handleAIContextSetting}
                 >
                   Configure
                 </Button>
               </div>
-              <div className="flex w-full items-center justify-between border-b border-solid border-neutral-border py-4">
+              <div className="flex justify-between items-center">
                 <span className="text-body font-body text-default-font">
                   Create your first Release Note
                 </span>
                 <Button
                   variant="neutral-tertiary"
-                  onClick={handleCreateFirstNote}
+                  onClick={handleCreateRelease}
                 >
                   Create
                 </Button>
               </div>
-              <div className="flex w-full items-center justify-between py-4">
+              <div className="flex justify-between items-center">
                 <span className="text-body font-body text-default-font">
                   Explore and manage Templates
                 </span>
                 <Button
                   variant="neutral-tertiary"
-                  onClick={handleExploreTemplates}
+                  onClick={handleTemplateManagement}
                 >
                   Templates
                 </Button>
