@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-type RouteSupabaseClient = ReturnType<typeof createRouteHandlerClient>
+type RouteSupabaseClient = ReturnType<typeof createRouteHandlerClient<Record<string, unknown>, 'public'>>
 
 interface SSLCertificateRecord {
   id: string | number

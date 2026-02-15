@@ -4,13 +4,14 @@ import React, { useMemo, useRef, useCallback } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 // Dynamically import react-quill to avoid SSR issues
 import dynamic from 'next/dynamic'
+import type { ReactQuillProps } from 'react-quill'
 import 'react-quill/dist/quill.snow.css' // Import Quill styles
 
 // Dynamically import ReactQuill, disable SSR  
-const ReactQuill = dynamic(() => import('react-quill'), { 
+const ReactQuill = dynamic(() => import('react-quill').then(module => module.default), {
   ssr: false,
   loading: () => <div>Loading editor...</div>
-});
+}) as unknown as React.ComponentType<ReactQuillProps & { ref?: React.Ref<QuillComponentApi> }>
 
 interface ReleaseNoteEditorProps {
   value: string

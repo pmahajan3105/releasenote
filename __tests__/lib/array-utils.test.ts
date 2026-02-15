@@ -155,7 +155,7 @@ describe('Array Utilities', () => {
     })
 
     it('should splice array', () => {
-      const arr = [1, 2, 3, 4, 5]
+      const arr: Array<number | string> = [1, 2, 3, 4, 5]
       const removed = arr.splice(1, 2, 'a', 'b')
       
       expect(removed).toEqual([2, 3])

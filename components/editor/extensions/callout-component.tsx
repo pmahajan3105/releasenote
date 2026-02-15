@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { NodeViewWrapper, NodeViewContent } from '@tiptap/react'
+import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from '@tiptap/react'
 import { 
   InfoIcon, 
   AlertTriangleIcon, 
@@ -10,15 +10,14 @@ import {
   LightbulbIcon
 } from 'lucide-react'
 
-interface CalloutComponentProps {
-  node: {
-    attrs: {
-      type: 'info' | 'warning' | 'success' | 'error' | 'tip'
-    }
-  }
-  updateAttributes: (attributes: Record<string, unknown>) => void
-  selected: boolean
-}
+type CalloutType = 'info' | 'warning' | 'success' | 'error' | 'tip'
+
+const isCalloutType = (value: unknown): value is CalloutType =>
+  value === 'info' ||
+  value === 'warning' ||
+  value === 'success' ||
+  value === 'error' ||
+  value === 'tip'
 
 const calloutConfig = {
   info: {
@@ -48,8 +47,8 @@ const calloutConfig = {
   }
 }
 
-export function CalloutComponent({ node, updateAttributes, selected }: CalloutComponentProps) {
-  const { type } = node.attrs
+export function CalloutComponent({ node, updateAttributes, selected }: NodeViewProps) {
+  const type = isCalloutType(node.attrs.type) ? node.attrs.type : 'info'
   const config = calloutConfig[type] || calloutConfig.info
   const Icon = config.icon
 

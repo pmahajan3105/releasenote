@@ -1,20 +1,9 @@
 'use client'
 
 import React, { useEffect, useRef } from 'react'
-import { NodeViewWrapper, NodeViewContent } from '@tiptap/react'
+import { NodeViewWrapper, NodeViewContent, type NodeViewProps } from '@tiptap/react'
 import { CopyIcon, CheckIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-interface CodeBlockComponentProps {
-  node: {
-    attrs: {
-      language: string | null
-    }
-    textContent: string
-  }
-  updateAttributes: (attributes: Record<string, unknown>) => void
-  selected: boolean
-}
 
 const SUPPORTED_LANGUAGES = [
   { value: 'javascript', label: 'JavaScript' },
@@ -41,8 +30,8 @@ const SUPPORTED_LANGUAGES = [
   { value: 'csharp', label: 'C#' },
 ]
 
-export function CodeBlockComponent({ node, updateAttributes, selected }: CodeBlockComponentProps) {
-  const { language } = node.attrs
+export function CodeBlockComponent({ node, updateAttributes, selected }: NodeViewProps) {
+  const language = typeof node.attrs.language === 'string' ? node.attrs.language : null
   const [copied, setCopied] = React.useState(false)
   const codeRef = useRef<HTMLElement>(null)
 

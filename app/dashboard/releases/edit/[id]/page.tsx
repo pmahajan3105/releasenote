@@ -241,7 +241,7 @@ export default function EditReleasePage() {
           content={content}
           version={version}
           coverImageUrl={coverImageUrl}
-          organization={organization}
+          organization={organization ?? undefined}
           publishedAt={note?.published_at}
         />
       </div>

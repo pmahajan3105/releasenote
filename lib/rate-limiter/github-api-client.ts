@@ -57,7 +57,7 @@ export class GitHubAPIClient {
       method,
       headers: requestHeaders,
       body,
-      priority,
+      queuePriority: priority,
       organizationId
     }
 

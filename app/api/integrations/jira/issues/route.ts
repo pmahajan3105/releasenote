@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const startAt = parseIntegerParam(searchParams.get('startAt'), 0, { min: 0 })
     const issueTypes = parseCsvParam(searchParams.get('issueTypes'))
     const statuses = parseCsvParam(searchParams.get('statuses'))
-    const updatedSince = searchParams.get('updatedSince')
+    const updatedSince = searchParams.get('updatedSince') ?? undefined
 
     // Get Jira integration
     const { data, error: integrationError } = await supabase

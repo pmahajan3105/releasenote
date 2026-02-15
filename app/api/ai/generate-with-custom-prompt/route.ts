@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { getAiProvider } from '@/lib/ai'
-import { customPromptEngine, GenerationContext } from '@/lib/ai/custom-prompts'
+import { customPromptEngine, GenerationContext, type PromptVariable } from '@/lib/ai/custom-prompts'
 import DOMPurify from 'dompurify'
 import { JSDOM } from 'jsdom'
 
 const window = new JSDOM('').window
 const purify = DOMPurify(window)
+
+const isPromptVariableValue = (
+  value: unknown
+): value is PromptVariable['value'] =>
+  typeof value === 'string' ||
+  typeof value === 'number' ||
+  typeof value === 'boolean' ||
+  (Array.isArray(value) && value.every(item => typeof item === 'string'))
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,14 +86,16 @@ export async function POST(request: NextRequest) {
     } : undefined
 
     // Create generation context
+    const promptVariables: PromptVariable[] = Object.entries(variables ?? {})
+      .flatMap(([name, value]) =>
+        isPromptVariableValue(value) ? [{ name, value }] : []
+      )
+
     const context: GenerationContext = {
       organizationId: session.user.id,
       customPrompt: promptObj,
       brandVoice: brandVoiceObj,
-      variables: Object.entries(variables || {}).map(([name, value]) => ({
-        name,
-        value
-      }))
+      variables: promptVariables
     }
 
     // Generate enhanced prompt

@@ -1,6 +1,3 @@
-import { createMocks } from 'node-mocks-http'
-import { NextRequest } from 'next/server'
-
 // Mock Supabase
 jest.mock('@supabase/auth-helpers-nextjs', () => ({
   createRouteHandlerClient: jest.fn(() => ({

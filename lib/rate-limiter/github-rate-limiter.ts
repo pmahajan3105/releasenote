@@ -18,7 +18,7 @@ interface QueuedRequest {
 }
 
 interface RequestOptions {
-  priority?: 'high' | 'medium' | 'low'
+  queuePriority?: 'high' | 'medium' | 'low'
   maxRetries?: number
   timeout?: number
   organizationId?: string
@@ -68,14 +68,14 @@ export class GitHubRateLimiter {
     url: string,
     options: RequestInit & RequestOptions = {}
   ): Promise<Response> {
-    const { priority = 'medium', timeout = 30000, organizationId, ...fetchOptions } = options
+    const { queuePriority = 'medium', timeout = 30000, organizationId, ...fetchOptions } = options
 
     return new Promise<Response>((resolve, reject) => {
       const requestId = this.generateRequestId()
       
       const queuedRequest: QueuedRequest = {
         id: requestId,
-        priority,
+        priority: queuePriority,
         request: async () => {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), timeout)

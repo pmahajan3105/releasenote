@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { isProviderAvailable } from '@/lib/config'
-import { withOrgAuth, type AuthContext } from '@/lib/auth-helpers'
+import { withOrgAuth } from '@/lib/auth-helpers'
+import type { AuthContext } from '@/types/auth'
 
 /**
  * GET /api/release-notes/init - Get initialization data (templates, categories, preferences)
