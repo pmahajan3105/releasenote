@@ -5,10 +5,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { HistoryIcon, EyeIcon, RotateCcwIcon, UserIcon, ClockIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { ReleaseNote } from '@/contexts/ReleaseNotesContext'
+import type { ReleaseNote } from '@/types/database'
 
 interface VersionHistoryProps {
   open: boolean
@@ -144,7 +143,7 @@ export function VersionHistory({
                 )}
               </div>
 
-              <ScrollArea className="h-full">
+              <div className="h-full overflow-auto pr-1">
                 <div className="space-y-3">
                   {loading ? (
                     <div className="text-center py-8">
@@ -230,7 +229,7 @@ export function VersionHistory({
                     ))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
 
             {/* Preview Panel */}
@@ -261,7 +260,7 @@ export function VersionHistory({
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-96">
+                    <div className="h-96 overflow-auto pr-1">
                       <div className="prose prose-sm max-w-none">
                         {previewVersion.content_html ? (
                           <div dangerouslySetInnerHTML={{ __html: previewVersion.content_html }} />
@@ -273,7 +272,7 @@ export function VersionHistory({
                           <div className="text-gray-500 italic">No content available</div>
                         )}
                       </div>
-                    </ScrollArea>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (

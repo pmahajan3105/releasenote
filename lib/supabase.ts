@@ -167,12 +167,15 @@ export function initializeSupabaseCleanup() {
     setInterval(async () => {
       try {
         const client = createServerSupabaseClient()
+        const rpcClient = client as unknown as {
+          rpc: (fn: string) => Promise<unknown>
+        }
         
         // Cleanup expired OAuth states
-        await client.rpc('cleanup_expired_oauth_states')
+        await rpcClient.rpc('cleanup_expired_oauth_states')
         
         // Cleanup old ticket cache
-        await client.rpc('cleanup_old_ticket_cache')
+        await rpcClient.rpc('cleanup_expired_ticket_cache')
         
         console.log('Supabase cleanup completed successfully')
       } catch (error) {

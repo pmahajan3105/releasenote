@@ -191,7 +191,7 @@ export function BrandVoiceManager({ className, onBrandVoiceSelect, onCustomPromp
   }, [])
 
   const handleCreateFromDefault = async (
-    defaultItem: BrandVoice | CustomPrompt,
+    defaultItem: Partial<BrandVoice> | Partial<CustomPrompt>,
     type: 'brandVoice' | 'customPrompt'
   ) => {
     setIsLoading(true)

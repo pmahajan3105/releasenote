@@ -1,13 +1,29 @@
 import React from 'react';
 
 const UserFlowDiagram = () => {
-  const Box = ({ children, className = "", width = "w-48", height = "h-24" }) => (
+  const Box = ({
+    children,
+    className = "",
+    width = "w-48",
+    height = "h-24"
+  }: {
+    children: React.ReactNode
+    className?: string
+    width?: string
+    height?: string
+  }) => (
     <div className={`${width} ${height} border-2 border-slate-300 rounded-lg flex items-center justify-center text-center p-2 text-sm font-medium bg-white ${className}`}>
       {children}
     </div>
   );
 
-  const Arrow = ({ direction = "right", className = "" }) => {
+  const Arrow = ({
+    direction = "right",
+    className = ""
+  }: {
+    direction?: "right" | "down"
+    className?: string
+  }) => {
     const arrowClass = direction === "down" ? "rotate-90" : "";
     return (
       <div className={`flex items-center justify-center ${className}`}>
@@ -18,7 +34,13 @@ const UserFlowDiagram = () => {
     );
   };
 
-  const DecisionBox = ({ children, className = "" }) => (
+  const DecisionBox = ({
+    children,
+    className = ""
+  }: {
+    children: React.ReactNode
+    className?: string
+  }) => (
     <div className={`w-40 h-20 border-2 border-blue-300 rounded-lg bg-blue-50 flex items-center justify-center text-center p-2 text-sm font-medium transform rotate-45 ${className}`}>
       <div className="transform -rotate-45">{children}</div>
     </div>
