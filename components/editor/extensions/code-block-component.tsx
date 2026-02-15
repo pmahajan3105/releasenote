@@ -114,13 +114,3 @@ export function CodeBlockComponent({ node, updateAttributes, selected }: CodeBlo
     </NodeViewWrapper>
   )
 }
-
-// Extend window type for Prism
-declare global {
-  interface Window {
-    Prism?: {
-      highlightElement: (element: HTMLElement) => void
-      highlightAll: () => void
-    }
-  }
-}

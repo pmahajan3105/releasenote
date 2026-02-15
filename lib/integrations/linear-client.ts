@@ -1,10 +1,4 @@
-type ProjectFilterInput = {
-  team: {
-    id: {
-      eq: string
-    }
-  }
-}
+import type { ProjectFilterInput } from '@/types/linear'
 
 /**
  * Linear API Client with GraphQL support
