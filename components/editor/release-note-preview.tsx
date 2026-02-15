@@ -108,7 +108,7 @@ export function ReleaseNotePreview({
           <span className="text-sm font-medium">Preview Mode</span>
         </div>
         <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-          This is how your release note will appear to the public. Changes are not saved until you click "Save Changes".
+          This is how your release note will appear to the public. Changes are not saved until you click &quot;Save Changes&quot;.
         </p>
       </div>
 

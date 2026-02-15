@@ -1,6 +1,7 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { Database } from '@/types/supabase'
 import { EnhancedReleaseNotesList } from '@/components/public/enhanced-release-notes-list'
 
@@ -69,7 +70,7 @@ export async function generateMetadata({ params }: Props) {
   const description = organization.meta_description || organization.description || `Latest release notes from ${organization.name}`
   const imageUrl = organization.meta_image_url
 
-  const metadata: any = {
+  const metadata: Metadata = {
     title,
     description,
     openGraph: {

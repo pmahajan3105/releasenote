@@ -31,10 +31,19 @@ interface SearchFilterProps {
 }
 
 export function SearchFilter({ releaseNotes, onFilter, brandColor = '#7F56D9' }: SearchFilterProps) {
+  type DateRange = 'all' | 'week' | 'month' | 'quarter' | 'year'
+  const DATE_RANGES: Array<{ value: DateRange; label: string }> = [
+    { value: 'all', label: 'All Time' },
+    { value: 'week', label: 'Past Week' },
+    { value: 'month', label: 'Past Month' },
+    { value: 'quarter', label: 'Past 3 Months' },
+    { value: 'year', label: 'Past Year' },
+  ]
+
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [dateRange, setDateRange] = useState<'all' | 'week' | 'month' | 'quarter' | 'year'>('all')
+  const [dateRange, setDateRange] = useState<DateRange>('all')
 
   // Helper function to strip HTML
   const stripHtml = (html: string): string => {
@@ -154,7 +163,11 @@ export function SearchFilter({ releaseNotes, onFilter, brandColor = '#7F56D9' }:
         {/* Filter Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2 h-10 sm:h-9 min-w-0 sm:min-w-[auto] justify-center sm:justify-start">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 h-10 sm:h-9 min-w-0 sm:min-w-[auto] justify-center sm:justify-start"
+              style={hasActiveFilters ? { borderColor: brandColor } : undefined}
+            >
               <FilterIcon className="w-4 h-4 flex-shrink-0" />
               <span className="hidden sm:inline">Filters</span>
               <span className="sm:hidden">Filter</span>
@@ -191,21 +204,32 @@ export function SearchFilter({ releaseNotes, onFilter, brandColor = '#7F56D9' }:
 
             {/* Date Range */}
             <DropdownMenuLabel>Date Range</DropdownMenuLabel>
-            {[
-              { value: 'all', label: 'All Time' },
-              { value: 'week', label: 'Past Week' },
-              { value: 'month', label: 'Past Month' },
-              { value: 'quarter', label: 'Past 3 Months' },
-              { value: 'year', label: 'Past Year' },
-            ].map(range => (
+            {DATE_RANGES.map((range) => (
               <DropdownMenuItem
                 key={range.value}
-                onClick={() => setDateRange(range.value as any)}
+                onClick={() => setDateRange(range.value)}
                 className={dateRange === range.value ? 'bg-accent' : ''}
               >
                 {range.label}
               </DropdownMenuItem>
             ))}
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Tags</DropdownMenuLabel>
+                {tags.map((tag) => (
+                  <DropdownMenuItem
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={selectedTags.includes(tag) ? 'bg-accent' : ''}
+                  >
+                    {tag}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
 
             {/* Clear Filters */}
             {hasActiveFilters && (

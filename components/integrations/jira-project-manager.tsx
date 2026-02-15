@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,12 +29,12 @@ interface JiraProject {
   style: string
   isPrivate: boolean
   url: string
-  avatarUrls?: any
+  avatarUrls?: Record<string, string>
   lead?: {
     accountId: string
     displayName: string
     emailAddress?: string
-    avatarUrls?: any
+    avatarUrls?: Record<string, string>
   }
   issueTypes: Array<{
     id: string
@@ -47,6 +48,15 @@ interface JiraProject {
 interface JiraSite {
   id: string
   name: string
+}
+
+interface JiraConnectionTestResponse {
+  tests?: Array<{
+    name?: string
+    details?: {
+      sites?: JiraSite[]
+    }
+  }>
 }
 
 interface JiraProjectManagerProps {
@@ -69,19 +79,7 @@ export function JiraProjectManager({
   
   const user = useAuthStore((state) => state.user)
 
-  useEffect(() => {
-    if (user) {
-      loadSites()
-    }
-  }, [user])
-
-  useEffect(() => {
-    if (selectedSite) {
-      loadProjects()
-    }
-  }, [selectedSite])
-
-  const loadSites = async () => {
+  const loadSites = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -91,8 +89,8 @@ export function JiraProjectManager({
       })
 
       if (response.ok) {
-        const data = await response.json()
-        const availableSites = data.tests?.find((test: any) => 
+        const data = await response.json() as JiraConnectionTestResponse
+        const availableSites = data.tests?.find((test) => 
           test.name === 'Authentication & Resources' && test.details?.sites
         )?.details?.sites || []
 
@@ -109,9 +107,9 @@ export function JiraProjectManager({
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedSite])
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     if (!selectedSite) return
 
     try {
@@ -132,7 +130,19 @@ export function JiraProjectManager({
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedSite])
+
+  useEffect(() => {
+    if (user) {
+      void loadSites()
+    }
+  }, [loadSites, user])
+
+  useEffect(() => {
+    if (selectedSite) {
+      void loadProjects()
+    }
+  }, [loadProjects, selectedSite])
 
   const handleProjectToggle = (projectKey: string) => {
     if (selectionMode === 'single') {
@@ -324,9 +334,12 @@ export function JiraProjectManager({
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                         {project.avatarUrls?.['48x48'] ? (
-                          <img 
-                            src={project.avatarUrls['48x48']} 
+                          <Image
+                            src={project.avatarUrls['48x48']}
                             alt={project.name}
+                            width={32}
+                            height={32}
+                            unoptimized
                             className="w-8 h-8 rounded"
                           />
                         ) : (

@@ -20,6 +20,9 @@ interface AIContext {
   updated_at?: string
 }
 
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error ? error.message : fallback
+
 export default function AIContextPage() {
   const [context, setContext] = useState<AIContext | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,9 +45,10 @@ export default function AIContextPage() {
           audience: "",
           output_format: ""
         })
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch AI context")
-        toast.error(err.message || "Failed to fetch AI context")
+      } catch (err: unknown) {
+        const errorMessage = getErrorMessage(err, "Failed to fetch AI context")
+        setError(errorMessage)
+        toast.error(errorMessage)
       } finally {
         setLoading(false)
       }
@@ -71,9 +75,10 @@ export default function AIContextPage() {
       if (!res.ok) throw new Error(json.error || "Failed to save AI context")
       setContext(json.aiContext)
       toast.success("AI context saved")
-    } catch (err: any) {
-      setError(err.message || "Failed to save AI context")
-      toast.error(err.message || "Failed to save AI context")
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, "Failed to save AI context")
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setSaving(false)
     }

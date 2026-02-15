@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -66,7 +66,7 @@ export function IntegrationStatus({
   const [testing, setTesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const checkHealth = async () => {
+  const checkHealth = useCallback(async () => {
     if (!integrationId) return
 
     try {
@@ -87,7 +87,7 @@ export function IntegrationStatus({
       setError(err instanceof Error ? err.message : 'Health check failed')
       setHealth(null)
     }
-  }
+  }, [integrationId, integrationType])
 
   const runDiagnostics = async () => {
     setTesting(true)
@@ -111,25 +111,16 @@ export function IntegrationStatus({
 
   useEffect(() => {
     if (integrationId) {
-      checkHealth().finally(() => setLoading(false))
+      void checkHealth().finally(() => setLoading(false))
     }
-  }, [integrationId, integrationType])
+  }, [checkHealth, integrationId])
 
   useEffect(() => {
     if (autoRefresh && integrationId && refreshInterval > 0) {
       const interval = setInterval(checkHealth, refreshInterval)
       return () => clearInterval(interval)
     }
-  }, [autoRefresh, integrationId, refreshInterval])
-
-  const getStatusColor = (status: IntegrationHealth['status']) => {
-    switch (status) {
-      case 'healthy': return 'text-green-600'
-      case 'warning': return 'text-yellow-600'
-      case 'error': return 'text-red-600'
-      default: return 'text-gray-600'
-    }
-  }
+  }, [autoRefresh, checkHealth, integrationId, refreshInterval])
 
   const getStatusIcon = (status: IntegrationHealth['status']) => {
     switch (status) {
@@ -148,12 +139,6 @@ export function IntegrationStatus({
       case 'error': return <Badge className={cn(baseClasses, "bg-red-100 text-red-800")}>Error</Badge>
       default: return <Badge className={cn(baseClasses, "bg-gray-100 text-gray-800")}>Unknown</Badge>
     }
-  }
-
-  const formatUptime = (uptime?: number) => {
-    if (!uptime) return 'Unknown'
-    if (uptime >= 99.9) return '99.9%+'
-    return `${uptime.toFixed(1)}%`
   }
 
   const formatLastChecked = (timestamp: string) => {

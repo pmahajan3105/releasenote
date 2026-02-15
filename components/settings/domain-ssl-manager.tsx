@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,12 +61,7 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
   const [error, setError] = useState('')
 
   // Load current domain and SSL status
-  useEffect(() => {
-    loadDomainStatus()
-    loadSSLStatus()
-  }, [organizationId])
-
-  const loadDomainStatus = async () => {
+  const loadDomainStatus = useCallback(async () => {
     try {
       // In a real implementation, this would fetch from the domain API
       // For demo purposes, we'll use mock data
@@ -80,9 +75,9 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
     } catch (error) {
       console.error('Failed to load domain status:', error)
     }
-  }
+  }, [])
 
-  const loadSSLStatus = async () => {
+  const loadSSLStatus = useCallback(async () => {
     try {
       const response = await fetch(`/api/organizations/${organizationId}/ssl`)
       const data = await response.json()
@@ -96,7 +91,13 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
       console.error('Failed to load SSL status:', error)
       setError('Failed to load SSL status')
     }
-  }
+  }, [organizationId])
+
+  // Load current domain and SSL status
+  useEffect(() => {
+    void loadDomainStatus()
+    void loadSSLStatus()
+  }, [loadDomainStatus, loadSSLStatus])
 
   const handleDomainSubmit = async () => {
     if (!domain.custom.trim()) return
@@ -126,7 +127,7 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
       } else {
         setError(data.error || 'Failed to configure domain')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to configure domain')
     } finally {
       setLoading(false)
@@ -155,7 +156,7 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
       } else {
         setError(data.error || 'Domain verification failed')
       }
-    } catch (error) {
+    } catch {
       setError('Domain verification failed')
     } finally {
       setLoading(false)
@@ -191,7 +192,7 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
         const data = await response.json()
         setError(data.error || 'Failed to remove domain')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to remove domain')
     } finally {
       setLoading(false)
@@ -221,7 +222,7 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
       } else {
         setError(data.error || 'Failed to enable SSL')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to enable SSL')
     } finally {
       setLoading(false)
@@ -251,7 +252,7 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
         const data = await response.json()
         setError(data.error || 'Failed to remove SSL')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to remove SSL')
     } finally {
       setLoading(false)
@@ -436,7 +437,7 @@ export function DomainSSLManager({ organizationId }: DomainSSLManagerProps) {
               <Alert>
                 <ShieldCheckIcon className="w-4 h-4" />
                 <AlertDescription>
-                  SSL certificates are provided by Let's Encrypt and automatically renewed every 90 days.
+                  SSL certificates are provided by Let&apos;s Encrypt and automatically renewed every 90 days.
                 </AlertDescription>
               </Alert>
             </div>

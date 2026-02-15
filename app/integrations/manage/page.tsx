@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,6 @@ import {
   GitBranchIcon,
   SettingsIcon,
   TestTubeIcon,
-  ExternalLinkIcon,
   RefreshCwIcon,
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -33,7 +32,7 @@ interface Integration {
   created_at: string
   updated_at: string
   last_test_at?: string
-  metadata?: any
+  metadata?: Record<string, unknown>
 }
 
 interface ConnectionTest {
@@ -44,7 +43,7 @@ interface ConnectionTest {
     status: 'passed' | 'failed' | 'warning' | 'info'
     message: string
     error?: string
-    details?: any
+    details?: Record<string, unknown>
   }>
   summary: {
     total: number
@@ -68,13 +67,7 @@ export default function IntegrationManagePage() {
   const { user } = useAuthStore()
   const supabase = createClientComponentClient()
 
-  useEffect(() => {
-    if (user) {
-      loadIntegrations()
-    }
-  }, [user])
-
-  const loadIntegrations = async () => {
+  const loadIntegrations = useCallback(async () => {
     if (!user) return
 
     try {
@@ -91,7 +84,13 @@ export default function IntegrationManagePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, user])
+
+  useEffect(() => {
+    if (user) {
+      void loadIntegrations()
+    }
+  }, [loadIntegrations, user])
 
   const runConnectionTest = async (integrationType: string) => {
     setTesting(true)

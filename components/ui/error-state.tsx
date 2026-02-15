@@ -3,7 +3,7 @@
 import React from 'react'
 import { AlertCircleIcon, RefreshCwIcon, WifiOffIcon, ServerCrashIcon } from 'lucide-react'
 import { Button } from './button'
-import { Card, CardContent, CardHeader, CardTitle } from './card'
+import { Card, CardContent } from './card'
 
 interface ErrorStateProps {
   title?: string

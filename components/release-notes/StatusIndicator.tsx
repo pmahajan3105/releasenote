@@ -122,8 +122,8 @@ export function StatusIndicator({
 // Status indicator with progress for different workflow states
 export function WorkflowStatusIndicator({ 
   status, 
-  publishedAt, 
-  scheduledAt 
+  publishedAt: _publishedAt, 
+  scheduledAt: _scheduledAt 
 }: Omit<StatusIndicatorProps, 'size' | 'showIcon' | 'showTimestamp'>) {
   const steps = [
     { key: 'draft', label: 'Draft', icon: FileTextIcon },

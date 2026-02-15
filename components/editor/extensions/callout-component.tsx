@@ -16,7 +16,7 @@ interface CalloutComponentProps {
       type: 'info' | 'warning' | 'success' | 'error' | 'tip'
     }
   }
-  updateAttributes: (attributes: Record<string, any>) => void
+  updateAttributes: (attributes: Record<string, unknown>) => void
   selected: boolean
 }
 

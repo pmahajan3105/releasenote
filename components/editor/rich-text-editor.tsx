@@ -48,7 +48,7 @@ import {
   AlignRightIcon,
   AlignJustifyIcon
 } from 'lucide-react'
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
 
 interface RichTextEditorProps {
@@ -68,9 +68,6 @@ export function RichTextEditor({
   enableAI = true,
   onAIGenerate
 }: RichTextEditorProps) {
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false)
-  const [linkUrl, setLinkUrl] = useState('')
-  const [uploading, setUploading] = useState(false)
   const supabase = getSupabaseClient()
 
   const editor = useEditor({
@@ -146,12 +143,11 @@ const addImage = useCallback(() => {
   input.onchange = async () => {
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
-    setUploading(true);
     try {
       const timestamp = Date.now();
       const fileName = `editor_${timestamp}_${file.name}`;
       const filePath = `${fileName}`;
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('release-note-images')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -167,8 +163,6 @@ const addImage = useCallback(() => {
       editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
     } catch (error) {
       alert('Image upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setUploading(false);
     }
   };
 }, [editor, supabase]);

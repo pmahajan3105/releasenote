@@ -24,6 +24,16 @@ interface MobileOptimizedFiltersProps {
   brandColor?: string
 }
 
+type DateRange = 'all' | 'week' | 'month' | 'quarter' | 'year'
+
+const DATE_RANGES: Array<{ value: DateRange; label: string }> = [
+  { value: 'all', label: 'All Time' },
+  { value: 'week', label: 'Past Week' },
+  { value: 'month', label: 'Past Month' },
+  { value: 'quarter', label: '3 Months' },
+  { value: 'year', label: 'Past Year' },
+]
+
 export function MobileOptimizedFilters({ 
   releaseNotes, 
   onFilter, 
@@ -32,7 +42,7 @@ export function MobileOptimizedFilters({
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [dateRange, setDateRange] = useState<'all' | 'week' | 'month' | 'quarter' | 'year'>('all')
+  const [dateRange, setDateRange] = useState<DateRange>('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [tagsOpen, setTagsOpen] = useState(false)
@@ -235,17 +245,11 @@ export function MobileOptimizedFilters({
                 <div className="space-y-3">
                   <h3 className="font-semibold text-lg">Date Range</h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { value: 'all', label: 'All Time' },
-                      { value: 'week', label: 'Past Week' },
-                      { value: 'month', label: 'Past Month' },
-                      { value: 'quarter', label: '3 Months' },
-                      { value: 'year', label: 'Past Year' },
-                    ].map(range => (
+                    {DATE_RANGES.map((range) => (
                       <Button
                         key={range.value}
                         variant={dateRange === range.value ? 'default' : 'outline'}
-                        onClick={() => setDateRange(range.value as any)}
+                        onClick={() => setDateRange(range.value)}
                         className="rounded-xl py-3 h-auto"
                         style={dateRange === range.value ? { backgroundColor: brandColor } : {}}
                       >

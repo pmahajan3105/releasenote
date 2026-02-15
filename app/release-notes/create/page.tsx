@@ -2,12 +2,11 @@
 
 import { CalendarIcon, SaveIcon, SendIcon, WandIcon } from "lucide-react"
 import { useState } from "react"
-import { useReleaseNotesStore, useReleaseNotesActions } from "@/lib/store"
+import { useReleaseNotesActions } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { RichTextEditor } from "@/components/editor/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -28,8 +27,7 @@ export default function CreateReleaseNotePage() {
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [showContentImprover, setShowContentImprover] = useState(false)
 
-  const { createReleaseNote, generateWithAI, generateWithTemplate, improveContent } = useReleaseNotesActions()
-  const templates = useReleaseNotesStore((state) => state.templates)
+  const { createReleaseNote, generateWithTemplate } = useReleaseNotesActions()
   const router = useRouter()
 
   const handleCategoryChange = (category: string, checked: boolean) => {

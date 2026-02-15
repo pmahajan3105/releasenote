@@ -12,7 +12,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge'
 import { CalendarIcon, ClockIcon, GlobeIcon, SendIcon, EyeIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { useReleaseNotesStore } from '@/lib/store/use-release-notes'
 import type { ReleaseNote } from '@/types/database'
 
 interface PublishingModalProps {
@@ -108,7 +107,7 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
             Publish Release Note
           </DialogTitle>
           <DialogDescription>
-            Configure publishing settings for "{releaseNote.title}"
+            Configure publishing settings for &quot;{releaseNote.title}&quot;
           </DialogDescription>
         </DialogHeader>
 

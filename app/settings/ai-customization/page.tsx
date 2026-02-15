@@ -28,7 +28,7 @@ export default function AICustomizationPage() {
           <CardHeader className="pb-4">
             <CardTitle className="text-lg text-[#101828]">Brand Voices</CardTitle>
             <CardDescription className="text-[#667085]">
-              Define your organization's tone, personality, and writing style
+              Define your organization&apos;s tone, personality, and writing style
             </CardDescription>
           </CardHeader>
           <CardContent>

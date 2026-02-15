@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   SearchIcon, 
   StarIcon, 
@@ -15,7 +16,6 @@ import {
   RefreshCwIcon,
   CheckCircleIcon,
   WandIcon,
-  SettingsIcon,
   BookOpenIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -47,7 +47,7 @@ interface Repository {
 
 interface RepositoryManagerProps {
   className?: string
-  onRepositorySelect?: (repository: Repository) => void
+  onRepositorySelect?: (repository: Repository | Repository[]) => void
   selectedRepositories?: Repository[]
   selectionMode?: 'single' | 'multiple'
 }
@@ -171,11 +171,11 @@ export function GitHubRepositoryManager({
     if (isSelected) {
       // Remove from selection
       const updatedSelection = selectedRepositories.filter(repo => repo.id !== repository.id)
-      onRepositorySelect(updatedSelection as any) // Type assertion for flexibility
+      onRepositorySelect(updatedSelection)
     } else {
       // Add to selection
       const updatedSelection = [...selectedRepositories, repository]
-      onRepositorySelect(updatedSelection as any) // Type assertion for flexibility
+      onRepositorySelect(updatedSelection)
     }
   }, [onRepositorySelect, selectedRepositories, selectionMode])
 
@@ -255,9 +255,12 @@ export function GitHubRepositoryManager({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {connection.avatar_url && (
-                  <img 
+                  <Image
                     src={connection.avatar_url} 
-                    alt={connection.username}
+                    alt={connection.username ?? 'GitHub user avatar'}
+                    width={40}
+                    height={40}
+                    unoptimized
                     className="w-10 h-10 rounded-full"
                   />
                 )}
@@ -330,7 +333,10 @@ export function GitHubRepositoryManager({
                 className="pl-10"
               />
             </div>
-            <Tabs value={filterBy} onValueChange={(value) => setFilterBy(value as any)}>
+            <Tabs
+              value={filterBy}
+              onValueChange={(value) => setFilterBy(value as 'all' | 'owned' | 'starred' | 'recent')}
+            >
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
                 <TabsTrigger value="owned" className="text-xs">Owned</TabsTrigger>

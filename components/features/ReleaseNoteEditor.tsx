@@ -1,12 +1,10 @@
 'use client'
 
-import React, { useMemo, useRef, useCallback, forwardRef } from 'react'
+import React, { useMemo, useRef, useCallback } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 // Dynamically import react-quill to avoid SSR issues
 import dynamic from 'next/dynamic'
 import 'react-quill/dist/quill.snow.css' // Import Quill styles
-import type Quill from 'quill' // Import Quill type
-import type ReactQuillType from 'react-quill' // Import ReactQuill type
 
 // Dynamically import ReactQuill, disable SSR  
 const ReactQuill = dynamic(() => import('react-quill'), { 
@@ -20,10 +18,22 @@ interface ReleaseNoteEditorProps {
   placeholder?: string
 }
 
+type QuillSelection = { index: number; length: number } | null
+
+interface QuillEditorApi {
+  getSelection: (focus?: boolean) => QuillSelection
+  insertEmbed: (index: number, type: string, value: string) => void
+  setSelection: (index: number, length: number) => void
+}
+
+interface QuillComponentApi {
+  getEditor: () => QuillEditorApi
+}
+
 const IMAGE_BUCKET = 'release-note-images' // Match your Supabase bucket name
 
 export default function ReleaseNoteEditor({ value, onChange, placeholder }: ReleaseNoteEditorProps) {
-  const quillRef = useRef<any>(null); // Use any type for dynamic import
+  const quillRef = useRef<QuillComponentApi | null>(null)
   const supabase = createClientComponentClient()
 
   const imageHandler = useCallback(async () => {
@@ -55,7 +65,7 @@ export default function ReleaseNoteEditor({ value, onChange, placeholder }: Rele
         const filePath = `${fileName}` // You might want to nest this in user/org folders
 
         // Upload image to Supabase Storage
-        const { data, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from(IMAGE_BUCKET)
           .upload(filePath, file, {
             cacheControl: '3600',

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -9,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuthActions } from '@/lib/store'
-import { MailIcon, AlertTriangleIcon } from 'lucide-react'
+import { MailIcon } from 'lucide-react'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -47,8 +46,8 @@ export default function SignupPage() {
       } else {
         setSuccess(true)
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to send magic link')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send magic link')
     } finally {
       setIsLoading(false)
     }
@@ -100,7 +99,7 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-2">
-                    We've sent a magic link to <strong>{formData.email}</strong>
+                    We&apos;ve sent a magic link to <strong>{formData.email}</strong>
                   </p>
                   <p className="text-xs text-gray-500">
                     Click the link in your email to complete your registration. It may take a few minutes to arrive.
@@ -186,7 +185,7 @@ export default function SignupPage() {
 
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-4">
-                    We'll send you a magic link to complete your registration - no password needed!
+                    We&apos;ll send you a magic link to complete your registration - no password needed!
                   </p>
                 </div>
 

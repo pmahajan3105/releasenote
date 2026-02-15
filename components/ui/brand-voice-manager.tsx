@@ -3,66 +3,23 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   PlusIcon, 
   PencilIcon, 
   TrashIcon,
-  CheckCircleIcon,
   ExclamationTriangleIcon,
   SparklesIcon,
   BookOpenIcon
 } from '@heroicons/react/24/outline'
-import { BrandVoice, CustomPrompt, DEFAULT_BRAND_VOICES, DEFAULT_CUSTOM_PROMPTS, customPromptEngine } from '@/lib/ai/custom-prompts'
+import { BrandVoice, CustomPrompt, DEFAULT_BRAND_VOICES, DEFAULT_CUSTOM_PROMPTS } from '@/lib/ai/custom-prompts'
 import { cn } from '@/lib/utils'
 
 interface BrandVoiceManagerProps {
   className?: string
   onBrandVoiceSelect?: (brandVoice: BrandVoice) => void
   onCustomPromptSelect?: (customPrompt: CustomPrompt) => void
-}
-
-interface BrandVoiceFormData {
-  name: string
-  description: string
-  tone: string
-  personality: string[]
-  vocabulary: {
-    preferred: string[]
-    avoided: string[]
-    replacements: Record<string, string>
-  }
-  sentenceLength: string
-  paragraphStyle: string
-  useEmojis: boolean
-  useMetrics: boolean
-  headerStyle: string
-  bulletPointStyle: string
-  brandGuidelines: string
-  exampleContent: string
-}
-
-interface CustomPromptFormData {
-  name: string
-  description: string
-  systemPrompt: string
-  userPromptTemplate: string
-  category: string
-  variables: Array<{
-    name: string
-    description: string
-    required: boolean
-    defaultValue?: string
-    type: string
-  }>
-  temperature: number
-  maxTokens: number
-  targetAudience: string
-  brandVoiceId?: string
 }
 
 function BrandVoiceCard({ 
@@ -203,8 +160,8 @@ export function BrandVoiceManager({ className, onBrandVoiceSelect, onCustomPromp
   const [customPrompts, setCustomPrompts] = useState<CustomPrompt[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [createType, setCreateType] = useState<'brandVoice' | 'customPrompt'>('brandVoice')
+  const [, setShowCreateForm] = useState(false)
+  const [, setCreateType] = useState<'brandVoice' | 'customPrompt'>('brandVoice')
 
   const loadBrandVoices = async () => {
     try {
@@ -233,7 +190,10 @@ export function BrandVoiceManager({ className, onBrandVoiceSelect, onCustomPromp
     loadCustomPrompts()
   }, [])
 
-  const handleCreateFromDefault = async (defaultItem: any, type: 'brandVoice' | 'customPrompt') => {
+  const handleCreateFromDefault = async (
+    defaultItem: BrandVoice | CustomPrompt,
+    type: 'brandVoice' | 'customPrompt'
+  ) => {
     setIsLoading(true)
     try {
       const endpoint = type === 'brandVoice' ? '/api/brand-voices' : '/api/custom-prompts'

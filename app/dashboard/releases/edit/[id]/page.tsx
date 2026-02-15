@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useAuthStore } from '@/lib/store/use-auth'
-import ReleaseNoteEditor from '@/components/features/ReleaseNoteEditor' // Import the editor
-import { ArrowUpTrayIcon, PhotoIcon, EyeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,11 +19,18 @@ type ReleaseNote = {
   content_html: string | null
   cover_image_url: string | null
   status: 'draft' | 'published'
+  published_at?: string
   // Add other fields as needed
 }
 
+type Organization = {
+  id: string
+  name: string
+  slug: string
+  logo_url: string | null
+}
+
 const COVER_IMAGE_BUCKET = 'release-note-images' // Match bucket name
-const PLACEHOLDER_CONTENT = '<!-- Generating AI content... -->'
 
 export default function EditReleasePage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -37,7 +43,7 @@ export default function EditReleasePage({ params }: { params: { id: string } }) 
   const [isUploadingCover, setIsUploadingCover] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [showPreview, setShowPreview] = useState(false)
-  const [organization, setOrganization] = useState<any>(null)
+  const [organization, setOrganization] = useState<Organization | null>(null)
   const releaseNoteId = params.id
   const supabase = createClientComponentClient()
 
@@ -174,7 +180,7 @@ export default function EditReleasePage({ params }: { params: { id: string } }) 
         }
 
         // Upload new image
-        const { data, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
             .from(COVER_IMAGE_BUCKET)
             .upload(filePath, file, {
                 cacheControl: '3600',
@@ -310,7 +316,14 @@ export default function EditReleasePage({ params }: { params: { id: string } }) 
             <label className="block text-sm font-medium mb-2">Featured Image</label>
             <div className="flex items-center gap-4">
               {coverImageUrl ? (
-                <img src={coverImageUrl} alt="Cover" className="w-32 h-20 object-cover rounded border" />
+                <Image
+                  src={coverImageUrl}
+                  alt="Cover"
+                  width={128}
+                  height={80}
+                  unoptimized
+                  className="w-32 h-20 object-cover rounded border"
+                />
               ) : (
                 <div className="w-32 h-20 flex items-center justify-center bg-gray-100 dark:bg-gray-800 border rounded text-gray-400">No image</div>
               )}

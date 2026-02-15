@@ -52,7 +52,7 @@ export default function OnboardingPage() {
       }
 
       // Create organization
-      const { data: orgData, error: orgError } = await supabase
+      const { error: orgError } = await supabase
         .from('organizations')
         .insert({
           id: user.user.id,
@@ -129,7 +129,7 @@ export default function OnboardingPage() {
             Welcome to Release Notes AI
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Let's set up your organization to get started
+            Let&apos;s set up your organization to get started
           </p>
         </div>
 

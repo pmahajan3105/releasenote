@@ -1,19 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuthStore, useReleaseNotes } from '@/lib/store'
+import { useAuthStore } from '@/lib/store'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { slugify } from '@/lib/utils'
 import { GitHubReleaseGenerator } from '@/components/features/GitHubReleaseGenerator'
 import { handleApiError } from '@/lib/error-handler-standard'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 
 // Define the Jira ticket type
 type JiraTicket = {
@@ -44,6 +41,11 @@ type JiraIntegration = {
   }
 }
 
+type JiraProjectResponse = {
+  key: string
+  name: string
+}
+
 // Define the form schema
 const releaseNotesSchema = z.object({
   integrationId: z.string().min(1, 'Please select a Jira integration'),
@@ -58,11 +60,8 @@ type ReleaseNotesFormData = z.infer<typeof releaseNotesSchema>
 
 // Renamed function to reflect its purpose
 export default function AIReleaseNotePage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [content, setContent] = useState('')
   const [selectedTickets, setSelectedTickets] = useState<string[]>([])
-  const [tickets, setTickets] = useState<any[]>([])
+  const [tickets, setTickets] = useState<JiraTicket[]>([])
   const [activeTab, setActiveTab] = useState<'github' | 'jira'>('github')
   const [integrations, setIntegrations] = useState<JiraIntegration[]>([])
   const [projects, setProjects] = useState<Array<{ key: string; name: string }>>([])
@@ -76,7 +75,6 @@ export default function AIReleaseNotePage() {
 
   const {
     register,
-    handleSubmit,
     watch,
     setValue,
     formState: { errors },
@@ -134,7 +132,7 @@ export default function AIReleaseNotePage() {
         const data = await response.json()
         
         // Transform the API response to match the expected format
-        const transformedProjects = data.projects?.map((project: any) => ({
+        const transformedProjects = data.projects?.map((project: JiraProjectResponse) => ({
           key: project.key,
           name: project.name
         })) || []
@@ -206,7 +204,19 @@ export default function AIReleaseNotePage() {
       const data = await response.json()
       
       // Transform the API response to match the expected JiraTicket format
-      const transformedTickets: JiraTicket[] = data.issues?.map((issue: any) => ({
+      const transformedTickets: JiraTicket[] = data.issues?.map((issue: {
+        id: string
+        key: string
+        summary: string
+        description?: string
+        status: { name: string }
+        issueType: { name: string }
+        priority?: { name: string }
+        url: string
+        assignee?: { displayName?: string }
+        created: string
+        updated: string
+      }) => ({
         id: issue.id,
         key: issue.key,
         title: issue.summary,
@@ -231,8 +241,11 @@ export default function AIReleaseNotePage() {
 
   // Toggle ticket selection
   const toggleTicketSelection = (ticketId: string) => {
-    const newSelectedTickets = selectedTickets.filter(id => id !== ticketId)
-    setSelectedTickets(newSelectedTickets)
+    setSelectedTickets((currentSelection) => (
+      currentSelection.includes(ticketId)
+        ? currentSelection.filter((id) => id !== ticketId)
+        : [...currentSelection, ticketId]
+    ))
   }
 
   // Select all tickets
@@ -249,7 +262,7 @@ export default function AIReleaseNotePage() {
   // Generate release notes (modified flow)
   const generateReleaseNote = async () => {
     try {
-      setLoading(true)
+      setIsGenerating(true)
       const response = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: {
@@ -262,12 +275,12 @@ export default function AIReleaseNotePage() {
 
       if (response.ok) {
         const result = await response.json()
-        setContent(result.content || '')
+        setValue('description', result.content || '')
       }
     } catch (error) {
       console.error('Error generating release note:', error)
     } finally {
-      setLoading(false)
+      setIsGenerating(false)
     }
   }
 

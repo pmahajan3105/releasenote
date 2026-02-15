@@ -14,7 +14,7 @@ interface PublishButtonProps {
   releaseNote: ReleaseNote
   variant?: 'default' | 'outline' | 'secondary'
   size?: 'sm' | 'md' | 'lg'
-  onAction?: (action: string, data?: any) => void
+  onAction?: (action: string, data?: unknown) => void
 }
 
 interface PublishingData {
@@ -38,7 +38,7 @@ export function PublishButton({
   const [showArchiveDialog, setShowArchiveDialog] = useState(false)
   const [loading, setLoading] = useState(false)
   
-  const { updateReleaseNote, publishReleaseNote } = useReleaseNotesActions()
+  const { updateReleaseNote } = useReleaseNotesActions()
 
   const handlePublish = async (data: PublishingData) => {
     setLoading(true)
@@ -269,7 +269,7 @@ export function PublishButton({
                 await updateReleaseNote(releaseNote.id, { status: 'draft' })
                 toast.success('Release note restored to draft!')
                 onAction?.('restored')
-              } catch (error) {
+              } catch {
                 toast.error('Failed to restore release note')
               }
             },
@@ -346,7 +346,7 @@ export function PublishButton({
           <AlertDialogHeader>
             <AlertDialogTitle>Unpublish Release Note</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to unpublish "{releaseNote.title}"? It will no longer be visible to the public and will be moved back to draft status.
+              Are you sure you want to unpublish &quot;{releaseNote.title}&quot;? It will no longer be visible to the public and will be moved back to draft status.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -364,7 +364,7 @@ export function PublishButton({
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Release Note</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to archive "{releaseNote.title}"? Archived release notes are hidden from the public but can be restored later.
+              Are you sure you want to archive &quot;{releaseNote.title}&quot;? Archived release notes are hidden from the public but can be restored later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

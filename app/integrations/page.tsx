@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/lib/store/use-auth'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  GithubIcon, 
   TestTubeIcon, 
   RefreshCwIcon,
   ExternalLinkIcon,
@@ -39,13 +38,7 @@ export default function IntegrationsPage() {
   const { user } = useAuthStore()
   const supabase = createClientComponentClient()
 
-  useEffect(() => {
-    if (user) {
-      loadIntegrations()
-    }
-  }, [user])
-
-  const loadIntegrations = async () => {
+  const loadIntegrations = useCallback(async () => {
     if (!user) return
     
     setLoading(true)
@@ -128,7 +121,13 @@ export default function IntegrationsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, user])
+
+  useEffect(() => {
+    if (user) {
+      void loadIntegrations()
+    }
+  }, [loadIntegrations, user])
 
   const handleConnect = (integration: Integration) => {
     window.location.href = integration.connectUrl
@@ -363,7 +362,7 @@ export default function IntegrationsPage() {
               <li>• Make sure you have the necessary permissions in your external service</li>
               <li>• Check that your organization settings are properly configured</li>
               <li>• For GitHub, ensure you have access to the repositories you want to use</li>
-              <li>• Try disconnecting and reconnecting if you're experiencing issues</li>
+              <li>• Try disconnecting and reconnecting if you&apos;re experiencing issues</li>
             </ul>
             <div className="pt-2">
               <Link href="/settings" className="text-[#7F56D9] hover:text-[#6941C6] text-sm">

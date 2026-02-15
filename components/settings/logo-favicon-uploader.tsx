@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import { Button } from '../ui/button'
 import { toast } from '../../lib/toast'
-import { handleApiError, handleAsyncOperation } from '../../lib/error-handler-standard'
 
 interface LogoFaviconUploaderProps {
   orgId: string
@@ -36,8 +36,8 @@ export function LogoFaviconUploader({ orgId, logoUrl, faviconUrl, onChange }: Lo
       if (!res.ok) throw new Error(data.error || 'Upload failed')
       toast.success(`${type === 'logo' ? 'Logo' : 'Favicon'} uploaded!`)
       onChange?.(type, data.url)
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Upload failed')
     } finally {
       setUploading(null)
       if (input) input.value = ''
@@ -48,7 +48,16 @@ export function LogoFaviconUploader({ orgId, logoUrl, faviconUrl, onChange }: Lo
     <div className="flex flex-col gap-6">
       <div>
         <label className="block font-medium mb-1">Organization Logo</label>
-        {logoUrl && <img src={logoUrl} alt="Logo" className="h-16 mb-2 rounded bg-white shadow" />}
+        {logoUrl && (
+          <Image
+            src={logoUrl}
+            alt="Logo"
+            width={128}
+            height={64}
+            unoptimized
+            className="h-16 mb-2 rounded bg-white shadow w-auto"
+          />
+        )}
         <input type="file" accept="image/png,image/jpeg,image/svg+xml" ref={logoInput} className="mb-2" />
         <Button disabled={uploading === 'logo'} onClick={() => handleUpload('logo')}>
           {uploading === 'logo' ? 'Uploading...' : 'Upload Logo'}
@@ -56,7 +65,16 @@ export function LogoFaviconUploader({ orgId, logoUrl, faviconUrl, onChange }: Lo
       </div>
       <div>
         <label className="block font-medium mb-1">Favicon</label>
-        {faviconUrl && <img src={faviconUrl} alt="Favicon" className="h-8 mb-2 rounded bg-white shadow" />}
+        {faviconUrl && (
+          <Image
+            src={faviconUrl}
+            alt="Favicon"
+            width={32}
+            height={32}
+            unoptimized
+            className="h-8 mb-2 rounded bg-white shadow w-auto"
+          />
+        )}
         <input type="file" accept="image/png,image/x-icon,image/svg+xml" ref={faviconInput} className="mb-2" />
         <Button disabled={uploading === 'favicon'} onClick={() => handleUpload('favicon')}>
           {uploading === 'favicon' ? 'Uploading...' : 'Upload Favicon'}

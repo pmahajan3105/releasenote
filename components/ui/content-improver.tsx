@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -306,7 +306,7 @@ export function ContentImprover({ content, onContentChange, className }: Content
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const analyzeContent = async () => {
+  const analyzeContent = useCallback(async () => {
     if (!content.trim()) {
       setError('Please enter some content to analyze')
       return
@@ -333,7 +333,7 @@ export function ContentImprover({ content, onContentChange, className }: Content
     } finally {
       setIsAnalyzing(false)
     }
-  }
+  }, [content])
 
   const handleApplySuggestion = async (suggestion: ContentSuggestion) => {
     if (!onContentChange) return
@@ -361,7 +361,7 @@ export function ContentImprover({ content, onContentChange, className }: Content
 
       return () => clearTimeout(debounceTimer)
     }
-  }, [content])
+  }, [content, analyzeContent])
 
   return (
     <div className={cn("space-y-6", className)}>

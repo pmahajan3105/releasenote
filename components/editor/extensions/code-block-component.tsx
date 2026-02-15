@@ -12,7 +12,7 @@ interface CodeBlockComponentProps {
     }
     textContent: string
   }
-  updateAttributes: (attributes: Record<string, any>) => void
+  updateAttributes: (attributes: Record<string, unknown>) => void
   selected: boolean
 }
 

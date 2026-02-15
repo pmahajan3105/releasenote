@@ -11,7 +11,7 @@ import {
   StarIcon,
 } from "lucide-react"
 import React, { useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { usePathname } from "next/navigation"
 import Image from "next/image"
 import {
   Avatar,
@@ -29,7 +29,6 @@ import Link from "next/link"
 import { useAuthStore } from "@/lib/store/use-auth"
 
 export const Sidebar = (): JSX.Element | null => {
-  const router = useRouter()
   const pathname = usePathname()
   const [openSections, setOpenSections] = useState<string[]>(['release-notes'])
   const { user, profile, signOut } = useAuthStore()

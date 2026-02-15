@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { RefreshCwIcon, LoaderIcon } from 'lucide-react'
+import { LoaderIcon } from 'lucide-react'
 import { Card, CardContent } from './card'
 
 interface LoadingStateProps {

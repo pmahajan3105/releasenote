@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { HistoryIcon, EyeIcon, RotateCcwIcon, UserIcon, ClockIcon, EditIcon } from 'lucide-react'
+import { HistoryIcon, EyeIcon, RotateCcwIcon, UserIcon, ClockIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { ReleaseNote } from '@/contexts/ReleaseNotesContext'
 
@@ -48,13 +48,7 @@ export function VersionHistory({
   const [selectedVersions, setSelectedVersions] = useState<string[]>([])
   const [previewVersion, setPreviewVersion] = useState<Version | null>(null)
 
-  useEffect(() => {
-    if (open && releaseNote.id) {
-      loadVersions()
-    }
-  }, [open, releaseNote.id])
-
-  const loadVersions = async () => {
+  const loadVersions = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/release-notes/${releaseNote.id}/versions`)
@@ -67,7 +61,13 @@ export function VersionHistory({
     } finally {
       setLoading(false)
     }
-  }
+  }, [releaseNote.id])
+
+  useEffect(() => {
+    if (open && releaseNote.id) {
+      void loadVersions()
+    }
+  }, [open, releaseNote.id, loadVersions])
 
   const handleVersionSelect = (versionId: string) => {
     if (selectedVersions.includes(versionId)) {
@@ -128,7 +128,7 @@ export function VersionHistory({
               Version History
             </DialogTitle>
             <DialogDescription>
-              View and manage versions of "{releaseNote.title}"
+              View and manage versions of &quot;{releaseNote.title}&quot;
             </DialogDescription>
           </DialogHeader>
 

@@ -1,24 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   PaletteIcon, 
-  CodeIcon, 
   EyeIcon, 
   SaveIcon, 
   RefreshCwIcon,
   AlertTriangleIcon,
   CheckCircleIcon,
   XCircleIcon,
-  InfoIcon,
-  HistoryIcon
+  InfoIcon
 } from 'lucide-react'
 
 interface CSSCustomizerProps {
@@ -55,15 +52,9 @@ export function CSSCustomizer({ organizationId }: CSSCustomizerProps) {
 
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [previewMode, setPreviewMode] = useState(false)
   const [error, setError] = useState('')
 
-  // Load current CSS configuration
-  useEffect(() => {
-    loadCSSData()
-  }, [organizationId])
-
-  const loadCSSData = async () => {
+  const loadCSSData = useCallback(async () => {
     setLoading(true)
     setError('')
 
@@ -76,12 +67,17 @@ export function CSSCustomizer({ organizationId }: CSSCustomizerProps) {
       } else {
         setError(data.error || 'Failed to load CSS configuration')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to load CSS configuration')
     } finally {
       setLoading(false)
     }
-  }
+  }, [organizationId])
+
+  // Load current CSS configuration
+  useEffect(() => {
+    void loadCSSData()
+  }, [loadCSSData])
 
   const handleSave = async () => {
     setSaving(true)
@@ -120,7 +116,7 @@ export function CSSCustomizer({ organizationId }: CSSCustomizerProps) {
           warnings: data.warnings || []
         })
       }
-    } catch (error) {
+    } catch {
       setError('Failed to save CSS configuration')
     } finally {
       setSaving(false)
@@ -219,9 +215,8 @@ export function CSSCustomizer({ organizationId }: CSSCustomizerProps) {
   }
 
   const previewCSS = () => {
-    if (cssData.customCSS.trim()) {
-      // Apply CSS to a preview iframe or modal
-      setPreviewMode(true)
+    if (!cssData.customCSS.trim()) {
+      setError('Add custom CSS before previewing.')
     }
   }
 
@@ -375,7 +370,7 @@ export function CSSCustomizer({ organizationId }: CSSCustomizerProps) {
               <Alert>
                 <CheckCircleIcon className="w-4 h-4" />
                 <AlertDescription>
-                  These variables are automatically generated based on your organization's brand settings and can be used in your custom CSS.
+                  These variables are automatically generated based on your organization&apos;s brand settings and can be used in your custom CSS.
                 </AlertDescription>
               </Alert>
             </TabsContent>

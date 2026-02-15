@@ -4,7 +4,7 @@ import { CodeBlockComponent } from './code-block-component'
 
 export interface CodeBlockEnhancedOptions {
   languageClassPrefix: string
-  HTMLAttributes: Record<string, any>
+  HTMLAttributes: Record<string, unknown>
   defaultLanguage: string | null
 }
 

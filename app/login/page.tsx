@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -47,7 +46,7 @@ export default function LoginPage() {
       } else {
         setSuccess(true)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
@@ -101,7 +100,7 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-2">
-                    We've sent a magic link to <strong>{email}</strong>
+                    We&apos;ve sent a magic link to <strong>{email}</strong>
                   </p>
                   <p className="text-xs text-gray-500">
                     Click the link in your email to sign in. It may take a few minutes to arrive.
@@ -145,7 +144,7 @@ export default function LoginPage() {
 
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-4">
-                    We'll send you a magic link for a password-free sign in.
+                    We&apos;ll send you a magic link for a password-free sign in.
                   </p>
                 </div>
 

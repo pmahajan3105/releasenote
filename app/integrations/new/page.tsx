@@ -20,7 +20,7 @@ type IntegrationFormData = z.infer<typeof integrationSchema>
 export default function NewIntegrationPage() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [repositories, setRepositories] = useState<Array<{ id: number; full_name: string }>>([])
+  const [repositories] = useState<Array<{ id: number; full_name: string }>>([])
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { user } = useAuthStore()

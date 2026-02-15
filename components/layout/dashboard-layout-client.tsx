@@ -10,7 +10,6 @@ import {
   HomeIcon,
   DocumentTextIcon,
   Cog6ToothIcon,
-  ChartBarIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
