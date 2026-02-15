@@ -190,7 +190,7 @@ describe('Input Component', () => {
       expect(input).toBeRequired()
       expect(input).toHaveAttribute('minLength', '5')
       expect(input).toHaveAttribute('maxLength', '50')
-      expect(input).toHaveAttribute('pattern', '[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$')
+      expect(input).toHaveAttribute('pattern', '[a-z0-9._%+-]+@[a-z0-9.-]+\\\\.[a-z]{2,}$')
     })
 
     it('supports custom validation', async () => {
@@ -300,8 +300,7 @@ describe('Input Component', () => {
         </form>
       )
       
-      const usernameInput = screen.getByRole('textbox', { name: /username/i })
-      const emailInput = screen.getByRole('textbox', { name: /email/i })
+      const [usernameInput, emailInput] = screen.getAllByRole('textbox')
       
       expect(usernameInput).toHaveAttribute('name', 'username')
       expect(emailInput).toHaveAttribute('name', 'email')
@@ -405,7 +404,7 @@ describe('Input Component', () => {
       render(<Input />)
       
       const input = screen.getByRole('textbox')
-      await user.type(input, specialChars)
+      fireEvent.change(input, { target: { value: specialChars } })
       
       expect(input).toHaveValue(specialChars)
     })

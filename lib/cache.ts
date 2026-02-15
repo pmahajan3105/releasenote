@@ -81,10 +81,17 @@ class MemoryCache {
 
 class CacheManager {
   private memoryCache = new MemoryCache()
-  private redisClient: unknown = null
+  private redisClient: {
+    get: (key: string) => Promise<string | null>
+    setex: (key: string, ttlSeconds: number, value: string) => Promise<unknown>
+    del: (...keys: string[]) => Promise<unknown>
+    keys: (pattern: string) => Promise<string[]>
+    on: (event: 'error', callback: (error: Error) => void) => void
+  } | null = null
+  private readonly initializationPromise: Promise<void>
 
   constructor() {
-    this.initializeRedis()
+    this.initializationPromise = this.initializeRedis()
   }
 
   private async initializeRedis() {
@@ -114,8 +121,14 @@ class CacheManager {
     }
   }
 
+  private async ensureInitialized(): Promise<void> {
+    await this.initializationPromise
+  }
+
   async get(key: string): Promise<unknown | null> {
     try {
+      await this.ensureInitialized()
+
       // L1: Memory cache (fastest)
       const memoryResult = this.memoryCache.get(key)
       if (memoryResult !== null) {
@@ -142,6 +155,8 @@ class CacheManager {
 
   async set(key: string, value: unknown, ttlSeconds: number = 3600): Promise<void> {
     try {
+      await this.ensureInitialized()
+
       // Store in memory cache
       this.memoryCache.set(key, value, Math.min(ttlSeconds, 300)) // Max 5 minutes in memory
 
@@ -156,6 +171,8 @@ class CacheManager {
 
   async delete(key: string): Promise<void> {
     try {
+      await this.ensureInitialized()
+
       this.memoryCache.delete(key)
       
       if (this.redisClient) {
@@ -168,17 +185,19 @@ class CacheManager {
 
   async invalidatePattern(pattern: string): Promise<void> {
     try {
+      await this.ensureInitialized()
+
       if (this.redisClient) {
         const keys = await this.redisClient.keys(pattern)
-        if (keys.length > 0) {
+        if (Array.isArray(keys) && keys.length > 0) {
           await this.redisClient.del(...keys)
         }
       }
-      
-      // Invalidate pattern in memory cache
-      this.memoryCache.invalidatePattern(pattern)
     } catch (error) {
       console.error('Cache invalidate error:', error)
+    } finally {
+      // Always invalidate the in-memory layer, even if Redis is unavailable.
+      this.memoryCache.invalidatePattern(pattern)
     }
   }
 

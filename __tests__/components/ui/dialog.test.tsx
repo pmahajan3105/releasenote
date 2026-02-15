@@ -258,11 +258,15 @@ describe('Dialog Components', () => {
       const firstInput = screen.getByPlaceholderText('First input')
       const secondInput = screen.getByPlaceholderText('Second input')
       
-      await user.tab()
-      expect(firstInput).toHaveFocus()
-      
+      await waitFor(() => {
+        expect(firstInput).toHaveFocus()
+      })
+
       await user.tab()
       expect(secondInput).toHaveFocus()
+      
+      await user.tab()
+      expect(screen.getByRole('button', { name: /close/i })).toHaveFocus()
     })
 
     it('has proper ARIA labels', () => {

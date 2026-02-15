@@ -187,7 +187,7 @@ describe('SearchFilter Component', () => {
         expect(screen.getByText(/category/i)).toBeInTheDocument()
         expect(screen.getByText(/feature/i)).toBeInTheDocument()
         expect(screen.getByText(/bugfix/i)).toBeInTheDocument()
-        expect(screen.getByText(/security/i)).toBeInTheDocument()
+        expect(screen.getAllByText(/^security$/i).length).toBeGreaterThan(0)
       })
     })
 
@@ -253,14 +253,15 @@ describe('SearchFilter Component', () => {
       // Add category filter
       const filterButton = screen.getByRole('button', { name: /filter/i })
       await user.click(filterButton)
-      await user.click(screen.getByText('security'))
+      const [securityCategoryOption] = screen.getAllByRole('menuitem', { name: 'security' })
+      await user.click(securityCategoryOption)
       
       // Remove category filter by clicking the badge
       await waitFor(() => {
         expect(screen.getByText('Category: security')).toBeInTheDocument()
       })
       
-      const categoryBadge = screen.getByText('Category: security').closest('div')
+      const categoryBadge = screen.getByText('Category: security').parentElement
       await user.click(categoryBadge!)
       
       await waitFor(() => {
