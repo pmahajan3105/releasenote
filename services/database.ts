@@ -1,13 +1,25 @@
-import { supabase } from '@/lib/supabase'
+import { createSupabaseClient } from '@/lib/supabase'
 import { Database } from '@/types/supabase'
 
 type Organization = Database['public']['Tables']['organizations']['Row']
 type Integration = Database['public']['Tables']['integrations']['Row']
 type ReleaseNote = Database['public']['Tables']['release_notes']['Row']
 
+type SupabaseClient = NonNullable<ReturnType<typeof createSupabaseClient>>
+
+function getClient(): SupabaseClient {
+  const client = createSupabaseClient()
+  if (!client) {
+    throw new Error('Supabase client is unavailable')
+  }
+
+  return client
+}
+
 // Organizations
 export async function getOrganizations(userId: string) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('organizations')
     .select('*')
     .eq('user_id', userId)
@@ -18,7 +30,8 @@ export async function getOrganizations(userId: string) {
 }
 
 export async function getOrganization(id: string) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('organizations')
     .select('*')
     .eq('id', id)
@@ -31,7 +44,8 @@ export async function getOrganization(id: string) {
 export async function createOrganization(
   organization: Omit<Organization, 'id' | 'created_at'>
 ) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('organizations')
     .insert(organization)
     .select()
@@ -45,7 +59,8 @@ export async function updateOrganization(
   id: string,
   organization: Partial<Omit<Organization, 'id' | 'created_at'>>
 ) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('organizations')
     .update(organization)
     .eq('id', id)
@@ -57,13 +72,15 @@ export async function updateOrganization(
 }
 
 export async function deleteOrganization(id: string) {
-  const { error } = await supabase.from('organizations').delete().eq('id', id)
+  const client = getClient()
+  const { error } = await client.from('organizations').delete().eq('id', id)
   if (error) throw error
 }
 
 // Integrations
 export async function getIntegrations(organizationId: string) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('integrations')
     .select('*')
     .eq('organization_id', organizationId)
@@ -74,7 +91,8 @@ export async function getIntegrations(organizationId: string) {
 }
 
 export async function getIntegration(id: string) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('integrations')
     .select('*')
     .eq('id', id)
@@ -87,7 +105,8 @@ export async function getIntegration(id: string) {
 export async function createIntegration(
   integration: Omit<Integration, 'id' | 'created_at'>
 ) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('integrations')
     .insert(integration)
     .select()
@@ -101,7 +120,8 @@ export async function updateIntegration(
   id: string,
   integration: Partial<Omit<Integration, 'id' | 'created_at'>>
 ) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('integrations')
     .update(integration)
     .eq('id', id)
@@ -113,13 +133,15 @@ export async function updateIntegration(
 }
 
 export async function deleteIntegration(id: string) {
-  const { error } = await supabase.from('integrations').delete().eq('id', id)
+  const client = getClient()
+  const { error } = await client.from('integrations').delete().eq('id', id)
   if (error) throw error
 }
 
 // Release Notes
 export async function getReleaseNotes(organizationId: string) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('release_notes')
     .select('*')
     .eq('organization_id', organizationId)
@@ -130,7 +152,8 @@ export async function getReleaseNotes(organizationId: string) {
 }
 
 export async function getReleaseNote(id: string) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('release_notes')
     .select('*')
     .eq('id', id)
@@ -143,7 +166,8 @@ export async function getReleaseNote(id: string) {
 export async function createReleaseNote(
   releaseNote: Omit<ReleaseNote, 'id' | 'created_at'>
 ) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('release_notes')
     .insert(releaseNote)
     .select()
@@ -157,7 +181,8 @@ export async function updateReleaseNote(
   id: string,
   releaseNote: Partial<Omit<ReleaseNote, 'id' | 'created_at'>>
 ) {
-  const { data, error } = await supabase
+  const client = getClient()
+  const { data, error } = await client
     .from('release_notes')
     .update(releaseNote)
     .eq('id', id)
@@ -169,6 +194,7 @@ export async function updateReleaseNote(
 }
 
 export async function deleteReleaseNote(id: string) {
-  const { error } = await supabase.from('release_notes').delete().eq('id', id)
+  const client = getClient()
+  const { error } = await client.from('release_notes').delete().eq('id', id)
   if (error) throw error
-} 
+}

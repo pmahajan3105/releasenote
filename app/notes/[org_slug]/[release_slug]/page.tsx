@@ -6,17 +6,30 @@ import Image from 'next/image'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { UI_CONSTANTS, DB_CONSTANTS, DATE_FORMAT_OPTIONS } from '@/lib/constants'
 import { logger } from '@/lib/logger'
-import { getCachedReleaseNote, setCachedReleaseNote } from '@/lib/cache'
+import { getTypedCachedReleaseNote, setCachedReleaseNote } from '@/lib/cache'
 
 type Props = {
   params: Promise<{ org_slug: string; release_slug: string }>
 }
 
+interface ReleaseNotePageData {
+  note: {
+    title: string
+    content_html: string | null
+    published_at: string | null
+    cover_image_url: string | null
+  }
+  organization: {
+    name: string
+    logo_url: string | null
+  }
+}
+
 // Function to fetch release note data server-side with caching
-async function getReleaseNote(orgSlug: string, releaseSlug: string) {
+async function getReleaseNote(orgSlug: string, releaseSlug: string): Promise<ReleaseNotePageData | null> {
   // Try cache first
   try {
-    const cached = await getCachedReleaseNote(orgSlug, releaseSlug)
+    const cached = await getTypedCachedReleaseNote<ReleaseNotePageData>(orgSlug, releaseSlug)
     if (cached) {
       logger.info('Cache hit for release note', { orgSlug, releaseSlug })
       return cached
@@ -51,7 +64,7 @@ async function getReleaseNote(orgSlug: string, releaseSlug: string) {
   // Type-safe access to joined data
   const releaseNoteData = data as ReleaseNoteWithOrganization
 
-  const result = {
+  const result: ReleaseNotePageData = {
     note: {
       title: releaseNoteData.title,
       content_html: releaseNoteData.content_html,

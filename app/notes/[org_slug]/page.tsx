@@ -9,10 +9,43 @@ type Props = {
   params: Promise<{ org_slug: string }>
 }
 
+type OrganizationPreview = Pick<
+  Database['public']['Tables']['organizations']['Row'],
+  | 'id'
+  | 'name'
+  | 'description'
+  | 'meta_title'
+  | 'meta_description'
+  | 'meta_image_url'
+  | 'favicon_url'
+  | 'brand_color'
+  | 'custom_domain'
+  | 'domain_verified'
+  | 'logo_url'
+>
+
+type RawReleaseNotePreview = Pick<
+  Database['public']['Tables']['release_notes']['Row'],
+  'id' | 'title' | 'slug' | 'published_at' | 'content_html' | 'cover_image_url' | 'views'
+>
+
+type ReleaseNotesPageData = {
+  organization: OrganizationPreview
+  releaseNotes: Array<{
+    id: string
+    title: string
+    slug: string
+    published_at: string
+    content_html?: string
+    featured_image_url?: string
+    views?: number
+  }>
+}
+
 async function getOrganizationReleaseNotes(orgSlug: string) {
   const supabase = createServerComponentClient<Database>({ cookies })
 
-  // Fetch the organization with branding info and custom CSS
+  // Fetch the organization with branding info
   const { data: orgData, error: orgError } = await supabase
     .from('organizations')
     .select(`
@@ -26,8 +59,7 @@ async function getOrganizationReleaseNotes(orgSlug: string) {
       brand_color,
       custom_domain,
       domain_verified,
-      custom_css,
-      custom_css_enabled
+      logo_url
     `)
     .eq('slug', orgSlug)
     .single()
@@ -39,7 +71,7 @@ async function getOrganizationReleaseNotes(orgSlug: string) {
   // Fetch published release notes with enhanced fields
   const { data: notesData, error: notesError } = await supabase
     .from('release_notes')
-    .select('id, title, slug, published_at, content_html, category, tags, featured_image_url, excerpt, views')
+    .select('id, title, slug, published_at, content_html, cover_image_url, views')
     .eq('organization_id', orgData.id)
     .eq('status', 'published')
     .order('published_at', { ascending: false })
@@ -50,10 +82,32 @@ async function getOrganizationReleaseNotes(orgSlug: string) {
     return null
   }
 
-  return {
-    organization: orgData,
-    releaseNotes: notesData || []
+  const organization = orgData as OrganizationPreview
+  const releaseNotes = ((notesData as RawReleaseNotePreview[] | null) ?? [])
+    .filter(
+      (
+        note
+      ): note is RawReleaseNotePreview & {
+        slug: string
+        published_at: string
+      } => typeof note.slug === 'string' && typeof note.published_at === 'string'
+    )
+    .map((note) => ({
+      id: note.id,
+      title: note.title,
+      slug: note.slug,
+      published_at: note.published_at,
+      content_html: note.content_html ?? undefined,
+      featured_image_url: note.cover_image_url ?? undefined,
+      views: note.views,
+    }))
+
+  const result: ReleaseNotesPageData = {
+    organization,
+    releaseNotes,
   }
+
+  return result
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -79,11 +133,22 @@ export async function generateMetadata({ params }: Props) {
       description,
       type: 'website',
       siteName: organization.name,
+      images: imageUrl
+        ? [
+            {
+              url: imageUrl,
+              width: 1200,
+              height: 630,
+              alt: title,
+            },
+          ]
+        : undefined,
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: imageUrl ? [imageUrl] : undefined,
     },
   }
 
@@ -91,19 +156,6 @@ export async function generateMetadata({ params }: Props) {
   metadata.icons = {
     icon: organization.favicon_url || '/branding/favicon-placeholder.ico',
     shortcut: organization.favicon_url || '/branding/favicon-placeholder.ico',
-  }
-
-  // Add social media image if provided
-  if (imageUrl) {
-    metadata.openGraph.images = [
-      {
-        url: imageUrl,
-        width: 1200,
-        height: 630,
-        alt: title,
-      }
-    ]
-    metadata.twitter.images = [imageUrl]
   }
 
   return metadata
@@ -121,7 +173,12 @@ export default async function OrganizationReleaseNotesPage({ params }: Props) {
 
   return (
     <EnhancedReleaseNotesList
-      organization={organization}
+      organization={{
+        name: organization.name,
+        description: organization.description ?? undefined,
+        logo_url: organization.logo_url ?? undefined,
+        brand_color: organization.brand_color ?? undefined,
+      }}
       releaseNotes={releaseNotes}
       orgSlug={orgSlug}
     />

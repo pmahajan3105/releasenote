@@ -231,6 +231,14 @@ export async function getCachedReleaseNote(
   return cacheManager.get(key)
 }
 
+export async function getTypedCachedReleaseNote<T>(
+  orgSlug: string,
+  releaseSlug: string
+): Promise<T | null> {
+  const cached = await getCachedReleaseNote(orgSlug, releaseSlug)
+  return cached as T | null
+}
+
 export async function setCachedReleaseNote(
   orgSlug: string, 
   releaseSlug: string, 
@@ -271,6 +279,11 @@ if (typeof window === 'undefined') {
 // General cache functions
 export async function getCache(key: string) {
   return cacheManager.get(key)
+}
+
+export async function getTypedCache<T>(key: string) {
+  const cached = await cacheManager.get(key)
+  return cached as T | null
 }
 
 export async function setCache(key: string, value: unknown, ttlSeconds: number = 3600) {
