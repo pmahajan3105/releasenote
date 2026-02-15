@@ -95,8 +95,7 @@ export default function ReleasesPage() {
             all: releaseNotes.length,
             draft: getReleaseNotesByStatus('draft').length,
             scheduled: getReleaseNotesByStatus('scheduled').length,
-            published: getReleaseNotesByStatus('published').length,
-            archived: releaseNotes.filter(note => note.status === 'archived').length
+            published: getReleaseNotesByStatus('published').length
         }
     }
 
@@ -160,9 +159,6 @@ export default function ReleasesPage() {
                     <TabsTrigger value="published">
                         Published {tabCounts.published > 0 && `(${tabCounts.published})`}
                     </TabsTrigger>
-                    <TabsTrigger value="archived">
-                        Archived {tabCounts.archived > 0 && `(${tabCounts.archived})`}
-                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={activeTab} className="mt-6">
@@ -208,7 +204,7 @@ export default function ReleasesPage() {
                                                     <StatusIndicator
                                                         status={note.status}
                                                         publishedAt={note.published_at}
-                                                        scheduledAt={note.scheduled_at}
+                                                        scheduledAt={note.status === 'scheduled' ? note.published_at : null}
                                                         size="sm"
                                                         showTimestamp
                                                     />

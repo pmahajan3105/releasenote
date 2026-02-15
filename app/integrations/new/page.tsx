@@ -11,8 +11,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 const integrationSchema = z.object({
   repository: z.string().min(1, 'Please select a repository'),
   labels: z.array(z.string()).optional(),
-  status: z.enum(['open', 'closed', 'all']).default('closed'),
-  lookbackDays: z.number().min(1, 'Must be at least 1 day').max(365, 'Cannot exceed 365 days').default(30),
+  status: z.enum(['open', 'closed', 'all']),
+  lookbackDays: z.coerce.number().min(1, 'Must be at least 1 day').max(365, 'Cannot exceed 365 days'),
 })
 
 type IntegrationFormData = z.infer<typeof integrationSchema>

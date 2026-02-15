@@ -53,12 +53,37 @@ interface ConnectionTest {
   }
 }
 
+interface GitHubRepository {
+  id: number
+  name: string
+  full_name: string
+  description?: string
+  private: boolean
+  html_url: string
+  default_branch: string
+  language?: string
+  stargazers_count: number
+  updated_at: string
+  topics: string[]
+  open_issues_count: number
+  has_issues: boolean
+  archived: boolean
+  disabled: boolean
+  size: number
+  fork: boolean
+  owner: {
+    login: string
+    avatar_url: string
+    type: string
+  }
+}
+
 export default function IntegrationManagePage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [selectedRepositories, setSelectedRepositories] = useState([])
-  const [selectedJiraProjects, setSelectedJiraProjects] = useState([])
-  const [selectedLinearTeams, setSelectedLinearTeams] = useState([])
+  const [selectedRepositories, setSelectedRepositories] = useState<GitHubRepository[]>([])
+  const [selectedJiraProjects, setSelectedJiraProjects] = useState<string[]>([])
+  const [selectedLinearTeams, setSelectedLinearTeams] = useState<string[]>([])
   const [connectionTest, setConnectionTest] = useState<ConnectionTest | null>(null)
   const [loading, setLoading] = useState(true)
   const [testing, setTesting] = useState(false)
@@ -116,6 +141,10 @@ export default function IntegrationManagePage() {
 
   const getIntegrationByType = (type: string) => {
     return integrations.find(integration => integration.type === type)
+  }
+
+  const handleRepositorySelect = (repository: GitHubRepository | GitHubRepository[]) => {
+    setSelectedRepositories(Array.isArray(repository) ? repository : [repository])
   }
 
   const getIntegrationStatus = (integration?: Integration) => {
@@ -407,7 +436,7 @@ export default function IntegrationManagePage() {
           {getIntegrationByType('github') ? (
             <GitHubRepositoryManager 
               selectedRepositories={selectedRepositories}
-              onRepositorySelect={setSelectedRepositories}
+              onRepositorySelect={handleRepositorySelect}
               selectionMode="multiple"
             />
           ) : (

@@ -102,27 +102,36 @@ export default function AIContextPage() {
     <div className="max-w-2xl mx-auto py-10">
       <h1 className="text-2xl font-bold mb-6">AI Context Settings</h1>
       <div className="space-y-4">
-        <Textarea
-          name="system_prompt"
-          label="System Prompt"
-          placeholder="System prompt for the AI model"
-          value={context?.system_prompt || ""}
-          onChange={handleChange}
-        />
-        <Textarea
-          name="user_prompt_template"
-          label="User Prompt Template"
-          placeholder="Template for the user prompt sent to the AI"
-          value={context?.user_prompt_template || ""}
-          onChange={handleChange}
-        />
-        <Textarea
-          name="example_output"
-          label="Example Output"
-          placeholder="Example output for this context"
-          value={context?.example_output || ""}
-          onChange={handleChange}
-        />
+        <div className="space-y-1">
+          <label htmlFor="system_prompt" className="text-sm font-medium text-gray-700">System Prompt</label>
+          <Textarea
+            id="system_prompt"
+            name="system_prompt"
+            placeholder="System prompt for the AI model"
+            value={context?.system_prompt || ""}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="user_prompt_template" className="text-sm font-medium text-gray-700">User Prompt Template</label>
+          <Textarea
+            id="user_prompt_template"
+            name="user_prompt_template"
+            placeholder="Template for the user prompt sent to the AI"
+            value={context?.user_prompt_template || ""}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="example_output" className="text-sm font-medium text-gray-700">Example Output</label>
+          <Textarea
+            id="example_output"
+            name="example_output"
+            placeholder="Example output for this context"
+            value={context?.example_output || ""}
+            onChange={handleChange}
+          />
+        </div>
         <Input
           name="tone"
           placeholder="Tone (e.g. professional, casual)"

@@ -138,7 +138,11 @@ export default function TemplateManagementPage() {
                 })
                 json = (await res.json()) as { template?: AITemplate; error?: string }
                 if (!res.ok) throw new Error(json.error || 'Failed to update template')
-                setTemplates(prev => prev.map(pt => pt.id === t.id ? json.template : pt))
+                if (!json.template) {
+                    throw new Error('Template update response was empty')
+                }
+                const updatedTemplate = json.template
+                setTemplates(prev => prev.map(pt => (pt.id === t.id ? updatedTemplate : pt)))
                 toast.success('Template updated')
             } else {
                 res = await fetch('/api/templates', {
@@ -148,7 +152,11 @@ export default function TemplateManagementPage() {
                 })
                 json = (await res.json()) as { template?: AITemplate; error?: string }
                 if (!res.ok) throw new Error(json.error || 'Failed to create template')
-                setTemplates(prev => [...prev, json.template])
+                if (!json.template) {
+                    throw new Error('Template create response was empty')
+                }
+                const createdTemplate = json.template
+                setTemplates(prev => [...prev, createdTemplate])
                 toast.success('Template created')
             }
             setShowDialog(false)

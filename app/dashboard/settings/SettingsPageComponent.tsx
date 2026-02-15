@@ -154,10 +154,10 @@ export default function SettingsPageComponent() {
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center space-x-3">
-                                                        <span className="text-2xl">{template.icon || '📝'}</span>
+                                                        <span className="text-2xl">📝</span>
                                                         <div>
                                                             <h3 className="font-medium text-gray-900 dark:text-white">{template.name}</h3>
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{template.description}</p>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">{template.content.slice(0, 120)}</p>
                                                         </div>
                                                     </div>
                                                     {defaultTemplateId === template.id && (
