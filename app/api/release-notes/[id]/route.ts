@@ -97,7 +97,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
 
     const allowedFields = [
       'title', 'description', 'content_markdown', 'content_html',

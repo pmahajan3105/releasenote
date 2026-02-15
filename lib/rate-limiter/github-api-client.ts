@@ -1,5 +1,4 @@
 import { githubRateLimiter } from './github-rate-limiter'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 /**
  * GitHub API client with built-in rate limiting
@@ -31,7 +30,7 @@ export class GitHubAPIClient {
       organizationId?: string
       priority?: 'high' | 'medium' | 'low'
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const {
       method = 'GET',
       headers = {},
@@ -90,7 +89,7 @@ export class GitHubAPIClient {
   /**
    * Get authenticated user information
    */
-  async getUser(token: string, organizationId?: string): Promise<any> {
+  async getUser(token: string, organizationId?: string): Promise<unknown> {
     return this.request('/user', {
       token,
       organizationId,
@@ -111,7 +110,7 @@ export class GitHubAPIClient {
       direction?: 'asc' | 'desc'
       type?: 'all' | 'owner' | 'public' | 'private' | 'member'
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const {
       organizationId,
       page = 1,
@@ -139,7 +138,7 @@ export class GitHubAPIClient {
   /**
    * Get repository details
    */
-  async getRepo(owner: string, repo: string, token: string, organizationId?: string): Promise<any> {
+  async getRepo(owner: string, repo: string, token: string, organizationId?: string): Promise<unknown> {
     return this.request(`/repos/${owner}/${repo}`, {
       token,
       organizationId,
@@ -163,7 +162,7 @@ export class GitHubAPIClient {
       page?: number
       perPage?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const {
       organizationId,
       since,
@@ -208,7 +207,7 @@ export class GitHubAPIClient {
       page?: number
       perPage?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const {
       organizationId,
       state = 'closed',
@@ -250,7 +249,7 @@ export class GitHubAPIClient {
       page?: number
       perPage?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const {
       organizationId,
       page = 1,
@@ -282,7 +281,7 @@ export class GitHubAPIClient {
       page?: number
       perPage?: number
     } = {}
-  ): Promise<any> {
+  ): Promise<unknown> {
     const {
       organizationId,
       sort = 'updated',
@@ -309,7 +308,7 @@ export class GitHubAPIClient {
   /**
    * Get rate limit status
    */
-  async getRateLimit(token: string, organizationId?: string): Promise<any> {
+  async getRateLimit(token: string, organizationId?: string): Promise<unknown> {
     return this.request('/rate_limit', {
       token,
       organizationId,
@@ -342,7 +341,7 @@ export class GitHubAPIError extends Error {
   constructor(
     message: string,
     public status: number,
-    public data?: any
+    public data?: unknown
   ) {
     super(message)
     this.name = 'GitHubAPIError'

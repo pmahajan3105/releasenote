@@ -8,6 +8,18 @@ import { JSDOM } from 'jsdom'
 const window = new JSDOM('').window
 const purify = DOMPurify(window)
 
+interface PromptTicket {
+  type?: string
+  title?: string
+  description?: string
+  labels?: string[]
+}
+
+interface PromptCommit {
+  message: string
+  author?: string
+}
+
 /**
  * POST /api/release-notes/generate - Generate release notes with AI
  * Supports both streaming and non-streaming responses
@@ -44,7 +56,7 @@ export async function POST(request: NextRequest) {
       tone = 'professional',
       provider = 'anthropic',
       model,
-      template_id,
+      template_id: _templateId,
       template,
       customPrompt
     } = body
@@ -165,8 +177,8 @@ export async function POST(request: NextRequest) {
 }
 
 function buildReleaseNotesPrompt(data: {
-  tickets?: any[]
-  commits?: any[]
+  tickets?: PromptTicket[]
+  commits?: PromptCommit[]
   companyDetails?: string
   tone?: string
   template?: string
@@ -227,7 +239,7 @@ function buildReleaseNotesPrompt(data: {
   
   if (data.commits && data.commits.length > 0) {
     prompt += '## Commits\n'
-    data.commits.forEach((commit: any) => {
+    data.commits.forEach((commit) => {
       prompt += `- ${commit.message}\n`
       if (commit.author) {
         prompt += `  Author: ${commit.author}\n`

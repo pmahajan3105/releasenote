@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
-import { OpenAIStream, StreamingTextResponse } from "ai";
 
 export const runtime = "edge";
 
 // Helper to fetch AI context for the user's org
-async function fetchAIContext(supabase: any, userId: string) {
+async function fetchAIContext(
+  supabase: ReturnType<typeof createRouteHandlerClient>,
+  userId: string
+) {
   const { data: memberData, error: memberError } = await supabase
     .from("organization_members")
     .select("organization_id")

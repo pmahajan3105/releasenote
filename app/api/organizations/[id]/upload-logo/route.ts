@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs'
-import { v4 as uuidv4 } from 'uuid'
 
 // POST: Uploads logo or favicon for an organization
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const storagePath = `org-assets/${orgId}/${filename}`
 
   // Upload to Supabase Storage
-  const { data, error } = await supabase.storage.from('org-assets').upload(storagePath, file, { upsert: true, contentType: file.type })
+  const { error } = await supabase.storage.from('org-assets').upload(storagePath, file, { upsert: true, contentType: file.type })
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

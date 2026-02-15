@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const startTime = Date.now()
   
   try {
     // Check database connectivity
     const supabase = createServerComponentClient({ cookies })
-    const { data: healthCheck, error: dbError } = await supabase
+    const { error: dbError } = await supabase
       .from('organizations')
       .select('id')
       .limit(1)

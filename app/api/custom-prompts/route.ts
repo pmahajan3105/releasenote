@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { CustomPrompt, customPromptEngine } from '@/lib/ai/custom-prompts'
+import { customPromptEngine } from '@/lib/ai/custom-prompts'
 
 export async function GET(request: NextRequest) {
   try {

@@ -8,8 +8,7 @@ import type {
   AuthSession, 
   AuthOrganization, 
   OrganizationMembershipWithOrg,
-  MembershipQueryResult,
-  OrganizationQueryResult
+  MembershipQueryResult
 } from '@/types/auth'
 
 /**

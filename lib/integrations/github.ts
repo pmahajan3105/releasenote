@@ -29,6 +29,19 @@ export interface GitHubCommit {
   url: string
 }
 
+interface GitHubCommitResponse {
+  sha: string
+  html_url: string
+  commit: {
+    message: string
+    author: {
+      name: string
+      email: string
+      date: string
+    }
+  }
+}
+
 export interface GitHubIssue {
   id: number
   number: number
@@ -180,7 +193,7 @@ export class GitHubService {
     if (options.page) params.set('page', options.page.toString())
 
     const query = params.toString() ? `?${params.toString()}` : ''
-    const commits = await this.makeRequest<any[]>(`/repos/${owner}/${repo}/commits${query}`)
+    const commits = await this.makeRequest<GitHubCommitResponse[]>(`/repos/${owner}/${repo}/commits${query}`)
     
     return commits.map(commit => ({
       sha: commit.sha,

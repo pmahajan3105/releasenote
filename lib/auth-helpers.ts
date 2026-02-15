@@ -3,13 +3,10 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import type { 
   AuthContext, 
-  AuthError, 
   AuthUser, 
   AuthSession, 
-  AuthOrganization,
   SessionValidationResult,
-  OrganizationValidationResult,
-  MembershipQueryResult
+  OrganizationValidationResult
 } from '@/types/auth'
 import { 
   isValidUser, 
@@ -46,7 +43,7 @@ import {
  * console.log(`Role: ${authResult.userRole}`)
  * ```
  */
-export async function validateUserSession(request: NextRequest): Promise<SessionValidationResult> {
+export async function validateUserSession(_request: NextRequest): Promise<SessionValidationResult> {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     

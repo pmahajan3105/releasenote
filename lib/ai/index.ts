@@ -38,7 +38,7 @@ export function getAiProvider(): AiProvider {
  * Gets the enhanced AI provider with support for multiple models
  * Primary: Azure OpenAI as specified in PRD
  */
-export function getEnhancedAiProvider(provider: 'azure-openai' | 'openai' = 'azure-openai') {
+export function getEnhancedAiProvider(_provider: 'azure-openai' | 'openai' = 'azure-openai') {
   try {
     // Use Azure OpenAI as primary provider per PRD specifications
     return getAiProvider()

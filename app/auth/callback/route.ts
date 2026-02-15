@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     if (data.user) {
       try {
         // Check if user has an organization
-        const { data: orgData, error: orgError } = await supabase
+        const { error: orgError } = await supabase
           .from('organizations')
           .select('id, name')
           .eq('id', data.user.id)

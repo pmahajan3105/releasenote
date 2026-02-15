@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+type RouteSupabaseClient = ReturnType<typeof createRouteHandlerClient>
+
+interface SSLCertificateRecord {
+  id: string | number
+  organization_id: string
+  domain: string
+}
+
 /**
  * SSL Certificate Renewal Cron Job
  * POST: Check for expiring certificates and renew them
@@ -112,7 +120,7 @@ export async function POST(request: NextRequest) {
 /**
  * Renew SSL certificate for a domain
  */
-async function renewCertificate(supabase: any, certificate: any) {
+async function renewCertificate(supabase: RouteSupabaseClient, certificate: SSLCertificateRecord) {
   try {
     const { domain, organization_id } = certificate
 

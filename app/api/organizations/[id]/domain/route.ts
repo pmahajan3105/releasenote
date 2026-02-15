@@ -92,7 +92,7 @@ export async function PUT(
       .eq('organization_id', params.id)
 
     // Create new verification record
-    const { data: verification, error: verificationError } = await supabase
+    const { error: verificationError } = await supabase
       .from('domain_verifications')
       .insert([{
         organization_id: params.id,

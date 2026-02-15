@@ -8,6 +8,30 @@ import { createServerSupabaseClient, SUPABASE_CONFIG } from './supabase'
 
 type SupabaseClient = ReturnType<typeof createServerSupabaseClient>
 
+type PaginatedQueryResult = {
+  data: unknown[] | null
+  error: unknown
+  count: number | null
+}
+
+type PaginatedQueryBuilder = PromiseLike<PaginatedQueryResult> & {
+  select: (columns: string, options?: { count?: 'exact' }) => PaginatedQueryBuilder
+  range: (from: number, to: number) => PaginatedQueryBuilder
+  eq: (column: string, value: unknown) => PaginatedQueryBuilder
+  order: (column: string, options: { ascending: boolean }) => PaginatedQueryBuilder
+}
+
+type BulkInsertQueryResult = {
+  data: unknown[] | null
+  error: unknown
+}
+
+type BulkInsertQueryBuilder = PromiseLike<BulkInsertQueryResult> & {
+  insert: (records: unknown[]) => BulkInsertQueryBuilder
+  upsert: (records: unknown[], options: { onConflict: string }) => BulkInsertQueryBuilder
+  select: () => BulkInsertQueryBuilder
+}
+
 /**
  * Query cache implementation for frequently accessed data
  */
@@ -362,7 +386,7 @@ export const QueryPatterns = {
 
     // TypeScript can't guarantee tableName is a valid table at runtime, so this is a runtime risk.
     // TypeScript limitation: dynamic tableName means strict typing is not possible here
-    let query = (supabase as unknown as { from: (table: string) => any })
+    let query = (supabase as unknown as { from: (table: string) => PaginatedQueryBuilder })
       .from(tableName)
       .select(typeof select === 'string' ? select : '*', { count: 'exact' })
       .range(offset, offset + limit - 1)
@@ -409,15 +433,12 @@ export const QueryPatterns = {
       const batch = records.slice(i, i + batchSize)
       
       // TypeScript limitation: dynamic tableName means strict typing is not possible here
-      let query = (supabase as unknown as { from: (table: string) => any })
+      const table = (supabase as unknown as { from: (table: string) => BulkInsertQueryBuilder })
         .from(tableName)
-        .insert(batch)
-        .select()
 
-      if (onConflict) {
-        // Type assertion needed for upsert
-      query = query as unknown as { upsert: (arg: unknown) => unknown }
-      }
+      const query = onConflict
+        ? table.upsert(batch as unknown[], { onConflict }).select()
+        : table.insert(batch as unknown[]).select()
 
       const { data, error } = await query
 

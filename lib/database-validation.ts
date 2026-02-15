@@ -49,7 +49,7 @@ export async function validateDatabaseIntegrity(): Promise<DatabaseValidationRes
     const supabase = createClientComponentClient()
 
     // Check if we can connect to the database
-    const { data: connectionTest, error: connectionError } = await supabase
+    const { error: connectionError } = await supabase
       .from('organizations')
       .select('id')
       .limit(1)
@@ -63,7 +63,7 @@ export async function validateDatabaseIntegrity(): Promise<DatabaseValidationRes
     // In a real production environment, you'd query the information_schema
     for (const tableName of EXPECTED_TABLES) {
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from(tableName)
           .select('*')
           .limit(1)
@@ -97,7 +97,7 @@ export async function validateDatabaseIntegrity(): Promise<DatabaseValidationRes
             if (error && error.message.includes('column') && error.message.includes('does not exist')) {
               errors.push(`Missing critical column ${column} in table ${tableName}`)
             }
-          } catch (err) {
+          } catch {
             warnings.push(`Could not verify column ${column} in ${tableName}`)
           }
         }
@@ -124,7 +124,7 @@ export async function validateDatabaseIntegrity(): Promise<DatabaseValidationRes
           if (test.expectError && !error) {
             warnings.push(`Table ${test.table} may not have proper RLS policies`)
           }
-        } catch (err) {
+        } catch {
           // This is expected for protected tables
         }
       }
@@ -188,7 +188,7 @@ export async function checkMigrationStatus(): Promise<{
 
     for (const table of latestTables) {
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from(table)
           .select('id')
           .limit(1)
@@ -196,7 +196,7 @@ export async function checkMigrationStatus(): Promise<{
         if (error && error.message.includes('does not exist')) {
           pendingMigrations.push(`Migration for table ${table}`)
         }
-      } catch (err) {
+      } catch {
         errors.push(`Could not check migration status for ${table}`)
       }
     }

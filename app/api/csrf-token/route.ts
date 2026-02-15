@@ -3,7 +3,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { generateCSRFToken } from '@/lib/security'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = createServerComponentClient({ cookies })
     const { data: { session } } = await supabase.auth.getSession()

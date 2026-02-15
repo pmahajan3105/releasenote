@@ -425,6 +425,9 @@ export class LinearAPIClient {
     } = {}
   ): Promise<unknown> {
     const { first = 50, after, teamId, includeArchived = false } = options
+    const filter: ProjectFilterInput | undefined = teamId
+      ? { team: { id: { eq: teamId } } }
+      : undefined
     
     const query = `
       query GetProjects($first: Int!, $after: String, $filter: ProjectFilterInput, $includeArchived: Boolean) {
@@ -492,7 +495,7 @@ export class LinearAPIClient {
       }
     `
 
-    const data = await this.request(query, { first, after, includeArchived }, token)
+    const data = await this.request(query, { first, after, filter, includeArchived }, token)
     if (data && typeof data === 'object' && 'projects' in data) {
       return (data as { projects: unknown }).projects
     }
@@ -598,10 +601,16 @@ export class LinearAPIClient {
         }
       }
 
+      const organization = (
+        viewer && typeof viewer === 'object' && 'organization' in viewer
+      )
+        ? (viewer as { organization?: Record<string, unknown> }).organization
+        : undefined
+
       return {
         success: true,
         user: viewer,
-        organization: (viewer as any).organization
+        organization
       }
     } catch (error) {
       return {

@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     // Redirect back to integrations with success
     return NextResponse.redirect(`${requestUrl.origin}/integrations/manage?success=GitHub integration added`)
 
-  } catch (error) {
+  } catch {
     return NextResponse.redirect(
       `${requestUrl.origin}/integrations/new?error=${encodeURIComponent('Failed to connect GitHub')}`
     )

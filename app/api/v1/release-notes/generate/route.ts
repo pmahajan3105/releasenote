@@ -19,6 +19,12 @@ type TicketDetail = {
   description: string | null
 }
 
+interface IntegrationRecord {
+  type: 'github' | 'jira' | 'linear' | string
+  config?: Record<string, unknown>
+  access_token: string
+}
+
 // Real ticket fetching implementation
 async function fetchTicketDetails(ticketIds: string[], organizationId: string): Promise<TicketDetail[]> {
   const supabase = createRouteHandlerClient({ cookies })
@@ -125,7 +131,7 @@ async function fetchFromIntegrations(ticketId: string, organizationId: string): 
 }
 
 // GitHub ticket fetching
-async function fetchFromGitHub(ticketId: string, integration: any): Promise<TicketDetail | null> {
+async function fetchFromGitHub(ticketId: string, integration: IntegrationRecord): Promise<TicketDetail | null> {
   try {
     const { GitHubService } = await import('@/lib/integrations/github')
     const github = new GitHubService(integration.access_token)
@@ -135,9 +141,10 @@ async function fetchFromGitHub(ticketId: string, integration: any): Promise<Tick
     if (!match) return null
     
     const issueNumber = match[match.length - 1]
-    const config = integration.config || {}
-    const owner = config.owner || config.selectedRepo?.split('/')[0]
-    const repo = config.repo || config.selectedRepo?.split('/')[1]
+    const config = integration.config ?? {}
+    const selectedRepo = typeof config.selectedRepo === 'string' ? config.selectedRepo : undefined
+    const owner = typeof config.owner === 'string' ? config.owner : selectedRepo?.split('/')[0]
+    const repo = typeof config.repo === 'string' ? config.repo : selectedRepo?.split('/')[1]
     
     if (!owner || !repo) return null
     
@@ -156,7 +163,7 @@ async function fetchFromGitHub(ticketId: string, integration: any): Promise<Tick
 }
 
 // Jira ticket fetching  
-async function fetchFromJira(ticketId: string, integration: any): Promise<TicketDetail | null> {
+async function fetchFromJira(ticketId: string, integration: IntegrationRecord): Promise<TicketDetail | null> {
   try {
     const { JiraAPIClient } = await import('@/lib/integrations/jira-client')
     const jira = new JiraAPIClient(integration.config, integration.access_token)
@@ -176,12 +183,10 @@ async function fetchFromJira(ticketId: string, integration: any): Promise<Ticket
 }
 
 // Linear ticket fetching
-async function fetchFromLinear(ticketId: string, integration: any): Promise<TicketDetail | null> {
+async function fetchFromLinear(ticketId: string, integration: IntegrationRecord): Promise<TicketDetail | null> {
   try {
-    const { LinearAPIClient } = await import('@/lib/integrations/linear-client')
-    const linear = new LinearAPIClient(integration.access_token)
-    
-    const issue = await linear.getIssue(ticketId)
+    const { linearAPI } = await import('@/lib/integrations/linear-client')
+    const issue = await linearAPI.getIssue(integration.access_token, ticketId)
     if (!issue) return null
     
     return {
@@ -197,8 +202,7 @@ async function fetchFromLinear(ticketId: string, integration: any): Promise<Tick
 
 // Configure DOMPurify outside the handler
 const window = new JSDOM('').window;
-// @ts-ignore 
-const purify = DOMPurify(window);
+const purify = DOMPurify(window as unknown as Window);
 
 export async function POST(request: Request) {
   // Validate JSON body
@@ -257,18 +261,6 @@ export async function POST(request: Request) {
 
     // 3. Fetch Ticket Details
     const ticketDetails = await fetchTicketDetails(noteData.source_ticket_ids, noteData.organization_id)
-
-    // 4. Construct Prompt
-    let prompt = `Generate release notes based on the following completed tickets:\n\n`
-    ticketDetails.forEach(ticket => {
-      prompt += `- **${ticket.key}: ${ticket.title}**\n`
-      if (ticket.description) {
-        prompt += `  Description: ${ticket.description}\n`
-      }
-      prompt += '\n'
-    })
-    prompt += `\nPlease categorize these tickets into sections like 'New Features', 'Bug Fixes', and 'Improvements'.`
-    prompt += ` Ensure the output is clean Markdown.`
 
     // 5. Call AI Provider with Azure OpenAI
     const aiProvider = getAiProvider()

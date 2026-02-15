@@ -2,7 +2,13 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-export async function GET(request: Request) {
+interface GitHubRepositorySummary {
+  id: number
+  full_name: string
+  private: boolean
+}
+
+export async function GET(_request: Request) {
   const supabase = createRouteHandlerClient({ cookies })
 
   try {
@@ -42,10 +48,10 @@ export async function GET(request: Request) {
       throw new Error('Failed to fetch repositories')
     }
 
-    const repositories = await response.json()
+    const repositories = await response.json() as GitHubRepositorySummary[]
 
     return NextResponse.json({
-      repositories: repositories.map((repo: any) => ({
+      repositories: repositories.map((repo) => ({
         id: repo.id,
         full_name: repo.full_name,
         private: repo.private,

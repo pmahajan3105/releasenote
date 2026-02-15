@@ -56,7 +56,7 @@ interface ReleaseNotesState {
   
   // Actions - AI Generation
   generateWithAI: (prompt: string, organizationId: string) => Promise<string | null>
-  generateWithTemplate: (templateId: string, data: any) => Promise<string | null>
+  generateWithTemplate: (templateId: string, data: Record<string, unknown>) => Promise<string | null>
   improveContent: (content: string, type: string) => Promise<string | null>
   
   // Actions - Templates

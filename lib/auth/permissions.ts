@@ -118,9 +118,6 @@ export function getHigherRoles(role: UserRole): UserRole[] {
  * Generally, users can only assign roles lower than their own
  */
 export function canAssignRole(userRole: string, targetRole: UserRole): boolean {
-  const userLevel = ROLE_HIERARCHY[userRole as UserRole] || 0
-  const targetLevel = ROLE_HIERARCHY[targetRole]
-  
   // Owner can assign any role
   if (userRole === 'owner') return true
   
