@@ -39,14 +39,21 @@ export function PublishButton({
   const [loading, setLoading] = useState(false)
   
   const { updateReleaseNote } = useReleaseNotesActions()
+  const buttonSize = size === 'md' ? 'default' : size
 
   const handlePublish = async (data: PublishingData) => {
     setLoading(true)
     try {
+      const publishedAt =
+        data.status === 'scheduled' && data.scheduledAt
+          ? data.scheduledAt.toISOString()
+          : data.status === 'published'
+            ? new Date().toISOString()
+            : undefined
+
       const updateData: Partial<ReleaseNote> = {
         status: data.status,
-        ...(data.scheduledAt && { scheduled_at: data.scheduledAt.toISOString() }),
-        ...(data.status === 'published' && { published_at: new Date().toISOString() })
+        ...(publishedAt ? { published_at: publishedAt } : {})
       }
 
       await updateReleaseNote(releaseNote.id, updateData)
@@ -68,8 +75,7 @@ export function PublishButton({
     try {
       await updateReleaseNote(releaseNote.id, { 
         status: 'draft',
-        published_at: null,
-        scheduled_at: null
+        published_at: undefined
       })
       toast.success('Release note unpublished successfully!')
       onAction?.('unpublished')
@@ -85,9 +91,12 @@ export function PublishButton({
   const handleArchive = async () => {
     setLoading(true)
     try {
-      await updateReleaseNote(releaseNote.id, { status: 'archived' })
-      toast.success('Release note archived successfully!')
-      onAction?.('archived')
+      await updateReleaseNote(releaseNote.id, {
+        status: 'draft',
+        published_at: undefined
+      })
+      toast.success('Release note moved to draft successfully!')
+      onAction?.('moved_to_draft')
     } catch (error) {
       toast.error('Failed to archive release note')
       console.error('Archive error:', error)
@@ -131,13 +140,6 @@ export function PublishButton({
           icon: SendIcon,
           action: () => setShowPublishModal(true),
           className: 'bg-green-600 hover:bg-green-700 text-white'
-        }
-      case 'archived':
-        return {
-          text: 'Archived',
-          icon: ArchiveIcon,
-          action: () => {},
-          className: 'bg-gray-600 hover:bg-gray-700 text-white'
         }
       default:
         return {
@@ -246,36 +248,11 @@ export function PublishButton({
           ...commonItems,
           {
             icon: ArchiveIcon,
-            label: 'Archive',
+            label: 'Move to Draft',
             action: () => setShowArchiveDialog(true),
             show: true,
             destructive: true
           }
-        ]
-
-      case 'archived':
-        return [
-          {
-            icon: SendIcon,
-            label: 'Restore & Publish',
-            action: () => setShowPublishModal(true),
-            show: true
-          },
-          {
-            icon: EditIcon,
-            label: 'Restore to Draft',
-            action: async () => {
-              try {
-                await updateReleaseNote(releaseNote.id, { status: 'draft' })
-                toast.success('Release note restored to draft!')
-                onAction?.('restored')
-              } catch {
-                toast.error('Failed to restore release note')
-              }
-            },
-            show: true
-          },
-          ...commonItems.filter(item => item.label !== 'Edit') // Can't edit archived notes directly
         ]
 
       default:
@@ -290,7 +267,7 @@ export function PublishButton({
       <div className="flex items-center">
         <Button
           variant={variant}
-          size={size}
+          size={buttonSize}
           onClick={mainButton.action}
           disabled={loading}
           className={mainButton.className}
@@ -303,7 +280,7 @@ export function PublishButton({
           <DropdownMenuTrigger asChild>
             <Button
               variant={variant}
-              size={size}
+              size={buttonSize}
               className={`${mainButton.className} ml-1 px-2`}
               disabled={loading}
             >
@@ -362,15 +339,15 @@ export function PublishButton({
       <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive Release Note</AlertDialogTitle>
+            <AlertDialogTitle>Move Release Note To Draft</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to archive &quot;{releaseNote.title}&quot;? Archived release notes are hidden from the public but can be restored later.
+              Are you sure you want to move &quot;{releaseNote.title}&quot; back to draft? It will no longer be visible publicly.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleArchive} className="bg-orange-600 hover:bg-orange-700">
-              Archive
+              Move To Draft
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

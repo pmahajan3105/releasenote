@@ -21,7 +21,7 @@ export default function PublishedReleaseNotesPage() {
   const filteredAndSortedNotes = useMemo(() => {
     const filtered = publishedNotes.filter(note => {
       const matchesSearch = note.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (note.content_markdown || note.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+                           (note.content_markdown || note.content_html || note.content || '').toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = filterCategory === 'all' || true // Categories not implemented yet
       return matchesSearch && matchesCategory
     })
@@ -44,17 +44,6 @@ export default function PublishedReleaseNotesPage() {
 
     return filtered
   }, [publishedNotes, searchTerm, filterCategory, sortBy])
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'feature': return 'bg-purple-100 text-purple-800'
-      case 'improvement': return 'bg-blue-100 text-blue-800'
-      case 'security': return 'bg-red-100 text-red-800'
-      case 'bugfix': return 'bg-orange-100 text-orange-800'
-      case 'performance': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -175,26 +164,20 @@ export default function PublishedReleaseNotesPage() {
                     </div>
                     
                     <div className="flex items-center gap-4 text-sm text-[#667085] mb-3">
-                      <span>Published {formatDate(note.publishedDate!)}</span>
+                      <span>Published {formatDate(note.published_at || note.created_at)}</span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <EyeIcon className="h-4 w-4" />
-                        {note.views.toLocaleString()} views
+                        {(note.views || 0).toLocaleString()} views
                       </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-3">
-                      {note.categories.map((category) => (
-                        <Badge key={category} className={`text-xs ${getCategoryColor(category)}`}>
-                          {category}
-                        </Badge>
-                      ))}
                     </div>
 
                     <div 
                       className="text-[#667085] line-clamp-2"
                       dangerouslySetInnerHTML={{ 
-                        __html: note.content.replace(/<[^>]*>/g, '').substring(0, 150) + '...' 
+                        __html: (note.content_html || note.content_markdown || note.content || '')
+                          .replace(/<[^>]*>/g, '')
+                          .substring(0, 150) + '...'
                       }}
                     />
                   </div>

@@ -51,7 +51,7 @@ export default function CreateReleaseNotePage() {
         changes: `Release notes for: ${title}`,
         date: new Date().toISOString().split('T')[0]
       })
-      setContent(aiContent)
+      setContent(aiContent ?? '')
     } catch (error) {
       console.error('AI generation failed:', error)
       alert('Failed to generate content. Please try again.')
@@ -75,6 +75,9 @@ export default function CreateReleaseNotePage() {
         status: 'draft',
         slug: title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
       })
+      if (!releaseNote) {
+        throw new Error('Failed to save draft')
+      }
       router.push(`/releases/edit/${releaseNote.id}`)
     } catch (error) {
       console.error('Save failed:', error)
@@ -95,6 +98,11 @@ export default function CreateReleaseNotePage() {
       return
     }
 
+    if (status === 'scheduled' && !scheduledDate) {
+      setError('Please choose a schedule date')
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     try {
@@ -105,6 +113,9 @@ export default function CreateReleaseNotePage() {
         slug: title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
         published_at: status === 'scheduled' ? scheduledDate : new Date().toISOString()
       })
+      if (!releaseNote) {
+        throw new Error('Failed to publish release note')
+      }
       
       // Send email notifications if publishing
       if (status === 'published') {
@@ -149,7 +160,7 @@ export default function CreateReleaseNotePage() {
         {/* Error Display */}
         {error && (
           <ErrorState
-            type="validation"
+            type="generic"
             message={error}
             onRetry={() => setError(null)}
             showRetry={false}
