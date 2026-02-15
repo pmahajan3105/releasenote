@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withOrgAuth, type AuthContext } from '@/lib/auth-helpers'
+import { withOrgAuth } from '@/lib/auth-helpers'
 import { ReleaseNotesService } from '@/lib/services'
+import type { AuthContext } from '@/types/auth'
 
 /**
  * GET /api/release-notes - Get all release notes with filtering
@@ -39,12 +40,11 @@ export const POST = withOrgAuth(async (request: NextRequest, context: AuthContex
 
     const {
       title,
-      description,
+      content,
       content_markdown,
       content_html,
       version,
-      status = 'draft',
-      is_public = false
+      status = 'draft'
     } = body
 
     if (!title || !content_markdown) {
@@ -59,12 +59,11 @@ export const POST = withOrgAuth(async (request: NextRequest, context: AuthContex
       context.user.id,
       {
         title,
-        description,
+        content,
         content_markdown,
         content_html,
         version,
-        status,
-        is_public
+        status
       }
     )
 

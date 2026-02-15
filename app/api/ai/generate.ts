@@ -4,26 +4,6 @@ import { cookies } from "next/headers";
 
 export const runtime = "edge";
 
-// Helper to fetch AI context for the user's org
-async function fetchAIContext(
-  supabase: ReturnType<typeof createRouteHandlerClient>,
-  userId: string
-) {
-  const { data: memberData, error: memberError } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", userId)
-    .single();
-  if (memberError || !memberData) return null;
-  const { data: aiContext, error: contextError } = await supabase
-    .from("ai_context")
-    .select("*")
-    .eq("organization_id", memberData.organization_id)
-    .single();
-  if (contextError) return null;
-  return aiContext;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -32,8 +12,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await req.json();
-    const aiContext = await fetchAIContext(supabase, session.user.id);
-    if (!aiContext) {
+    const { data: memberData, error: memberError } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", session.user.id)
+      .single();
+    const organizationId =
+      memberData && typeof memberData === "object" && "organization_id" in memberData
+        ? (memberData as { organization_id?: string }).organization_id
+        : undefined;
+    if (memberError || !organizationId) {
+      return NextResponse.json({ error: "AI context not configured" }, { status: 400 });
+    }
+
+    const { data: aiContext, error: contextError } = await supabase
+      .from("ai_context")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .single();
+    if (contextError || !aiContext) {
       return NextResponse.json({ error: "AI context not configured" }, { status: 400 });
     }
     // Build prompt using AI context and user-provided data

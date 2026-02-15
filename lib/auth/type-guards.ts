@@ -259,8 +259,8 @@ export function validateMembershipQueryResult(data: unknown): {
     organization_id: membership.organization_id as string,
     user_id: membership.user_id as string,
     role: membership.role as string,
-    invited_by: membership.invited_by as string | null,
-    joined_at: membership.joined_at as string | null,
+    invited_by: (membership.invited_by as string | null) ?? undefined,
+    joined_at: (membership.joined_at as string | null) ?? undefined,
     organizations: validateOrganizationData(membership.organizations).organization!
   }
 
@@ -273,6 +273,8 @@ export function validateMembershipQueryResult(data: unknown): {
 export function extractOrganizationFromMembership(
   membershipData: MembershipQueryResult
 ): AuthOrganization {
+  const userRole = isValidUserRole(membershipData.role) ? membershipData.role : 'viewer'
+
   return {
     ...membershipData.organizations,
     membership: {
@@ -280,11 +282,11 @@ export function extractOrganizationFromMembership(
       created_at: membershipData.created_at,
       organization_id: membershipData.organization_id,
       user_id: membershipData.user_id,
-      role: membershipData.role,
+      role: userRole,
       invited_by: membershipData.invited_by,
       joined_at: membershipData.joined_at
     },
-    userRole: membershipData.role
+    userRole
   }
 }
 
