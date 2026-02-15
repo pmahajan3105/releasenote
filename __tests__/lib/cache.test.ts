@@ -25,6 +25,14 @@ const mockRedis = {
   disconnect: jest.fn(),
 }
 
+function setRedisMockDefaults() {
+  mockRedis.get.mockResolvedValue(null)
+  mockRedis.setex.mockResolvedValue('OK')
+  mockRedis.del.mockResolvedValue(1)
+  mockRedis.keys.mockResolvedValue([])
+  mockRedis.ping.mockResolvedValue('PONG')
+}
+
 jest.mock('ioredis', () => ({
   Redis: jest.fn(() => mockRedis),
 }))
@@ -32,6 +40,7 @@ jest.mock('ioredis', () => ({
 describe('Cache', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    setRedisMockDefaults()
     clearCache() // Clear in-memory cache
   })
 
