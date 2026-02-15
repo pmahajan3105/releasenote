@@ -1,8 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TemplateSelector } from '@/components/ui/template-selector';
+import type { AITemplate } from '@/lib/ai/templates';
 
-const mockTemplates = [
+const mockTemplates: AITemplate[] = [
   {
     id: '1',
     name: 'Modern',
@@ -10,8 +11,10 @@ const mockTemplates = [
     icon: '📝',
     tone: 'professional',
     targetAudience: 'developers',
-    outputFormat: 'HTML',
-    category: 'General',
+    outputFormat: 'html',
+    category: 'modern',
+    systemPrompt: 'Generate modern release notes',
+    userPromptTemplate: 'Use this data: {changes}',
     exampleOutput: 'Example for Modern',
   },
   {
@@ -21,8 +24,10 @@ const mockTemplates = [
     icon: '✏️',
     tone: 'casual',
     targetAudience: 'users',
-    outputFormat: 'Markdown',
-    category: 'General',
+    outputFormat: 'markdown',
+    category: 'minimal',
+    systemPrompt: 'Generate minimal release notes',
+    userPromptTemplate: 'Summarize changes',
     exampleOutput: 'Example for Minimal',
   },
 ];

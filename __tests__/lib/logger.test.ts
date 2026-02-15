@@ -412,14 +412,15 @@ describe('Logger', () => {
 
   describe('Error Handling', () => {
     it('handles circular references in context', () => {
-      const circularContext: any = { name: 'test' }
+      const circularContext: Record<string, unknown> = { name: 'test' }
       circularContext.self = circularContext
       
       expect(() => logger.info('Circular test', circularContext)).not.toThrow()
     })
 
     it('handles undefined and null context', () => {
-      expect(() => logger.info('Null test', null)).not.toThrow()
+      const logInfo = logger.info.bind(logger) as (message: string, context?: unknown) => void
+      expect(() => logInfo('Null test', null)).not.toThrow()
       expect(() => logger.info('Undefined test', undefined)).not.toThrow()
     })
 
@@ -438,7 +439,11 @@ describe('Logger', () => {
   describe('Environment-specific Behavior', () => {
     it('uses pretty printing in development', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'development'
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'development',
+        writable: true,
+        configurable: true,
+      })
       
       logger.info('Pretty print test', { key: 'value' })
       
@@ -447,12 +452,20 @@ describe('Logger', () => {
         expect.stringContaining('{\n')
       )
       
-      process.env.NODE_ENV = originalEnv
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalEnv,
+        writable: true,
+        configurable: true,
+      })
     })
 
     it('uses single line JSON in production', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'production'
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'production',
+        writable: true,
+        configurable: true,
+      })
       
       logger.info('Single line test', { key: 'value' })
       
@@ -461,7 +474,11 @@ describe('Logger', () => {
         expect.not.stringContaining('{\n')
       )
       
-      process.env.NODE_ENV = originalEnv
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalEnv,
+        writable: true,
+        configurable: true,
+      })
     })
   })
-}) 
+})
