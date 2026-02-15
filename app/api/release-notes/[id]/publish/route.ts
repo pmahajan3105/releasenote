@@ -8,10 +8,10 @@ import { cookies } from 'next/headers'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const releaseNoteId = params.id
+    const { id: releaseNoteId } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()

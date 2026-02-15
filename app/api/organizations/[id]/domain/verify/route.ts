@@ -10,9 +10,10 @@ import { promises as dns } from 'dns'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -24,7 +25,7 @@ export async function POST(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, name, custom_domain, domain_verified')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -54,7 +55,7 @@ export async function POST(
     const { data: verification, error: verificationError } = await supabase
       .from('domain_verifications')
       .select('*')
-      .eq('organization_id', params.id)
+      .eq('organization_id', id)
       .eq('domain', organization.custom_domain)
       .single()
 
@@ -81,7 +82,7 @@ export async function POST(
         const { error: updateOrgError } = await supabase
           .from('organizations')
           .update({ domain_verified: true })
-          .eq('id', params.id)
+          .eq('id', id)
 
         if (updateOrgError) {
           throw updateOrgError

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { EyeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,8 +32,9 @@ type Organization = {
 
 const COVER_IMAGE_BUCKET = 'release-note-images' // Match bucket name
 
-export default function EditReleasePage({ params }: { params: { id: string } }) {
+export default function EditReleasePage() {
   const router = useRouter()
+  const params = useParams<{ id: string }>()
   const [loading, setLoading] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -51,7 +52,7 @@ export default function EditReleasePage({ params }: { params: { id: string } }) 
     const fetchReleaseNote = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/release-notes/${params.id}`)
+        const response = await fetch(`/api/release-notes/${releaseNoteId}`)
         if (response.ok) {
           const releaseNote = await response.json()
           setTitle(releaseNote.title || '')
@@ -83,11 +84,11 @@ export default function EditReleasePage({ params }: { params: { id: string } }) 
       }
     }
 
-    if (params.id) {
+    if (releaseNoteId) {
       fetchReleaseNote()
       fetchOrganization()
     }
-  }, [params.id, supabase])
+  }, [releaseNoteId, supabase])
 
   const validateReleaseNote = () => {
     const errors: string[] = []
@@ -128,7 +129,7 @@ export default function EditReleasePage({ params }: { params: { id: string } }) 
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/release-notes/${params.id}`, {
+      const response = await fetch(`/api/release-notes/${releaseNoteId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

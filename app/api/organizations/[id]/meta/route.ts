@@ -18,9 +18,10 @@ interface MetaTagsData {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -42,7 +43,7 @@ export async function GET(
         custom_domain,
         domain_verified
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -83,9 +84,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const data: MetaTagsData = await request.json()
     
     // Validate data
@@ -138,7 +140,7 @@ export async function PUT(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, name')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -159,7 +161,7 @@ export async function PUT(
         favicon_url: data.favicon_url || null,
         brand_color: data.brand_color || '#7F56D9'
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       throw updateError

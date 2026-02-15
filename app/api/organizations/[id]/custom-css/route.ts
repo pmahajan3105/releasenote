@@ -12,9 +12,10 @@ import { CSSValidator } from '@/lib/css-validator'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -26,7 +27,7 @@ export async function GET(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('custom_css, brand_color, custom_css_enabled')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -64,9 +65,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { customCSS, enabled = true } = await request.json()
 
     if (typeof customCSS !== 'string') {
@@ -87,7 +89,7 @@ export async function PUT(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, name')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -99,7 +101,12 @@ export async function PUT(
     }
 
     // Validate CSS if provided
-    let validationResult = { isValid: true, errors: [], warnings: [], sanitizedCSS: '' }
+    let validationResult: ReturnType<typeof CSSValidator.validate> = {
+      isValid: true,
+      errors: [],
+      warnings: [],
+      sanitizedCSS: ''
+    }
     
     if (customCSS.trim()) {
       validationResult = CSSValidator.validate(customCSS)
@@ -121,7 +128,7 @@ export async function PUT(
         custom_css_enabled: enabled,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       throw updateError
@@ -154,9 +161,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -168,7 +176,7 @@ export async function DELETE(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -187,7 +195,7 @@ export async function DELETE(
         custom_css_enabled: false,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       throw updateError

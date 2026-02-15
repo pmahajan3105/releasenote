@@ -5,9 +5,10 @@ import { customPromptEngine } from '@/lib/ai/custom-prompts'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
@@ -18,7 +19,7 @@ export async function GET(
     const { data: brandVoice, error } = await supabase
       .from('brand_voices')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organization_id', session.user.id)
       .single()
 
@@ -42,9 +43,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
@@ -85,7 +87,7 @@ export async function PUT(
     const { data: updatedBrandVoice, error } = await supabase
       .from('brand_voices')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organization_id', session.user.id)
       .select()
       .single()
@@ -113,9 +115,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
@@ -126,7 +129,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('brand_voices')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organization_id', session.user.id)
 
     if (error) {

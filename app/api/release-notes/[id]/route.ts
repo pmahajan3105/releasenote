@@ -11,10 +11,10 @@ import { generateSlug } from '@/lib/utils'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const releaseNoteId = params.id
+    const { id: releaseNoteId } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -60,10 +60,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const releaseNoteId = params.id
+    const { id: releaseNoteId } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -159,10 +159,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const releaseNoteId = params.id
+    const { id: releaseNoteId } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()

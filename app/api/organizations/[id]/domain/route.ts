@@ -11,9 +11,10 @@ import crypto from 'crypto'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { domain } = await request.json()
     
     if (!domain) {
@@ -44,7 +45,7 @@ export async function PUT(
       .from('organizations')
       .select('id, name')
       .eq('custom_domain', domain)
-      .neq('id', params.id)
+      .neq('id', id)
       .single()
 
     if (existingDomain) {
@@ -58,7 +59,7 @@ export async function PUT(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, name, custom_domain')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -79,7 +80,7 @@ export async function PUT(
         custom_domain: domain,
         domain_verified: false
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       throw updateError
@@ -89,13 +90,13 @@ export async function PUT(
     await supabase
       .from('domain_verifications')
       .delete()
-      .eq('organization_id', params.id)
+      .eq('organization_id', id)
 
     // Create new verification record
     const { error: verificationError } = await supabase
       .from('domain_verifications')
       .insert([{
-        organization_id: params.id,
+        organization_id: id,
         domain,
         verification_token: verificationToken,
         verification_method: 'dns'
@@ -137,9 +138,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -151,7 +153,7 @@ export async function DELETE(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, custom_domain')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -169,7 +171,7 @@ export async function DELETE(
         custom_domain: null,
         domain_verified: false
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       throw updateError
@@ -179,7 +181,7 @@ export async function DELETE(
     await supabase
       .from('domain_verifications')
       .delete()
-      .eq('organization_id', params.id)
+      .eq('organization_id', id)
 
     return NextResponse.json({
       success: true,

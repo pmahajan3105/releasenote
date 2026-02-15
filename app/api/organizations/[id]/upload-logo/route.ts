@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
 // POST: Uploads logo or favicon for an organization
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createServerSupabaseClient({ req, res: {} })
-  const orgId = params.id
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = createRouteHandlerClient({ cookies })
+  const { id: orgId } = await params
   const formData = await req.formData()
   const file = formData.get('file') as File
   const type = formData.get('type') as string // 'logo' or 'favicon'

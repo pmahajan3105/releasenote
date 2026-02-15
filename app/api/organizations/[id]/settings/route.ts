@@ -4,9 +4,10 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get the current user
@@ -19,7 +20,7 @@ export async function GET(
     const { data: organization, error } = await supabase
       .from('organizations')
       .select('settings')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error && error.code !== 'PGRST116') {
@@ -43,9 +44,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get the current user
@@ -64,7 +66,7 @@ export async function PUT(
         settings, 
         updated_at: new Date().toISOString() 
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select('settings')
       .single()
 

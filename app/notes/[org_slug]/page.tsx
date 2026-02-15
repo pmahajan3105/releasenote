@@ -6,7 +6,7 @@ import { Database } from '@/types/supabase'
 import { EnhancedReleaseNotesList } from '@/components/public/enhanced-release-notes-list'
 
 type Props = {
-  params: { org_slug: string }
+  params: Promise<{ org_slug: string }>
 }
 
 async function getOrganizationReleaseNotes(orgSlug: string) {
@@ -57,7 +57,8 @@ async function getOrganizationReleaseNotes(orgSlug: string) {
 }
 
 export async function generateMetadata({ params }: Props) {
-  const data = await getOrganizationReleaseNotes(params.org_slug)
+  const { org_slug: orgSlug } = await params
+  const data = await getOrganizationReleaseNotes(orgSlug)
 
   if (!data) {
     return {
@@ -109,7 +110,8 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function OrganizationReleaseNotesPage({ params }: Props) {
-  const data = await getOrganizationReleaseNotes(params.org_slug)
+  const { org_slug: orgSlug } = await params
+  const data = await getOrganizationReleaseNotes(orgSlug)
 
   if (!data) {
     notFound()
@@ -121,7 +123,7 @@ export default async function OrganizationReleaseNotesPage({ params }: Props) {
     <EnhancedReleaseNotesList
       organization={organization}
       releaseNotes={releaseNotes}
-      orgSlug={params.org_slug}
+      orgSlug={orgSlug}
     />
   )
 }

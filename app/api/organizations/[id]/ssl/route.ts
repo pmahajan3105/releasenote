@@ -12,9 +12,10 @@ import crypto from 'crypto'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -26,7 +27,7 @@ export async function GET(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, custom_domain, domain_verified')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -51,7 +52,7 @@ export async function GET(
     const { data: certificate, error: certError } = await supabase
       .from('ssl_certificates')
       .select('*')
-      .eq('organization_id', params.id)
+      .eq('organization_id', id)
       .eq('domain', organization.custom_domain)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -110,9 +111,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { provider = 'letsencrypt', autoRenew = true } = await request.json()
 
     const supabase = createRouteHandlerClient({ cookies })
@@ -126,7 +128,7 @@ export async function POST(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, custom_domain, domain_verified')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -148,7 +150,7 @@ export async function POST(
     const { data: existingCert } = await supabase
       .from('ssl_certificates')
       .select('expires_at')
-      .eq('organization_id', params.id)
+      .eq('organization_id', id)
       .eq('domain', organization.custom_domain)
       .gte('expires_at', new Date().toISOString())
       .single()
@@ -168,7 +170,7 @@ export async function POST(
     const { data: challenge, error: challengeError } = await supabase
       .from('ssl_challenges')
       .insert([{
-        organization_id: params.id,
+        organization_id: id,
         domain: organization.custom_domain,
         challenge_type: 'dns-01',
         challenge_token: challengeToken,
@@ -191,7 +193,7 @@ export async function POST(
     const { data: certificate, error: certError } = await supabase
       .from('ssl_certificates')
       .insert([{
-        organization_id: params.id,
+        organization_id: id,
         domain: organization.custom_domain,
         certificate: mockCertificate.certificate,
         private_key: mockCertificate.privateKey,
@@ -253,9 +255,10 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -267,7 +270,7 @@ export async function DELETE(
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('id, custom_domain')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
 
@@ -282,7 +285,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('ssl_certificates')
       .delete()
-      .eq('organization_id', params.id)
+      .eq('organization_id', id)
 
     if (deleteError) {
       throw deleteError
@@ -292,7 +295,7 @@ export async function DELETE(
     await supabase
       .from('ssl_challenges')
       .delete()
-      .eq('organization_id', params.id)
+      .eq('organization_id', id)
 
     return NextResponse.json({
       success: true,

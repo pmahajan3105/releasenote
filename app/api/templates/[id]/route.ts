@@ -3,8 +3,9 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 
 // PUT: Update a template
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     if (sessionError || !session?.user) {
@@ -23,7 +24,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { data, error } = await supabase
       .from("templates")
       .update(body)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("organization_id", memberData.organization_id)
       .select()
       .single()
@@ -36,8 +37,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE: Delete a template
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     if (sessionError || !session?.user) {
@@ -55,7 +57,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const { error } = await supabase
       .from("templates")
       .delete()
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("organization_id", memberData.organization_id)
     if (error) throw error
     return NextResponse.json({ success: true })

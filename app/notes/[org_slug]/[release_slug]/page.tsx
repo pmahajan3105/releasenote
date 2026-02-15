@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger'
 import { getCachedReleaseNote, setCachedReleaseNote } from '@/lib/cache'
 
 type Props = {
-  params: { org_slug: string; release_slug: string }
+  params: Promise<{ org_slug: string; release_slug: string }>
 }
 
 // Function to fetch release note data server-side with caching
@@ -87,7 +87,8 @@ export const revalidate = 3600 // Revalidate every hour
 
 // --- Optional: generateMetadata for SEO --- 
 export async function generateMetadata({ params }: Props) {
-   const data = await getReleaseNote(params.org_slug, params.release_slug)
+   const { org_slug: orgSlug, release_slug: releaseSlug } = await params
+   const data = await getReleaseNote(orgSlug, releaseSlug)
 
    if (!data) {
     return {
@@ -119,7 +120,8 @@ export async function generateMetadata({ params }: Props) {
 // --- End generateMetadata --- 
 
 export default async function PublicReleaseNotePage({ params }: Props) {
-  const data = await getReleaseNote(params.org_slug, params.release_slug)
+  const { org_slug: orgSlug, release_slug: releaseSlug } = await params
+  const data = await getReleaseNote(orgSlug, releaseSlug)
 
   if (!data) {
     notFound() // Trigger Next.js 404 page
