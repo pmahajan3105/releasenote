@@ -25,6 +25,21 @@ interface IntegrationRecord {
   access_token: string
 }
 
+interface LinearIssueData {
+  identifier: string
+  title: string
+  description?: string | null
+}
+
+function isLinearIssueData(value: unknown): value is LinearIssueData {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const issue = value as Record<string, unknown>
+  return typeof issue.identifier === 'string' && typeof issue.title === 'string'
+}
+
 // Real ticket fetching implementation
 async function fetchTicketDetails(ticketIds: string[], organizationId: string): Promise<TicketDetail[]> {
   const supabase = createRouteHandlerClient({ cookies })
@@ -148,7 +163,17 @@ async function fetchFromGitHub(ticketId: string, integration: IntegrationRecord)
     
     if (!owner || !repo) return null
     
-    const issue = await github.getIssue(owner, repo, parseInt(issueNumber))
+    const issueNumberValue = Number.parseInt(issueNumber, 10)
+    if (Number.isNaN(issueNumberValue)) {
+      return null
+    }
+
+    const issues = await github.getIssues(owner, repo, {
+      state: 'all',
+      per_page: 100,
+      page: 1
+    })
+    const issue = issues.find((candidate) => candidate.number === issueNumberValue)
     if (!issue) return null
     
     return {
@@ -166,9 +191,14 @@ async function fetchFromGitHub(ticketId: string, integration: IntegrationRecord)
 async function fetchFromJira(ticketId: string, integration: IntegrationRecord): Promise<TicketDetail | null> {
   try {
     const { JiraAPIClient } = await import('@/lib/integrations/jira-client')
-    const jira = new JiraAPIClient(integration.config, integration.access_token)
-    
-    const issue = await jira.getIssue(ticketId)
+    const jira = JiraAPIClient.getInstance()
+    const resources = await jira.getAccessibleResources(integration.access_token)
+    const config = integration.config ?? {}
+    const configuredSiteId = typeof config.siteId === 'string' ? config.siteId : undefined
+    const cloudId = configuredSiteId || resources[0]?.id
+    if (!cloudId) return null
+
+    const issue = await jira.getIssue(integration.access_token, cloudId, ticketId)
     if (!issue) return null
     
     return {
@@ -187,7 +217,7 @@ async function fetchFromLinear(ticketId: string, integration: IntegrationRecord)
   try {
     const { linearAPI } = await import('@/lib/integrations/linear-client')
     const issue = await linearAPI.getIssue(integration.access_token, ticketId)
-    if (!issue) return null
+    if (!isLinearIssueData(issue)) return null
     
     return {
       key: issue.identifier,
@@ -201,8 +231,8 @@ async function fetchFromLinear(ticketId: string, integration: IntegrationRecord)
 }
 
 // Configure DOMPurify outside the handler
-const window = new JSDOM('').window;
-const purify = DOMPurify(window as unknown as Window);
+const domWindow = new JSDOM('').window
+const purify = DOMPurify(domWindow)
 
 export async function POST(request: Request) {
   // Validate JSON body

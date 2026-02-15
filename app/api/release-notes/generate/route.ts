@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const aiProvider = getAiProvider(provider)
+    const aiProvider = getAiProvider()
     let generatedContent: string
 
     if (streaming) {
@@ -81,20 +81,13 @@ export async function POST(request: NextRequest) {
             // Build prompt for streaming
             const prompt = buildReleaseNotesPrompt({ tickets, commits, companyDetails, tone, template })
             
-            // This would need to be implemented in the AI provider for streaming
-            const response = await aiProvider.generateStreaming(prompt, {
-              model,
+            const content = await aiProvider.generateFromPrompt(prompt, {
               temperature: 0.7,
               maxTokens: 2000
             })
+            const chunks = content.match(/.{1,256}/g) ?? []
 
-            const reader = response.getReader()
-            
-            while (true) {
-              const { done, value } = await reader.read()
-              if (done) break
-              
-              const chunk = new TextDecoder().decode(value)
+            for (const chunk of chunks) {
               controller.enqueue(encoder.encode(chunk))
             }
             
@@ -118,14 +111,12 @@ export async function POST(request: NextRequest) {
       // Non-streaming generation
       if (customPrompt) {
         generatedContent = await aiProvider.generateFromPrompt(customPrompt, {
-          model,
           temperature: 0.7,
           maxTokens: 2000
         })
       } else if (tickets.length > 0) {
         const prompt = buildReleaseNotesPrompt({ tickets, companyDetails, tone, template })
         generatedContent = await aiProvider.generateFromPrompt(prompt, {
-          model,
           temperature: 0.7,
           maxTokens: 2000
         })

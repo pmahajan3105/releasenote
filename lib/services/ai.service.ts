@@ -61,7 +61,6 @@ export class AIService {
 
     try {
       const content = await provider.generateFromPrompt(prompt, {
-        model: options.model,
         temperature: options.temperature || 0.7,
         maxTokens: options.maxTokens || 2000
       })
@@ -99,7 +98,7 @@ export class AIService {
     try {
       const content = await provider.generateReleaseNotes(commits, {
         template: options.template || 'traditional',
-        tone: options.tone || 'professional',
+        tone: this.normalizeTone(options.tone),
         includeBreakingChanges: true
       })
 
@@ -135,7 +134,6 @@ export class AIService {
 
     try {
       const content = await provider.generateFromPrompt(prompt, {
-        model: options.model,
         temperature: options.temperature || 0.7,
         maxTokens: options.maxTokens || 2000
       })
@@ -198,11 +196,22 @@ export class AIService {
   ): Promise<ReadableStream> {
     const provider = this.getProvider(options.provider)
     const prompt = this.buildTicketsPrompt(tickets, options)
-
-    return provider.generateStreaming(prompt, {
-      model: options.model,
+    const content = await provider.generateFromPrompt(prompt, {
       temperature: options.temperature || 0.7,
       maxTokens: options.maxTokens || 2000
+    })
+
+    const encoder = new TextEncoder()
+    const chunks = content.match(/.{1,256}/g) ?? []
+
+    return new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) {
+          options.onChunk?.(chunk)
+          controller.enqueue(encoder.encode(chunk))
+        }
+        controller.close()
+      }
     })
   }
 
@@ -241,8 +250,17 @@ export class AIService {
   /**
    * Private helper methods
    */
-  private getProvider(providerName?: string) {
-    return getAiProvider(providerName as 'openai' | 'anthropic')
+  private getProvider(_providerName?: string) {
+    return getAiProvider()
+  }
+
+  private normalizeTone(
+    tone: GenerationOptions['tone']
+  ): 'professional' | 'casual' | 'technical' {
+    if (tone === 'friendly') {
+      return 'casual'
+    }
+    return tone || 'professional'
   }
 
   private buildTicketsPrompt(tickets: Ticket[], options: GenerationOptions): string {
