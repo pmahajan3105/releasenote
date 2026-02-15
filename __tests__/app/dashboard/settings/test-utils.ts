@@ -1,9 +1,6 @@
 // Minimal mock for fetch to work with Vitest: returns a Response-like object
 export function mockFetchImpl(responses: Record<string, any>) {
   return (input: string | Request | URL, opts?: any) => {
-    // Log every fetch call for debugging
-    // eslint-disable-next-line no-console
-    console.log('[mockFetchImpl] fetch input:', input)
     let urlStr: string
     if (typeof input === 'string') {
       urlStr = input
@@ -14,9 +11,6 @@ export function mockFetchImpl(responses: Record<string, any>) {
     } else {
       throw new Error('Unknown fetch input type: ' + typeof input)
     }
-    // Log every fetch call for debugging
-    // eslint-disable-next-line no-console
-    console.log('[mockFetchImpl] fetch called:', urlStr)
     // Match by endpoint prefix (ignore query params)
     const urlObj = new URL(urlStr, 'http://localhost')
     const pathname = urlObj.pathname
@@ -67,4 +61,3 @@ export function mockFetchImpl(responses: Record<string, any>) {
     }
   }
 }
-

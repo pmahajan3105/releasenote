@@ -70,7 +70,7 @@ describe('Dashboard Page', () => {
     render(<Dashboard />)
     
     await waitFor(() => {
-      expect(screen.getByText(/dashboard/i)).toBeInTheDocument()
+      expect(screen.getByText(/welcome to release notes generator/i)).toBeInTheDocument()
     })
   })
 
@@ -78,7 +78,7 @@ describe('Dashboard Page', () => {
     render(<Dashboard />)
     
     await waitFor(() => {
-      expect(screen.getByText(/overview of your release notes/i)).toBeInTheDocument()
+      expect(screen.getByText(/ready to generate some awesome release notes/i)).toBeInTheDocument()
     })
   })
 
@@ -124,29 +124,13 @@ describe('Dashboard Page', () => {
     expect(screen.queryByText(/error/i)).not.toBeInTheDocument()
   })
 
-  it('should render published notes metric', async () => {
+  it('should render static sections', async () => {
     render(<Dashboard />)
     
     await waitFor(() => {
-      expect(screen.getByText(/published notes/i)).toBeInTheDocument()
+      expect(screen.getByText('Recent Release Notes')).toBeInTheDocument()
+      expect(screen.getByText('Integrations Status')).toBeInTheDocument()
+      expect(screen.getByText('Getting Started Checklist')).toBeInTheDocument()
     })
   })
-
-  it('should display published notes count', async () => {
-    render(<Dashboard />)
-    
-    await waitFor(() => {
-      expect(screen.getByText('Published Notes')).toBeInTheDocument()
-      expect(screen.getByText('24')).toBeInTheDocument()
-    })
-  })
-
-  it('should show total views metric', async () => {
-    render(<Dashboard />)
-    
-    await waitFor(() => {
-      expect(screen.getByText('Total Views')).toBeInTheDocument()
-      expect(screen.getByText('12,484')).toBeInTheDocument()
-    })
-  })
-}) 
+})

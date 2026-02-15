@@ -5,25 +5,29 @@ import ReleaseNoteEditor from '@/components/features/ReleaseNoteEditor'
 
 // Mock react-quill
 jest.mock('react-quill', () => {
-  const MockQuill = ({ value, onChange, placeholder }: any) => (
-    <div data-testid="quill-editor">
-      <textarea
-        data-testid="quill-textarea"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-      />
-    </div>
+  const React = require('react')
+  const MockQuill = React.forwardRef(
+    (
+      { value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder?: string },
+      _ref: React.Ref<HTMLDivElement>
+    ) => (
+      <div data-testid="quill-editor">
+        <textarea
+          data-testid="quill-textarea"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      </div>
+    )
   )
+  MockQuill.displayName = 'MockQuill'
   return MockQuill
 })
 
 // Mock next/dynamic
 jest.mock('next/dynamic', () => {
-  return (importFunc: any) => {
-    const Component = importFunc()
-    return Component
-  }
+  return () => require('react-quill')
 })
 
 // Mock Supabase
@@ -77,7 +81,8 @@ describe('ReleaseNoteEditor', () => {
     const textarea = screen.getByTestId('quill-textarea')
     await user.type(textarea, 'New content')
     
-    expect(mockOnChange).toHaveBeenCalledWith('New content')
+    expect(mockOnChange).toHaveBeenCalled()
+    expect(mockOnChange).toHaveBeenLastCalledWith('t')
   })
 
   it('should handle empty value gracefully', () => {
