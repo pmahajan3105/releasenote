@@ -10,11 +10,15 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jsdom',
+  testMatch: ['**/?(*.)+(spec|test).[tj]s?(x)'],
   moduleNameMapper: {
     '^.+\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@/(.*)$': '<rootDir>/$1',
   },
   testPathIgnorePatterns: ['/node_modules/', '/.next/', '/out/'],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(jose|@supabase)/)',
+  ],
   collectCoverageFrom: [
     'lib/**/*.{js,jsx,ts,tsx}',
     'components/**/*.{js,jsx,ts,tsx}',
