@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { linearAPI } from '@/lib/integrations/linear-client'
+import {
+  getLinearAccessToken,
+  isLinearIntegrationRecord,
+  normalizeLinearTeamsResponse,
+  parseBooleanParam,
+  parseIntegerParam,
+  transformLinearTeam,
+} from '@/lib/integrations/linear-route-helpers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,51 +21,37 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const includeArchived = searchParams.get('includeArchived') === 'true'
-    const first = parseInt(searchParams.get('first') || '50')
+    const includeArchived = parseBooleanParam(searchParams.get('includeArchived'), false)
+    const first = parseIntegerParam(searchParams.get('first'), 50, { min: 1, max: 100 })
 
     // Get Linear integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
       .select('*')
       .eq('organization_id', session.user.id)
       .eq('type', 'linear')
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isLinearIntegrationRecord(data)) {
       return NextResponse.json({ error: 'Linear integration not found' }, { status: 404 })
+    }
+    const accessToken = getLinearAccessToken(data)
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Linear access token not found' }, { status: 400 })
     }
 
     try {
-      const teams = await linearAPI.getTeams(integration.access_token, {
+      const teamsResponse = await linearAPI.getTeams(accessToken, {
         first,
         includeArchived
       })
+      const teams = normalizeLinearTeamsResponse(teamsResponse)
 
-      // Transform teams for frontend consumption
-      const transformedTeams = teams.nodes?.map((team: any) => ({
-        id: team.id,
-        name: team.name,
-        key: team.key,
-        description: team.description,
-        color: team.color,
-        icon: team.icon,
-        private: team.private,
-        issueCount: team.issueCount,
-        activeCycleCount: team.activeCycleCount,
-        createdAt: team.createdAt,
-        updatedAt: team.updatedAt,
-        organization: team.organization
-      })) || []
+      const transformedTeams = teams.nodes.map((team) => transformLinearTeam(team))
 
       return NextResponse.json({
         teams: transformedTeams,
-        pagination: {
-          hasNextPage: teams.pageInfo?.hasNextPage || false,
-          hasPreviousPage: teams.pageInfo?.hasPreviousPage || false,
-          startCursor: teams.pageInfo?.startCursor,
-          endCursor: teams.pageInfo?.endCursor
-        }
+        pagination: teams.pageInfo
       })
 
     } catch (error) {

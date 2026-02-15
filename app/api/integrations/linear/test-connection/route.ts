@@ -2,8 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { linearAPI } from '@/lib/integrations/linear-client'
+import {
+  getLinearAccessToken,
+  getLinearOrganizationName,
+  isLinearIntegrationRecord,
+  normalizeLinearIssuesResponse,
+  normalizeLinearProjectsResponse,
+  normalizeLinearTeamsResponse,
+  normalizeLinearViewer,
+  summarizeLinearIssue,
+  summarizeLinearProject,
+  summarizeLinearTeam,
+} from '@/lib/integrations/linear-route-helpers'
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -13,19 +25,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Linear integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
       .select('*')
       .eq('organization_id', session.user.id)
       .eq('type', 'linear')
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isLinearIntegrationRecord(data)) {
       return NextResponse.json({
         success: false,
         error: 'Linear integration not found',
         tests: []
       }, { status: 404 })
+    }
+    const accessToken = getLinearAccessToken(data)
+    if (!accessToken) {
+      return NextResponse.json({
+        success: false,
+        error: 'Linear access token not found',
+        tests: []
+      }, { status: 400 })
     }
 
     const tests = []
@@ -33,26 +53,22 @@ export async function POST(request: NextRequest) {
 
     // Test 1: Basic Authentication & User Info
     try {
-      const connectionTest = await linearAPI.testConnection(integration.access_token)
+      const connectionTest = await linearAPI.testConnection(accessToken)
+      const viewer = normalizeLinearViewer(connectionTest.user)
       
       if (connectionTest.success) {
         tests.push({
           name: 'Authentication & User Info',
           status: 'passed',
-          message: `Successfully authenticated as ${connectionTest.user.displayName || connectionTest.user.name}`,
+          message: `Successfully authenticated as ${viewer.displayName || viewer.name || 'Unknown User'}`,
           details: {
             user: {
-              id: connectionTest.user.id,
-              name: connectionTest.user.name,
-              displayName: connectionTest.user.displayName,
-              email: connectionTest.user.email
+              id: viewer.id,
+              name: viewer.name,
+              displayName: viewer.displayName,
+              email: viewer.email
             },
-            organization: connectionTest.organization ? {
-              id: connectionTest.organization.id,
-              name: connectionTest.organization.name,
-              urlKey: connectionTest.organization.urlKey,
-              userCount: connectionTest.organization.userCount
-            } : null
+            organization: viewer.organization ?? null
           }
         })
       } else {
@@ -77,9 +93,10 @@ export async function POST(request: NextRequest) {
     // Test 2: Teams Access
     if (overallSuccess) {
       try {
-        const teams = await linearAPI.getTeams(integration.access_token, {
+        const teamsResponse = await linearAPI.getTeams(accessToken, {
           first: 10
         })
+        const teams = normalizeLinearTeamsResponse(teamsResponse)
 
         tests.push({
           name: 'Teams Access',
@@ -87,13 +104,7 @@ export async function POST(request: NextRequest) {
           message: `Successfully accessed teams. Found ${teams.nodes?.length || 0} teams`,
           details: {
             totalTeams: teams.nodes?.length || 0,
-            sampleTeams: teams.nodes?.slice(0, 3).map((team: any) => ({
-              id: team.id,
-              name: team.name,
-              key: team.key,
-              issueCount: team.issueCount,
-              private: team.private
-            })) || []
+            sampleTeams: teams.nodes?.slice(0, 3).map((team) => summarizeLinearTeam(team)) || []
           }
         })
       } catch (error) {
@@ -109,25 +120,18 @@ export async function POST(request: NextRequest) {
     // Test 3: Issues Access
     if (overallSuccess) {
       try {
-        const issues = await linearAPI.getIssues(integration.access_token, {
+        const issuesResponse = await linearAPI.getIssues(accessToken, {
           first: 10,
           orderBy: 'updatedAt'
         })
+        const issues = normalizeLinearIssuesResponse(issuesResponse)
 
         tests.push({
           name: 'Issues Access',
           status: 'passed',
           message: `Successfully accessed issues. Found ${issues.nodes?.length || 0} recent issues`,
           details: {
-            sampleIssues: issues.nodes?.slice(0, 3).map((issue: any) => ({
-              id: issue.id,
-              identifier: issue.identifier,
-              title: issue.title,
-              state: issue.state.name,
-              team: issue.team?.name,
-              assignee: issue.assignee?.displayName,
-              priority: issue.priority
-            })) || []
+            sampleIssues: issues.nodes?.slice(0, 3).map((issue) => summarizeLinearIssue(issue)) || []
           }
         })
       } catch (error) {
@@ -143,22 +147,17 @@ export async function POST(request: NextRequest) {
     // Test 4: Projects Access
     if (overallSuccess) {
       try {
-        const projects = await linearAPI.getProjects(integration.access_token, {
+        const projectsResponse = await linearAPI.getProjects(accessToken, {
           first: 10
         })
+        const projects = normalizeLinearProjectsResponse(projectsResponse)
 
         tests.push({
           name: 'Projects Access',
           status: 'passed',
           message: `Successfully retrieved ${projects.nodes?.length || 0} projects`,
           details: {
-            sampleProjects: projects.nodes?.slice(0, 3).map((project: any) => ({
-              id: project.id,
-              name: project.name,
-              state: project.state,
-              progress: project.progress,
-              issueCount: project.issues?.nodes?.length || 0
-            })) || []
+            sampleProjects: projects.nodes?.slice(0, 3).map((project) => summarizeLinearProject(project)) || []
           }
         })
       } catch (error) {
@@ -185,13 +184,13 @@ export async function POST(request: NextRequest) {
           
           switch (apiTest.method) {
             case 'getViewer':
-              await linearAPI.getViewer(integration.access_token)
+              await linearAPI.getViewer(accessToken)
               break
             case 'getTeams':
-              await linearAPI.getTeams(integration.access_token, { first: 1 })
+              await linearAPI.getTeams(accessToken, { first: 1 })
               break
             case 'getIssues':
-              await linearAPI.getIssues(integration.access_token, { first: 1 })
+              await linearAPI.getIssues(accessToken, { first: 1 })
               break
           }
           
@@ -221,16 +220,16 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
         last_test_at: new Date().toISOString()
       })
-      .eq('id', integration.id)
+      .eq('id', data.id)
 
     return NextResponse.json({
       success: overallSuccess,
       timestamp: new Date().toISOString(),
       integration: {
-        id: integration.id,
+        id: data.id,
         type: 'linear',
-        connected_at: integration.created_at,
-        organization: integration.metadata?.organization?.name || 'Unknown Organization'
+        connected_at: data.created_at,
+        organization: getLinearOrganizationName(data.metadata)
       },
       tests,
       summary: {

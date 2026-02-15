@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import {
+  buildGitHubHeaders,
+  getGitHubAccessToken,
+  isGitHubIntegrationRecord,
+} from '@/lib/integrations/github-route-helpers'
+import { parseIntegerParam } from '@/lib/integrations/route-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +20,7 @@ export async function POST(request: NextRequest) {
     const { integrationId } = await request.json()
 
     // Get GitHub integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
       .select('*')
       .eq('id', integrationId || 'github')
@@ -22,7 +28,7 @@ export async function POST(request: NextRequest) {
       .eq('type', 'github')
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isGitHubIntegrationRecord(data)) {
       return NextResponse.json({
         status: 'error',
         lastChecked: new Date().toISOString(),
@@ -40,7 +46,26 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const accessToken = getGitHubAccessToken(data)
+    if (!accessToken) {
+      return NextResponse.json({
+        status: 'error',
+        lastChecked: new Date().toISOString(),
+        details: {
+          connection: false,
+          authentication: false,
+          permissions: false
+        },
+        issues: [{
+          type: 'error',
+          message: 'GitHub access token not found',
+          solution: 'Please reconnect your GitHub account to refresh the access token'
+        }]
+      }, { status: 400 })
+    }
+
     const startTime = Date.now()
+    const headers = buildGitHubHeaders(accessToken)
     const health = {
       status: 'healthy' as const,
       lastChecked: new Date().toISOString(),
@@ -70,13 +95,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Test GitHub API connection
-      const githubResponse = await fetch('https://api.github.com/user', {
-        headers: {
-          'Authorization': `token ${integration.access_token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'ReleaseNoteAI'
-        }
-      })
+      const githubResponse = await fetch('https://api.github.com/user', { headers })
 
       health.responseTime = Date.now() - startTime
 
@@ -99,12 +118,10 @@ export async function POST(request: NextRequest) {
           })
         }
       } else {
-        const userData = await githubResponse.json()
-        
         // Check rate limits
-        const rateLimitRemaining = parseInt(githubResponse.headers.get('x-ratelimit-remaining') || '0')
-        const rateLimitLimit = parseInt(githubResponse.headers.get('x-ratelimit-limit') || '5000')
-        const rateLimitReset = parseInt(githubResponse.headers.get('x-ratelimit-reset') || '0')
+        const rateLimitRemaining = parseIntegerParam(githubResponse.headers.get('x-ratelimit-remaining'), 0, { min: 0 })
+        const rateLimitLimit = parseIntegerParam(githubResponse.headers.get('x-ratelimit-limit'), 5000, { min: 0 })
+        const rateLimitReset = parseIntegerParam(githubResponse.headers.get('x-ratelimit-reset'), 0, { min: 0 })
 
         health.details.rateLimit = {
           remaining: rateLimitRemaining,
@@ -133,11 +150,7 @@ export async function POST(request: NextRequest) {
         // Test repository access
         try {
           const reposResponse = await fetch('https://api.github.com/user/repos?per_page=1', {
-            headers: {
-              'Authorization': `token ${integration.access_token}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'User-Agent': 'ReleaseNoteAI'
-            }
+            headers
           })
 
           if (!reposResponse.ok) {
@@ -150,7 +163,7 @@ export async function POST(request: NextRequest) {
               docs: 'https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-for-oauth-apps'
             })
           }
-        } catch (repoError) {
+        } catch {
           health.issues.push({
             type: 'info',
             message: 'Unable to test repository permissions',
@@ -166,7 +179,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-    } catch (networkError) {
+    } catch {
       health.status = 'error'
       health.details.connection = false
       health.issues.push({

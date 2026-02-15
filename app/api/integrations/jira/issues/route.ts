@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
+import {
+  getJiraResources,
+  isJiraIntegrationRecord,
+  parseCsvParam,
+  parseIntegerParam,
+  resolveJiraSite,
+  transformJiraIssue,
+} from '@/lib/integrations/jira-route-helpers'
+
+const DEFAULT_MAX_RESULTS = 50
+const MAX_ALLOWED_RESULTS = 100
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,31 +27,31 @@ export async function GET(request: NextRequest) {
     const siteId = searchParams.get('siteId')
     const projectKey = searchParams.get('projectKey')
     const jql = searchParams.get('jql')
-    const maxResults = parseInt(searchParams.get('maxResults') || '50')
-    const startAt = parseInt(searchParams.get('startAt') || '0')
-    const issueTypes = searchParams.get('issueTypes')?.split(',').filter(Boolean)
-    const statuses = searchParams.get('statuses')?.split(',').filter(Boolean)
+    const maxResults = parseIntegerParam(searchParams.get('maxResults'), DEFAULT_MAX_RESULTS, {
+      min: 1,
+      max: MAX_ALLOWED_RESULTS,
+    })
+    const startAt = parseIntegerParam(searchParams.get('startAt'), 0, { min: 0 })
+    const issueTypes = parseCsvParam(searchParams.get('issueTypes'))
+    const statuses = parseCsvParam(searchParams.get('statuses'))
     const updatedSince = searchParams.get('updatedSince')
 
     // Get Jira integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
       .select('*')
       .eq('organization_id', session.user.id)
       .eq('type', 'jira')
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isJiraIntegrationRecord(data)) {
       return NextResponse.json({ error: 'Jira integration not found' }, { status: 404 })
     }
+    const integration = data
+    const resources = getJiraResources(integration.metadata)
 
-    // Determine which site to use
-    let targetSiteId = siteId
-    if (!targetSiteId && integration.metadata?.resources?.length > 0) {
-      targetSiteId = integration.metadata.resources[0].id
-    }
-
-    if (!targetSiteId) {
+    const selectedSite = resolveJiraSite(resources, siteId)
+    if (!selectedSite) {
       return NextResponse.json({ error: 'No Jira site available' }, { status: 400 })
     }
 
@@ -49,7 +60,7 @@ export async function GET(request: NextRequest) {
 
       if (jql) {
         // Use custom JQL query
-        issues = await jiraAPI.searchIssues(integration.access_token, targetSiteId, {
+        issues = await jiraAPI.searchIssues(integration.access_token, selectedSite.id, {
           jql,
           startAt,
           maxResults,
@@ -58,7 +69,7 @@ export async function GET(request: NextRequest) {
         })
       } else if (projectKey) {
         // Search by project with optional filters
-        issues = await jiraAPI.getProjectIssues(integration.access_token, targetSiteId, projectKey, {
+        issues = await jiraAPI.getProjectIssues(integration.access_token, selectedSite.id, projectKey, {
           issueTypes,
           statuses,
           updatedSince,
@@ -71,7 +82,7 @@ export async function GET(request: NextRequest) {
           ? `updated >= "${updatedSince}" ORDER BY updated DESC`
           : 'updated >= -30d ORDER BY updated DESC'
           
-        issues = await jiraAPI.searchIssues(integration.access_token, targetSiteId, {
+        issues = await jiraAPI.searchIssues(integration.access_token, selectedSite.id, {
           jql: defaultJql,
           startAt,
           maxResults,
@@ -80,60 +91,7 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // Transform issues for frontend consumption
-      const transformedIssues = issues.issues?.map((issue: any) => ({
-        id: issue.id,
-        key: issue.key,
-        summary: issue.fields.summary,
-        description: issue.fields.description,
-        status: {
-          name: issue.fields.status.name,
-          id: issue.fields.status.id,
-          statusCategory: issue.fields.status.statusCategory
-        },
-        issueType: {
-          name: issue.fields.issuetype.name,
-          id: issue.fields.issuetype.id,
-          iconUrl: issue.fields.issuetype.iconUrl,
-          subtask: issue.fields.issuetype.subtask
-        },
-        priority: issue.fields.priority ? {
-          name: issue.fields.priority.name,
-          id: issue.fields.priority.id,
-          iconUrl: issue.fields.priority.iconUrl
-        } : null,
-        assignee: issue.fields.assignee ? {
-          accountId: issue.fields.assignee.accountId,
-          displayName: issue.fields.assignee.displayName,
-          emailAddress: issue.fields.assignee.emailAddress,
-          avatarUrls: issue.fields.assignee.avatarUrls
-        } : null,
-        created: issue.fields.created,
-        updated: issue.fields.updated,
-        fixVersions: issue.fields.fixVersions?.map((version: any) => ({
-          id: version.id,
-          name: version.name,
-          description: version.description,
-          released: version.released,
-          releaseDate: version.releaseDate
-        })) || [],
-        labels: issue.fields.labels || [],
-        url: `${integration.metadata?.resources?.find((r: any) => r.id === targetSiteId)?.url}/browse/${issue.key}`,
-        changelog: issue.changelog?.histories?.map((history: any) => ({
-          id: history.id,
-          author: {
-            accountId: history.author.accountId,
-            displayName: history.author.displayName
-          },
-          created: history.created,
-          items: history.items?.map((item: any) => ({
-            field: item.field,
-            fieldtype: item.fieldtype,
-            from: item.fromString,
-            to: item.toString
-          })) || []
-        })) || []
-      })) || []
+      const transformedIssues = issues.issues.map((issue) => transformJiraIssue(issue, selectedSite))
 
       // Cache the issues in our ticket_cache table
       if (transformedIssues.length > 0) {
@@ -176,8 +134,8 @@ export async function GET(request: NextRequest) {
           total: issues.total || 0
         },
         site: {
-          id: targetSiteId,
-          name: integration.metadata?.resources?.find((r: any) => r.id === targetSiteId)?.name || 'Unknown Site'
+          id: selectedSite.id,
+          name: selectedSite.name || 'Unknown Site'
         }
       })
 

@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import {
+  buildGitHubHeaders,
+  getGitHubAccessToken,
+  isGitHubIntegrationRecord,
+} from '@/lib/integrations/github-route-helpers'
 
-export async function POST(request: NextRequest) {
+interface GitHubRepoSummary {
+  name?: string
+  private?: boolean
+  permissions?: Record<string, unknown>
+  full_name?: string
+}
+
+interface GitHubRateLimitResponse {
+  resources: {
+    core: {
+      remaining: number
+      limit: number
+    }
+    search?: Record<string, unknown>
+    graphql?: Record<string, unknown>
+  }
+}
+
+export async function POST(_request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -12,14 +35,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get GitHub integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
       .select('*')
       .eq('organization_id', session.user.id)
       .eq('type', 'github')
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isGitHubIntegrationRecord(data)) {
       return NextResponse.json({
         success: false,
         error: 'GitHub integration not found',
@@ -27,18 +50,22 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
+    const accessToken = getGitHubAccessToken(data)
+    if (!accessToken) {
+      return NextResponse.json({
+        success: false,
+        error: 'GitHub access token not found',
+        tests: []
+      }, { status: 400 })
+    }
+
     const tests = []
     let overallSuccess = true
+    const headers = buildGitHubHeaders(accessToken)
 
     // Test 1: Basic Authentication
     try {
-      const userResponse = await fetch('https://api.github.com/user', {
-        headers: {
-          'Authorization': `token ${integration.access_token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'ReleaseNoteAI'
-        }
-      })
+      const userResponse = await fetch('https://api.github.com/user', { headers })
 
       if (userResponse.ok) {
         const userData = await userResponse.json()
@@ -69,21 +96,15 @@ export async function POST(request: NextRequest) {
 
     // Test 2: Repository Access
     try {
-      const reposResponse = await fetch('https://api.github.com/user/repos?per_page=5&sort=updated', {
-        headers: {
-          'Authorization': `token ${integration.access_token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'ReleaseNoteAI'
-        }
-      })
+      const reposResponse = await fetch('https://api.github.com/user/repos?per_page=5&sort=updated', { headers })
 
       if (reposResponse.ok) {
-        const repos = await reposResponse.json()
+        const repos = await reposResponse.json() as GitHubRepoSummary[]
         tests.push({
           name: 'Repository Access',
           status: 'passed',
           message: `Successfully accessed repositories (${repos.length} found)`,
-          details: repos.map((repo: any) => ({
+          details: repos.map((repo) => ({
             name: repo.name,
             private: repo.private,
             permissions: repo.permissions
@@ -108,16 +129,10 @@ export async function POST(request: NextRequest) {
 
     // Test 3: Rate Limits
     try {
-      const rateLimitResponse = await fetch('https://api.github.com/rate_limit', {
-        headers: {
-          'Authorization': `token ${integration.access_token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'ReleaseNoteAI'
-        }
-      })
+      const rateLimitResponse = await fetch('https://api.github.com/rate_limit', { headers })
 
       if (rateLimitResponse.ok) {
-        const rateLimitData = await rateLimitResponse.json()
+        const rateLimitData = await rateLimitResponse.json() as GitHubRateLimitResponse
         const coreLimit = rateLimitData.resources.core
         const remaining = coreLimit.remaining
         const limit = coreLimit.limit
@@ -162,25 +177,13 @@ export async function POST(request: NextRequest) {
 
     // Test 4: Webhook Capability (if configured)
     try {
-      const hooksResponse = await fetch('https://api.github.com/user/repos?per_page=1', {
-        headers: {
-          'Authorization': `token ${integration.access_token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'ReleaseNoteAI'
-        }
-      })
+      const hooksResponse = await fetch('https://api.github.com/user/repos?per_page=1', { headers })
 
       if (hooksResponse.ok) {
-        const repos = await hooksResponse.json()
+        const repos = await hooksResponse.json() as GitHubRepoSummary[]
         if (repos.length > 0) {
           const testRepo = repos[0]
-          const webhooksResponse = await fetch(`https://api.github.com/repos/${testRepo.full_name}/hooks`, {
-            headers: {
-              'Authorization': `token ${integration.access_token}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'User-Agent': 'ReleaseNoteAI'
-            }
-          })
+          const webhooksResponse = await fetch(`https://api.github.com/repos/${testRepo.full_name}/hooks`, { headers })
 
           if (webhooksResponse.ok) {
             tests.push({
@@ -199,7 +202,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-    } catch (error) {
+    } catch {
       tests.push({
         name: 'Webhook Access',
         status: 'info',
@@ -217,11 +220,7 @@ export async function POST(request: NextRequest) {
     for (const endpoint of endpoints) {
       try {
         const endpointResponse = await fetch(endpoint.url, {
-          headers: {
-            'Authorization': `token ${integration.access_token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'ReleaseNoteAI'
-          }
+          headers
         })
 
         tests.push({
@@ -249,15 +248,15 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
         last_test_at: new Date().toISOString()
       })
-      .eq('id', integration.id)
+      .eq('id', data.id)
 
     return NextResponse.json({
       success: overallSuccess,
       timestamp: new Date().toISOString(),
       integration: {
-        id: integration.id,
+        id: data.id,
         type: 'github',
-        connected_at: integration.created_at
+        connected_at: data.created_at
       },
       tests,
       summary: {

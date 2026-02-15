@@ -1,6 +1,135 @@
 /**
  * Jira API Client with authentication and rate limiting
  */
+export interface JiraAccessibleResource {
+  id: string
+  name: string
+  url: string
+  scopes: string[]
+  avatarUrl?: string
+}
+
+export interface JiraUser {
+  accountId: string
+  displayName: string
+  emailAddress?: string
+  avatarUrls?: Record<string, string>
+}
+
+export interface JiraIssueType {
+  id: string
+  name: string
+  description?: string
+  iconUrl?: string
+  subtask?: boolean
+}
+
+export interface JiraIssueStatusCategory {
+  id: number
+  key: string
+  colorName: string
+  name: string
+}
+
+export interface JiraIssueStatus {
+  id: string
+  name: string
+  statusCategory: JiraIssueStatusCategory
+}
+
+export interface JiraUserReference {
+  accountId: string
+  displayName: string
+  emailAddress?: string
+  avatarUrls?: Record<string, string>
+}
+
+export interface JiraPriority {
+  id: string
+  name: string
+  iconUrl?: string
+}
+
+export interface JiraVersion {
+  id: string
+  name: string
+  description?: string
+  released?: boolean
+  releaseDate?: string
+}
+
+export interface JiraProjectIssueType {
+  id: string
+  name: string
+  description?: string
+  iconUrl?: string
+  subtask?: boolean
+}
+
+export interface JiraProject {
+  id: string
+  key: string
+  name: string
+  description?: string
+  projectTypeKey?: string
+  simplified?: boolean
+  style?: string
+  isPrivate?: boolean
+  self?: string
+  avatarUrls?: Record<string, string>
+  lead?: JiraUserReference
+  issueTypes?: JiraProjectIssueType[]
+}
+
+export interface JiraIssueChangeItem {
+  field: string
+  fieldtype: string
+  fromString?: string
+  toString?: string
+}
+
+export interface JiraIssueChangeHistory {
+  id: string
+  author: JiraUserReference
+  created: string
+  items: JiraIssueChangeItem[]
+}
+
+export interface JiraIssue {
+  id: string
+  key: string
+  fields: {
+    summary: string
+    description?: string
+    status: JiraIssueStatus
+    issuetype: JiraIssueType
+    priority?: JiraPriority
+    assignee?: JiraUserReference
+    created: string
+    updated: string
+    fixVersions?: JiraVersion[]
+    labels?: string[]
+  }
+  changelog?: {
+    histories?: JiraIssueChangeHistory[]
+  }
+}
+
+export interface JiraIssueSearchResponse {
+  startAt: number
+  maxResults: number
+  total: number
+  issues: JiraIssue[]
+}
+
+export interface JiraProjectSearchResponse {
+  startAt: number
+  maxResults: number
+  total: number
+  isLast: boolean
+  values: JiraProject[]
+}
+
 export class JiraAPIClient {
   private static instance: JiraAPIClient
   private baseURL = 'https://api.atlassian.com'
@@ -17,7 +146,7 @@ export class JiraAPIClient {
   /**
    * Make an authenticated request to Jira API
    */
-  private async request(
+  private async request<T>(
     endpoint: string,
     options: {
       method?: string
@@ -26,7 +155,7 @@ export class JiraAPIClient {
       token: string
       cloudId?: string
     }
-  ): Promise<unknown> {
+  ): Promise<T> {
     const { method = 'GET', headers = {}, body, token, cloudId } = options
 
     let url = endpoint
@@ -67,10 +196,10 @@ export class JiraAPIClient {
       // Handle empty responses
       const contentType = response.headers.get('content-type')
       if (contentType && contentType.includes('application/json')) {
-        return await response.json()
+        return await response.json() as T
       }
       
-      return await response.text()
+      return await response.text() as T
     } catch (error) {
       if (error instanceof JiraAPIError) {
         throw error
@@ -86,15 +215,15 @@ export class JiraAPIClient {
   /**
    * Get accessible resources (Jira sites)
    */
-  async getAccessibleResources(token: string): Promise<unknown[]> {
-    return this.request('/oauth/token/accessible-resources', { token }) as Promise<unknown[]>
+  async getAccessibleResources(token: string): Promise<JiraAccessibleResource[]> {
+    return this.request<JiraAccessibleResource[]>('/oauth/token/accessible-resources', { token })
   }
 
   /**
    * Get current user information
    */
-  async getCurrentUser(token: string, cloudId: string): Promise<unknown> {
-    return this.request('/rest/api/3/myself', { token, cloudId })
+  async getCurrentUser(token: string, cloudId: string): Promise<JiraUser> {
+    return this.request<JiraUser>('/rest/api/3/myself', { token, cloudId })
   }
 
   /**
@@ -109,7 +238,7 @@ export class JiraAPIClient {
       maxResults?: number
       startAt?: number
     } = {}
-  ): Promise<unknown> {
+  ): Promise<JiraProjectSearchResponse> {
     const { expand, recent, maxResults = 50, startAt = 0 } = options
     
     const params = new URLSearchParams({
@@ -125,7 +254,7 @@ export class JiraAPIClient {
       params.append('recent', recent.toString())
     }
 
-    return this.request(`/rest/api/3/project/search?${params}`, { token, cloudId })
+    return this.request<JiraProjectSearchResponse>(`/rest/api/3/project/search?${params}`, { token, cloudId })
   }
 
   /**
@@ -136,12 +265,12 @@ export class JiraAPIClient {
     cloudId: string,
     projectIdOrKey: string,
     expand?: string[]
-  ): Promise<unknown> {
+  ): Promise<JiraProject> {
     const params = expand && expand.length > 0 
       ? `?expand=${expand.join(',')}`
       : ''
     
-    return this.request(`/rest/api/3/project/${projectIdOrKey}${params}`, { token, cloudId })
+    return this.request<JiraProject>(`/rest/api/3/project/${projectIdOrKey}${params}`, { token, cloudId })
   }
 
   /**
@@ -157,7 +286,7 @@ export class JiraAPIClient {
       fields?: string[]
       expand?: string[]
     }
-  ): Promise<unknown> {
+  ): Promise<JiraIssueSearchResponse> {
     const { jql, startAt = 0, maxResults = 50, fields, expand } = options
     
     const body = {
@@ -168,7 +297,7 @@ export class JiraAPIClient {
       expand: expand || ['changelog']
     }
 
-    return this.request('/rest/api/3/search', {
+    return this.request<JiraIssueSearchResponse>('/rest/api/3/search', {
       method: 'POST',
       body: JSON.stringify(body),
       token,
@@ -187,7 +316,7 @@ export class JiraAPIClient {
       fields?: string[]
       expand?: string[]
     } = {}
-  ): Promise<unknown> {
+  ): Promise<JiraIssue> {
     const { fields, expand } = options
     
     const params = new URLSearchParams()
@@ -201,7 +330,7 @@ export class JiraAPIClient {
     const queryString = params.toString()
     const endpoint = `/rest/api/3/issue/${issueIdOrKey}${queryString ? `?${queryString}` : ''}`
     
-    return this.request(endpoint, { token, cloudId })
+    return this.request<JiraIssue>(endpoint, { token, cloudId })
   }
 
   /**
@@ -219,7 +348,7 @@ export class JiraAPIClient {
       maxResults?: number
       startAt?: number
     } = {}
-  ): Promise<unknown> {
+  ): Promise<JiraIssueSearchResponse> {
     const { issueTypes, statuses, assignee, updatedSince, maxResults = 50, startAt = 0 } = options
     
     // Build JQL query with proper escaping
@@ -260,14 +389,14 @@ export class JiraAPIClient {
    * Get issue types for a project
    */
   async getProjectIssueTypes(token: string, cloudId: string, projectId: string): Promise<unknown> {
-    return this.request(`/rest/api/3/project/${projectId}/statuses`, { token, cloudId })
+    return this.request<unknown>(`/rest/api/3/project/${projectId}/statuses`, { token, cloudId })
   }
 
   /**
    * Get all issue types
    */
-  async getIssueTypes(token: string, cloudId: string): Promise<unknown> {
-    return this.request('/rest/api/3/issuetype', { token, cloudId })
+  async getIssueTypes(token: string, cloudId: string): Promise<JiraIssueType[]> {
+    return this.request<JiraIssueType[]>('/rest/api/3/issuetype', { token, cloudId })
   }
 
   /**
@@ -294,7 +423,7 @@ export class JiraAPIClient {
       params.append('expand', expand)
     }
 
-    return this.request(`/rest/api/3/project/${projectIdOrKey}/version?${params}`, { token, cloudId })
+    return this.request<unknown>(`/rest/api/3/project/${projectIdOrKey}/version?${params}`, { token, cloudId })
   }
 
   /**
@@ -309,7 +438,7 @@ export class JiraAPIClient {
       maxResults?: number
       startAt?: number
     } = {}
-  ): Promise<unknown> {
+  ): Promise<JiraIssueSearchResponse> {
     const { maxResults = 100, startAt = 0 } = options
     
     const jql = `project = "${projectKey}" AND fixVersion = "${versionName}" ORDER BY updated DESC`
@@ -326,8 +455,8 @@ export class JiraAPIClient {
    */
   async testConnection(token: string): Promise<{
     success: boolean
-    resources: unknown[]
-    user?: unknown
+    resources: JiraAccessibleResource[]
+    user?: JiraUser
     error?: string
   }> {
     try {

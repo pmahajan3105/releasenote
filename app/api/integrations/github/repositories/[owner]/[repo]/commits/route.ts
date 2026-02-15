@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { GitHubService } from '@/lib/integrations/github'
+import {
+  getGitHubAccessToken,
+  isGitHubIntegrationRecord,
+  parsePage,
+  parsePerPage,
+} from '@/lib/integrations/github-route-helpers'
 
 /**
  * Get commits from a specific GitHub repository
@@ -20,21 +26,21 @@ export async function GET(
     }
 
     // Get GitHub integration for the user
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
-      .select('config')
+      .select('*')
       .eq('type', 'github')
       .eq('organization_id', session.user.id)
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isGitHubIntegrationRecord(data)) {
       return NextResponse.json(
         { error: 'GitHub integration not found' },
         { status: 404 }
       )
     }
 
-    const accessToken = integration.config?.access_token
+    const accessToken = getGitHubAccessToken(data)
     if (!accessToken) {
       return NextResponse.json(
         { error: 'GitHub access token not found' },
@@ -48,8 +54,8 @@ export async function GET(
     const path = url.searchParams.get('path') || undefined
     const since = url.searchParams.get('since') || undefined
     const until = url.searchParams.get('until') || undefined
-    const per_page = parseInt(url.searchParams.get('per_page') || '30')
-    const page = parseInt(url.searchParams.get('page') || '1')
+    const per_page = parsePerPage(url.searchParams.get('per_page'), 30)
+    const page = parsePage(url.searchParams.get('page'), 1)
 
     // Initialize GitHub service and fetch commits
     const github = new GitHubService(accessToken)
@@ -58,7 +64,7 @@ export async function GET(
       path,
       since,
       until,
-      per_page: Math.min(per_page, 100),
+      per_page,
       page
     })
 

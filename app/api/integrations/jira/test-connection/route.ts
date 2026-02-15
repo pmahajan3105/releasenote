@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
+import {
+  getJiraResources,
+  isJiraIntegrationRecord,
+  transformIssueTypeForDiagnostics,
+} from '@/lib/integrations/jira-route-helpers'
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -13,20 +18,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Jira integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
       .select('*')
       .eq('organization_id', session.user.id)
       .eq('type', 'jira')
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isJiraIntegrationRecord(data)) {
       return NextResponse.json({
         success: false,
         error: 'Jira integration not found',
         tests: []
       }, { status: 404 })
     }
+    const integration = data
+    const resources = getJiraResources(integration.metadata)
 
     const tests = []
     let overallSuccess = true
@@ -70,9 +77,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Test 2: Project Access (if authentication passed)
-    if (overallSuccess && integration.metadata?.resources?.length > 0) {
+    if (overallSuccess && resources.length > 0) {
       try {
-        const firstSite = integration.metadata.resources[0]
+        const firstSite = resources[0]
         const projects = await jiraAPI.getProjects(integration.access_token, firstSite.id, {
           maxResults: 10
         })
@@ -83,7 +90,7 @@ export async function POST(request: NextRequest) {
           message: `Successfully accessed projects. Found ${projects.values?.length || 0} projects`,
           details: {
             totalProjects: projects.total || 0,
-            sampleProjects: projects.values?.slice(0, 5).map((project: any) => ({
+            sampleProjects: projects.values?.slice(0, 5).map((project) => ({
               key: project.key,
               name: project.name,
               projectTypeKey: project.projectTypeKey,
@@ -102,9 +109,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Test 3: Issue Search Capability
-    if (overallSuccess && integration.metadata?.resources?.length > 0) {
+    if (overallSuccess && resources.length > 0) {
       try {
-        const firstSite = integration.metadata.resources[0]
+        const firstSite = resources[0]
         
         // Search for recent issues across all projects
         const recentIssues = await jiraAPI.searchIssues(integration.access_token, firstSite.id, {
@@ -118,7 +125,7 @@ export async function POST(request: NextRequest) {
           message: `Successfully searched issues. Found ${recentIssues.total || 0} recent issues`,
           details: {
             totalIssues: recentIssues.total || 0,
-            sampleIssues: recentIssues.issues?.slice(0, 3).map((issue: any) => ({
+            sampleIssues: recentIssues.issues?.slice(0, 3).map((issue) => ({
               key: issue.key,
               summary: issue.fields.summary,
               status: issue.fields.status.name,
@@ -138,9 +145,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Test 4: Issue Types & Metadata
-    if (overallSuccess && integration.metadata?.resources?.length > 0) {
+    if (overallSuccess && resources.length > 0) {
       try {
-        const firstSite = integration.metadata.resources[0]
+        const firstSite = resources[0]
         const issueTypes = await jiraAPI.getIssueTypes(integration.access_token, firstSite.id)
 
         tests.push({
@@ -148,12 +155,7 @@ export async function POST(request: NextRequest) {
           status: 'passed',
           message: `Successfully retrieved ${issueTypes.length || 0} issue types`,
           details: {
-            issueTypes: issueTypes.slice(0, 10).map((type: any) => ({
-              id: type.id,
-              name: type.name,
-              description: type.description,
-              subtask: type.subtask
-            }))
+            issueTypes: issueTypes.slice(0, 10).map((issueType) => transformIssueTypeForDiagnostics(issueType))
           }
         })
       } catch (error) {
@@ -174,9 +176,9 @@ export async function POST(request: NextRequest) {
     ]
 
     for (const endpoint of endpoints) {
-      if (overallSuccess && integration.metadata?.resources?.length > 0) {
+      if (overallSuccess && resources.length > 0) {
         try {
-          const firstSite = integration.metadata.resources[0]
+          const firstSite = resources[0]
           const startTime = Date.now()
           
           switch (endpoint.test) {
@@ -229,7 +231,7 @@ export async function POST(request: NextRequest) {
         id: integration.id,
         type: 'jira',
         connected_at: integration.created_at,
-        sites: integration.metadata?.resources?.length || 0
+        sites: resources.length
       },
       tests,
       summary: {

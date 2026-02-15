@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
+import {
+  getJiraResources,
+  isJiraIntegrationRecord,
+  parseIntegerParam,
+  resolveJiraSite,
+  transformJiraProject,
+} from '@/lib/integrations/jira-route-helpers'
+
+const DEFAULT_MAX_RESULTS = 50
+const MAX_ALLOWED_RESULTS = 100
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,64 +24,40 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const siteId = searchParams.get('siteId')
-    const maxResults = parseInt(searchParams.get('maxResults') || '50')
-    const startAt = parseInt(searchParams.get('startAt') || '0')
+    const maxResults = parseIntegerParam(searchParams.get('maxResults'), DEFAULT_MAX_RESULTS, {
+      min: 1,
+      max: MAX_ALLOWED_RESULTS,
+    })
+    const startAt = parseIntegerParam(searchParams.get('startAt'), 0, { min: 0 })
 
     // Get Jira integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
       .select('*')
       .eq('organization_id', session.user.id)
       .eq('type', 'jira')
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isJiraIntegrationRecord(data)) {
       return NextResponse.json({ error: 'Jira integration not found' }, { status: 404 })
     }
+    const integration = data
+    const resources = getJiraResources(integration.metadata)
 
     // Determine which site to use
-    let targetSiteId = siteId
-    if (!targetSiteId && integration.metadata?.resources?.length > 0) {
-      targetSiteId = integration.metadata.resources[0].id
-    }
-
-    if (!targetSiteId) {
+    const selectedSite = resolveJiraSite(resources, siteId)
+    if (!selectedSite) {
       return NextResponse.json({ error: 'No Jira site available' }, { status: 400 })
     }
 
     try {
-      const projects = await jiraAPI.getProjects(integration.access_token, targetSiteId, {
+      const projects = await jiraAPI.getProjects(integration.access_token, selectedSite.id, {
         maxResults,
         startAt,
         expand: ['description', 'lead', 'issueTypes', 'url', 'projectKeys']
       })
 
-      // Transform projects for frontend consumption
-      const transformedProjects = projects.values?.map((project: any) => ({
-        id: project.id,
-        key: project.key,
-        name: project.name,
-        description: project.description,
-        projectTypeKey: project.projectTypeKey,
-        simplified: project.simplified,
-        style: project.style,
-        isPrivate: project.isPrivate,
-        url: project.self,
-        avatarUrls: project.avatarUrls,
-        lead: project.lead ? {
-          accountId: project.lead.accountId,
-          displayName: project.lead.displayName,
-          emailAddress: project.lead.emailAddress,
-          avatarUrls: project.lead.avatarUrls
-        } : null,
-        issueTypes: project.issueTypes?.map((issueType: any) => ({
-          id: issueType.id,
-          name: issueType.name,
-          description: issueType.description,
-          iconUrl: issueType.iconUrl,
-          subtask: issueType.subtask
-        })) || []
-      })) || []
+      const transformedProjects = projects.values.map(transformJiraProject)
 
       return NextResponse.json({
         projects: transformedProjects,
@@ -82,8 +68,8 @@ export async function GET(request: NextRequest) {
           isLast: projects.isLast || false
         },
         site: {
-          id: targetSiteId,
-          name: integration.metadata?.resources?.find((r: any) => r.id === targetSiteId)?.name || 'Unknown Site'
+          id: selectedSite.id,
+          name: selectedSite.name || 'Unknown Site'
         }
       })
 

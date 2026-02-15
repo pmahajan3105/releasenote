@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { GitHubService } from '@/lib/integrations/github'
+import {
+  getGitHubAccessToken,
+  isGitHubIntegrationRecord,
+  parseGitHubDirection,
+  parseGitHubRepoSort,
+  parsePage,
+  parsePerPage,
+} from '@/lib/integrations/github-route-helpers'
 
 /**
  * Get GitHub repositories for the authenticated user
@@ -16,21 +24,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Get GitHub integration for the user
-    const { data: integration, error: integrationError } = await supabase
+    const { data, error: integrationError } = await supabase
       .from('integrations')
-      .select('config')
+      .select('*')
       .eq('type', 'github')
       .eq('organization_id', session.user.id)
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isGitHubIntegrationRecord(data)) {
       return NextResponse.json(
         { error: 'GitHub integration not found. Please connect your GitHub account first.' },
         { status: 404 }
       )
     }
 
-    const accessToken = integration.config?.access_token
+    const accessToken = getGitHubAccessToken(data)
     if (!accessToken) {
       return NextResponse.json(
         { error: 'GitHub access token not found. Please reconnect your GitHub account.' },
@@ -40,17 +48,17 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const url = new URL(request.url)
-    const sort = url.searchParams.get('sort') as 'created' | 'updated' | 'pushed' | 'full_name' || 'updated'
-    const direction = url.searchParams.get('direction') as 'asc' | 'desc' || 'desc'
-    const per_page = parseInt(url.searchParams.get('per_page') || '50')
-    const page = parseInt(url.searchParams.get('page') || '1')
+    const sort = parseGitHubRepoSort(url.searchParams.get('sort'), 'updated')
+    const direction = parseGitHubDirection(url.searchParams.get('direction'), 'desc')
+    const per_page = parsePerPage(url.searchParams.get('per_page'), 50)
+    const page = parsePage(url.searchParams.get('page'), 1)
 
     // Initialize GitHub service and fetch repositories
     const github = new GitHubService(accessToken)
     const repositories = await github.getRepositories({
       sort,
       direction,
-      per_page: Math.min(per_page, 100), // Limit to 100 per page
+      per_page,
       page
     })
 
