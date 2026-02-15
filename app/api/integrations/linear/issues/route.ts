@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const stateType = parseLinearStateType(searchParams.get('stateType'))
     const updatedSince = searchParams.get('updatedSince')
     const first = parseIntegerParam(searchParams.get('first'), 50, { min: 1, max: 100 })
-    const after = searchParams.get('after')
+    const after = searchParams.get('after') || undefined
 
     // Get Linear integration
     const { data, error: integrationError } = await supabase

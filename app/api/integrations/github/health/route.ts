@@ -8,6 +8,38 @@ import {
 } from '@/lib/integrations/github-route-helpers'
 import { parseIntegerParam } from '@/lib/integrations/route-utils'
 
+type GitHubHealthStatus = 'healthy' | 'warning' | 'error'
+type GitHubHealthIssueType = 'error' | 'warning' | 'info'
+
+interface GitHubHealthIssue {
+  type: GitHubHealthIssueType
+  message: string
+  solution?: string
+  docs?: string
+}
+
+interface GitHubHealthResponse {
+  status: GitHubHealthStatus
+  lastChecked: string
+  responseTime: number
+  details: {
+    connection: boolean
+    authentication: boolean
+    permissions: boolean
+    rateLimit: {
+      remaining: number
+      limit: number
+      resetAt: string
+    }
+  }
+  metrics: {
+    totalRequests: number
+    successRate: number
+    avgResponseTime: number
+  }
+  issues: GitHubHealthIssue[]
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -66,8 +98,8 @@ export async function POST(request: NextRequest) {
 
     const startTime = Date.now()
     const headers = buildGitHubHeaders(accessToken)
-    const health = {
-      status: 'healthy' as const,
+    const health: GitHubHealthResponse = {
+      status: 'healthy',
       lastChecked: new Date().toISOString(),
       responseTime: 0,
       details: {
@@ -85,12 +117,7 @@ export async function POST(request: NextRequest) {
         successRate: 100,
         avgResponseTime: 0
       },
-      issues: [] as Array<{
-        type: 'error' | 'warning' | 'info'
-        message: string
-        solution?: string
-        docs?: string
-      }>
+      issues: []
     }
 
     try {
@@ -130,7 +157,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Rate limit warnings
-        const usagePercent = ((rateLimitLimit - rateLimitRemaining) / rateLimitLimit) * 100
+        const usagePercent =
+          rateLimitLimit > 0 ? ((rateLimitLimit - rateLimitRemaining) / rateLimitLimit) * 100 : 100
         if (usagePercent > 90) {
           health.status = 'warning'
           health.issues.push({
