@@ -1,4 +1,10 @@
-import type { ProjectFilterInput } from '../types/linear'
+type ProjectFilterInput = {
+  team: {
+    id: {
+      eq: string
+    }
+  }
+}
 
 /**
  * Linear API Client with GraphQL support
@@ -594,18 +600,14 @@ export class LinearAPIClient {
     try {
       const viewer = await this.getViewer(token)
       
-      if (!viewer) {
+      if (!isRecord(viewer)) {
         return {
           success: false,
           error: 'Unable to fetch user information'
         }
       }
 
-      const organization = (
-        viewer && typeof viewer === 'object' && 'organization' in viewer
-      )
-        ? (viewer as { organization?: Record<string, unknown> }).organization
-        : undefined
+      const organization = isRecord(viewer.organization) ? viewer.organization : undefined
 
       return {
         success: true,
@@ -626,3 +628,7 @@ export const linearAPI = LinearAPIClient.getInstance()
 
 // Export alias for backward compatibility
 export { LinearAPIClient as LinearClient }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}

@@ -138,23 +138,24 @@ export class IntegrationService {
         return { success: false, error: 'Integration not found' }
       }
 
-      let userInfo: Record<string, unknown> | null = null;
+      let userInfo: Record<string, unknown> | undefined
 
       switch (provider) {
         case 'github': {
-          const client = new GitHubClient(integration.access_token);
-          userInfo = await client.getUser();
-          break;
+          const client = new GitHubClient(integration.access_token)
+          userInfo = IntegrationService.toRecord(await client.getUser())
+          break
         }
         case 'jira': {
-          const client = new JiraClient(integration.access_token);
-          userInfo = await client.getCurrentUser();
-          break;
+          const client = JiraClient.getInstance()
+          const cloudId = await this.getJiraCloudId(integration.access_token)
+          userInfo = IntegrationService.toRecord(await client.getCurrentUser(integration.access_token, cloudId))
+          break
         }
         case 'linear': {
-          const client = new LinearClient(integration.access_token);
-          userInfo = await client.getViewer();
-          break;
+          const client = LinearClient.getInstance()
+          userInfo = IntegrationService.toRecord(await client.getViewer(integration.access_token))
+          break
         }
         default:
           return { success: false, error: 'Unknown provider' }
@@ -179,7 +180,16 @@ export class IntegrationService {
     }
 
     const client = new GitHubClient(integration.access_token)
-    return client.getRepositories()
+    const repositories = await client.getRepositories()
+    return repositories.map((repository) => ({
+      id: String(repository.id),
+      name: repository.name,
+      full_name: repository.full_name,
+      description: repository.description,
+      url: repository.html_url,
+      default_branch: repository.default_branch,
+      private: repository.private,
+    }))
   }
 
   async getGitHubPullRequests(
@@ -194,7 +204,18 @@ export class IntegrationService {
     }
 
     const client = new GitHubClient(integration.access_token)
-    return client.getPullRequests(owner, repo, options)
+    const pullRequests = await client.getPullRequests(owner, repo, options)
+    return pullRequests.map((pullRequest) => ({
+      id: String(pullRequest.id),
+      title: pullRequest.title,
+      description: pullRequest.body ?? '',
+      status: pullRequest.merged_at ? 'merged' : pullRequest.state,
+      author: pullRequest.user.login,
+      url: pullRequest.html_url,
+      created_at: pullRequest.created_at,
+      updated_at: pullRequest.updated_at,
+      merged_at: pullRequest.merged_at,
+    }))
   }
 
   async getGitHubCommits(
@@ -221,8 +242,10 @@ export class IntegrationService {
       throw new Error('Jira integration not found')
     }
 
-    const client = new JiraClient(integration.access_token)
-    return client.getProjects()
+    const client = JiraClient.getInstance()
+    const cloudId = await this.getJiraCloudId(integration.access_token)
+    const projects = await client.getProjects(integration.access_token, cloudId)
+    return projects.values
   }
 
   async getJiraIssues(
@@ -235,8 +258,25 @@ export class IntegrationService {
       throw new Error('Jira integration not found')
     }
 
-    const client = new JiraClient(integration.access_token)
-    return client.getIssues(jql, options)
+    const client = JiraClient.getInstance()
+    const cloudId = await this.getJiraCloudId(integration.access_token)
+    const issues = await client.searchIssues(integration.access_token, cloudId, {
+      jql: jql ?? 'ORDER BY updated DESC',
+      maxResults: options?.maxResults,
+      startAt: options?.startAt,
+    })
+
+    return issues.issues.map((issue) => ({
+      id: issue.id,
+      title: issue.fields.summary,
+      description: issue.fields.description ?? '',
+      status: issue.fields.status.name,
+      assignee: issue.fields.assignee?.displayName,
+      labels: issue.fields.labels ?? [],
+      url: '',
+      created_at: issue.fields.created,
+      updated_at: issue.fields.updated,
+    }))
   }
 
   /**
@@ -248,8 +288,9 @@ export class IntegrationService {
       throw new Error('Linear integration not found')
     }
 
-    const client = new LinearClient(integration.access_token)
-    return client.getTeams()
+    const client = LinearClient.getInstance()
+    const teams = await client.getTeams(integration.access_token)
+    return IntegrationService.extractNodes(teams)
   }
 
   async getLinearIssues(
@@ -262,8 +303,33 @@ export class IntegrationService {
       throw new Error('Linear integration not found')
     }
 
-    const client = new LinearClient(integration.access_token)
-    return client.getIssues(teamId, options)
+    const client = LinearClient.getInstance()
+    const issues = await client.getIssues(integration.access_token, {
+      teamId,
+      first: options?.limit,
+      after: options?.after,
+    })
+
+    return IntegrationService.extractNodes(issues).map((issue) => {
+      const issueRecord = IntegrationService.toRecord(issue)
+      const state = IntegrationService.toRecord(issueRecord?.state)
+      const assignee = IntegrationService.toRecord(issueRecord?.assignee)
+      const labels = IntegrationService.extractNodes(issueRecord?.labels)
+        .map((label) => IntegrationService.toRecord(label)?.name)
+        .filter((label): label is string => typeof label === 'string')
+
+      return {
+        id: IntegrationService.asString(issueRecord?.id) ?? '',
+        title: IntegrationService.asString(issueRecord?.title) ?? '',
+        description: IntegrationService.asString(issueRecord?.description) ?? '',
+        status: IntegrationService.asString(state?.name) ?? 'Unknown',
+        assignee: IntegrationService.asString(assignee?.displayName),
+        labels,
+        url: IntegrationService.asString(issueRecord?.url) ?? '',
+        created_at: IntegrationService.asString(issueRecord?.createdAt) ?? '',
+        updated_at: IntegrationService.asString(issueRecord?.updatedAt) ?? '',
+      }
+    })
   }
 
   /**
@@ -301,5 +367,31 @@ export class IntegrationService {
     // Implementation would depend on the provider's refresh token flow
     // This is a placeholder for the refresh logic
     throw new Error('Token refresh not implemented for this provider')
+  }
+
+  private static toRecord(value: unknown): Record<string, unknown> | undefined {
+    return typeof value === 'object' && value !== null
+      ? (value as Record<string, unknown>)
+      : undefined
+  }
+
+  private static asString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined
+  }
+
+  private static extractNodes(value: unknown): unknown[] {
+    const record = IntegrationService.toRecord(value)
+    const nodes = record?.nodes
+    return Array.isArray(nodes) ? nodes : []
+  }
+
+  private async getJiraCloudId(accessToken: string): Promise<string> {
+    const client = JiraClient.getInstance()
+    const resources = await client.getAccessibleResources(accessToken)
+    const cloudId = resources[0]?.id
+    if (!cloudId) {
+      throw new Error('No Jira cloud site available for this integration')
+    }
+    return cloudId
   }
 }
