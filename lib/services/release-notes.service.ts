@@ -177,6 +177,10 @@ export class ReleaseNotesService {
     authorId: string, 
     data: CreateReleaseNoteData
   ): Promise<ReleaseNote> {
+    if (!data.title) {
+      throw new Error('Title is required to create a release note')
+    }
+
     // Generate unique slug
     const baseSlug = generateSlug(data.title)
     let slug = baseSlug
@@ -201,14 +205,13 @@ export class ReleaseNotesService {
       .insert({
         organization_id: organizationId,
         title: data.title,
-        description: data.description,
+        content: data.content,
         content_markdown: data.content_markdown,
         content_html: data.content_html || data.content_markdown,
         slug,
         version: data.version,
         status: data.status || 'draft',
-        author_id: authorId,
-        is_public: data.is_public || false
+        author_id: authorId
       })
       .select()
       .single()
@@ -231,8 +234,14 @@ export class ReleaseNotesService {
     const updateData: Record<string, unknown> = {}
 
     const allowedFields = [
-      'title', 'description', 'content_markdown', 'content_html',
-      'version', 'is_public'
+      'title',
+      'content',
+      'content_markdown',
+      'content_html',
+      'version',
+      'status',
+      'published_at',
+      'source_ticket_ids'
     ]
 
     // Only update provided fields
@@ -327,7 +336,6 @@ export class ReleaseNotesService {
       .select('*')
       .eq('organization_id', organizationId)
       .eq('status', 'published')
-      .eq('is_public', true)
       .order('published_at', { ascending: false })
       .limit(limit)
 
@@ -348,6 +356,14 @@ export class ReleaseNotesService {
     totalSubscribers: number
     activeIntegrations: number
   }> {
+    interface OrganizationStatsResult {
+      total_release_notes: number
+      published_notes: number
+      draft_notes: number
+      total_subscribers: number
+      active_integrations: number
+    }
+
     const { data: stats, error } = await this.supabase
       .rpc('get_organization_stats', {
         p_organization_id: organizationId
@@ -358,12 +374,14 @@ export class ReleaseNotesService {
       throw new Error(`Failed to fetch organization stats: ${error.message}`)
     }
 
+    const typedStats = stats as OrganizationStatsResult | null
+
     return {
-      totalReleaseNotes: stats?.total_release_notes || 0,
-      publishedNotes: stats?.published_notes || 0,
-      draftNotes: stats?.draft_notes || 0,
-      totalSubscribers: stats?.total_subscribers || 0,
-      activeIntegrations: stats?.active_integrations || 0
+      totalReleaseNotes: typedStats?.total_release_notes || 0,
+      publishedNotes: typedStats?.published_notes || 0,
+      draftNotes: typedStats?.draft_notes || 0,
+      totalSubscribers: typedStats?.total_subscribers || 0,
+      activeIntegrations: typedStats?.active_integrations || 0
     }
   }
 
@@ -376,6 +394,13 @@ export class ReleaseNotesService {
     title: string
     createdAt: string
   }>> {
+    interface RecentActivityResult {
+      activity_type: string
+      activity_id: string
+      title: string
+      created_at: string
+    }
+
     const { data: activities, error } = await this.supabase
       .rpc('get_recent_activity', {
         p_organization_id: organizationId,
@@ -386,7 +411,9 @@ export class ReleaseNotesService {
       throw new Error(`Failed to fetch recent activity: ${error.message}`)
     }
 
-    return (activities || []).map(activity => ({
+    const typedActivities = (activities || []) as RecentActivityResult[]
+
+    return typedActivities.map(activity => ({
       activityType: activity.activity_type,
       activityId: activity.activity_id,
       title: activity.title,
