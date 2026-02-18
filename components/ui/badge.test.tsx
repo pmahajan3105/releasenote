@@ -61,10 +61,10 @@ describe('Badge Component', () => {
     expect(badge).toHaveAttribute('title', 'Test Badge')
   })
 
-  it('renders as div element', () => {
+  it('renders as span element', () => {
     render(<Badge>Badge Content</Badge>)
     const badge = screen.getByText('Badge Content')
-    expect(badge.tagName).toBe('DIV')
+    expect(badge.tagName).toBe('SPAN')
   })
 
   it('handles empty content', () => {
