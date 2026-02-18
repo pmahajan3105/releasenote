@@ -1,23 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { verifyUnsubscribeToken } from '@/lib/subscribers/unsubscribe-token'
 
 /**
  * Simple unsubscribe API
- * POST: Unsubscribe an email from organization updates
+ * POST: Unsubscribe via signed token, or legacy email+org_slug payload.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, organization_slug } = await request.json()
-
-    if (!email || !organization_slug) {
-      return NextResponse.json(
-        { error: 'Email and organization slug are required' },
-        { status: 400 }
-      )
-    }
+    const body = await request.json()
+    const token = typeof body?.token === 'string' ? body.token : null
+    const email = typeof body?.email === 'string' ? body.email : null
+    const organization_slug = typeof body?.organization_slug === 'string' ? body.organization_slug : null
 
     const supabase = createRouteHandlerClient({ cookies })
+
+    if (token) {
+      const verified = verifyUnsubscribeToken(token)
+      if (!verified) {
+        return NextResponse.json({ error: 'Invalid unsubscribe token' }, { status: 400 })
+      }
+
+      const { data: subscriber, error: findError } = await supabase
+        .from('subscribers')
+        .select('id, status, organization_id')
+        .eq('id', verified.subscriberId)
+        .single()
+
+      if (findError || !subscriber) {
+        return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
+      }
+
+      const { data: organization } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', subscriber.organization_id)
+        .single()
+
+      if (subscriber.status === 'unsubscribed') {
+        return NextResponse.json({
+          success: true,
+          message: `Already unsubscribed from ${organization?.name ?? 'this'} release notes`,
+        })
+      }
+
+      const { error: updateError } = await supabase
+        .from('subscribers')
+        .update({
+          status: 'unsubscribed',
+          unsubscribed_at: new Date().toISOString(),
+        })
+        .eq('id', subscriber.id)
+
+      if (updateError) {
+        throw updateError
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully unsubscribed from ${organization?.name ?? 'this'} release notes`,
+      })
+    }
+
+    if (!email || !organization_slug) {
+      return NextResponse.json({ error: 'Email and organization slug are required' }, { status: 400 })
+    }
 
     // Find organization by slug
     const { data: organization, error: orgError } = await supabase
