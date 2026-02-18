@@ -52,8 +52,9 @@ import { useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
 
 interface RichTextEditorProps {
-  content?: string
+  content?: string | Record<string, unknown>
   onChange?: (content: string) => void
+  onChangeJson?: (content: Record<string, unknown>) => void
   placeholder?: string
   className?: string
   enableAI?: boolean
@@ -63,6 +64,7 @@ interface RichTextEditorProps {
 export function RichTextEditor({ 
   content = '', 
   onChange, 
+  onChangeJson,
   placeholder = 'Start writing your release notes...', 
   className = '',
   enableAI = true,
@@ -126,6 +128,7 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML())
+      onChangeJson?.(editor.getJSON() as unknown as Record<string, unknown>)
     },
   })
 

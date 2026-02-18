@@ -17,6 +17,7 @@ type ReleaseNote = {
   id: string
   title: string
   content_html: string | null
+  content_json: Record<string, unknown> | null
   featured_image_url: string | null
   status: 'draft' | 'published'
   published_at?: string
@@ -38,6 +39,7 @@ export default function EditReleasePage() {
   const [loading, setLoading] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [contentJson, setContentJson] = useState<Record<string, unknown> | null>(null)
   const [version, setVersion] = useState('')
   const [note, setNote] = useState<ReleaseNote | null>(null)
   const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null)
@@ -56,7 +58,8 @@ export default function EditReleasePage() {
         if (response.ok) {
           const releaseNote = await response.json()
           setTitle(releaseNote.title || '')
-          setContent(releaseNote.content || '')
+          setContent(releaseNote.content_html || releaseNote.content || '')
+          setContentJson(releaseNote.content_json || null)
           setVersion(releaseNote.version || '')
           setNote(releaseNote)
           setFeaturedImageUrl(releaseNote.featured_image_url)
@@ -136,7 +139,8 @@ export default function EditReleasePage() {
         },
         body: JSON.stringify({
           title,
-          content,
+          content_html: content,
+          content_json: contentJson,
           version,
           featured_image_url: featuredImageUrl,
         }),
@@ -144,7 +148,7 @@ export default function EditReleasePage() {
 
       if (response.ok) {
         toast.success('Release note saved successfully')
-        router.push('/releases')
+        router.push('/dashboard/releases')
       } else {
         const errorData = await response.json()
         toast.error(errorData.message || 'Failed to save release note')
@@ -381,7 +385,7 @@ export default function EditReleasePage() {
               Content
             </label>
             <RichTextEditor
-              content={content}
+              content={contentJson ?? content}
               onChange={(newContent) => {
                 setContent(newContent)
                 // Clear validation errors when user starts typing
@@ -389,6 +393,7 @@ export default function EditReleasePage() {
                   setValidationErrors([])
                 }
               }}
+              onChangeJson={setContentJson}
               placeholder="Release note content"
             />
           </div>
@@ -409,7 +414,7 @@ export default function EditReleasePage() {
               <EyeIcon className="w-4 h-4 mr-2" />
               Preview Public Page
             </Button>
-            <Button variant="outline" onClick={() => router.push('/releases')}>
+            <Button variant="outline" onClick={() => router.push('/dashboard/releases')}>
               Cancel
             </Button>
           </div>
