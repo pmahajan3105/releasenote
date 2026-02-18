@@ -281,6 +281,38 @@ export interface Database {
           status?: 'active' | 'unsubscribed' | 'bounced'
         }
       }
+      release_note_notifications: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          release_note_id: string
+          subscriber_id: string
+          status: 'pending' | 'sent' | 'failed'
+          sent_at: string | null
+          error: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          release_note_id: string
+          subscriber_id: string
+          status?: 'pending' | 'sent' | 'failed'
+          sent_at?: string | null
+          error?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          release_note_id?: string
+          subscriber_id?: string
+          status?: 'pending' | 'sent' | 'failed'
+          sent_at?: string | null
+          error?: string | null
+        }
+      }
       ticket_cache: {
         Row: {
           id: string

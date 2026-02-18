@@ -63,6 +63,11 @@ const ENV_VARS: EnvVarConfig[] = [
     required: true,
     description: '32-byte key for encrypting OAuth tokens at rest (base64 or 64-char hex)'
   },
+  {
+    name: 'SUBSCRIBER_TOKEN_SECRET',
+    required: true,
+    description: 'HMAC secret for signing unsubscribe links in subscriber emails'
+  },
   
   // App Configuration
   {
