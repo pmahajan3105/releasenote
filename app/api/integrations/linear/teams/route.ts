@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { linearAPI } from '@/lib/integrations/linear-client'
+import { listLinearTeams } from '@/lib/integrations/linear-sdk'
 import {
   getLinearAccessToken,
   isLinearIntegrationRecord,
-  normalizeLinearTeamsResponse,
   parseBooleanParam,
   parseIntegerParam,
   transformLinearTeam,
@@ -41,11 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const teamsResponse = await linearAPI.getTeams(accessToken, {
-        first,
-        includeArchived
-      })
-      const teams = normalizeLinearTeamsResponse(teamsResponse)
+      const teams = await listLinearTeams(accessToken, { first, includeArchived })
 
       const transformedTeams = teams.nodes.map((team) => transformLinearTeam(team))
 

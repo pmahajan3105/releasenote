@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { linearAPI } from '@/lib/integrations/linear-client'
+import { listLinearIssues } from '@/lib/integrations/linear-sdk'
 import type { Database } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
 import {
   getLinearAccessToken,
   isLinearIntegrationRecord,
-  normalizeLinearIssuesResponse,
   parseIntegerParam,
   parseLinearStateType,
   transformLinearIssue,
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const issuesResponse = await linearAPI.getIssues(accessToken, {
+      const issues = await listLinearIssues(accessToken, {
         first,
         after,
         teamId: teamId || undefined,
@@ -56,7 +55,6 @@ export async function GET(request: NextRequest) {
         stateType,
         updatedSince: updatedSince || undefined
       })
-      const issues = normalizeLinearIssuesResponse(issuesResponse)
 
       const transformedIssues = issues.nodes.map((issue) => transformLinearIssue(issue))
 
