@@ -26,7 +26,7 @@ type OrganizationPreview = Pick<
 
 type RawReleaseNotePreview = Pick<
   Database['public']['Tables']['release_notes']['Row'],
-  'id' | 'title' | 'slug' | 'published_at' | 'content_html' | 'cover_image_url' | 'views'
+  'id' | 'title' | 'slug' | 'published_at' | 'content_html' | 'featured_image_url' | 'views'
 >
 
 type ReleaseNotesPageData = {
@@ -71,7 +71,7 @@ async function getOrganizationReleaseNotes(orgSlug: string) {
   // Fetch published release notes with enhanced fields
   const { data: notesData, error: notesError } = await supabase
     .from('release_notes')
-    .select('id, title, slug, published_at, content_html, cover_image_url, views')
+    .select('id, title, slug, published_at, content_html, featured_image_url, views')
     .eq('organization_id', orgData.id)
     .eq('status', 'published')
     .order('published_at', { ascending: false })
@@ -98,8 +98,8 @@ async function getOrganizationReleaseNotes(orgSlug: string) {
       slug: note.slug,
       published_at: note.published_at,
       content_html: note.content_html ?? undefined,
-      featured_image_url: note.cover_image_url ?? undefined,
-      views: note.views,
+      featured_image_url: note.featured_image_url ?? undefined,
+      views: note.views ?? undefined,
     }))
 
   const result: ReleaseNotesPageData = {

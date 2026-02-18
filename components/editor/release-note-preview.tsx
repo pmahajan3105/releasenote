@@ -14,7 +14,7 @@ interface ReleaseNotePreviewProps {
   title: string
   content: string
   version?: string
-  coverImageUrl?: string | null
+  featuredImageUrl?: string | null
   organization?: {
     name: string
     logo_url?: string | null
@@ -27,7 +27,7 @@ export function ReleaseNotePreview({
   title,
   content,
   version,
-  coverImageUrl,
+  featuredImageUrl,
   organization,
   publishedAt,
   className = ''
@@ -38,12 +38,12 @@ export function ReleaseNotePreview({
   return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 ${className}`}>
       <article className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
-        {/* Cover Image */}
-        {coverImageUrl && (
+        {/* Featured Image */}
+        {featuredImageUrl && (
           <div className="w-full h-64 relative">
             <Image
-              src={coverImageUrl}
-              alt={`${title} cover image`}
+              src={featuredImageUrl}
+              alt={`${title} featured image`}
               fill
               style={{ objectFit: 'cover' }}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

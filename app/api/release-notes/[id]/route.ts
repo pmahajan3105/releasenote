@@ -101,7 +101,7 @@ export async function PUT(
 
     const allowedFields = [
       'title', 'description', 'content_markdown', 'content_html',
-      'version', 'is_public'
+      'version', 'is_public', 'featured_image_url', 'content_json'
     ]
 
     // Only update provided fields

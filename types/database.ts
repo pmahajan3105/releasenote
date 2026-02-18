@@ -1,6 +1,11 @@
 /**
- * Enhanced Database Types
- * Matches the PRD schema requirements and enhanced migration
+ * Canonical Database Types (App-Facing)
+ *
+ * This file is the single source of truth for the app's Supabase `Database` type.
+ * It intentionally models the *practical* schema used by the app (not every table).
+ *
+ * Note: In this repo, some API routes use untyped Supabase clients. This type is
+ * primarily for typed clients (`createClient<Database>()`) and server components.
  */
 
 export interface Database {
@@ -12,33 +17,63 @@ export interface Database {
           created_at: string
           updated_at: string
           name: string
-          description?: string
-          slug?: string
-          user_id: string
+          slug: string
+          description: string | null
+          user_id: string | null
+          logo_url: string | null
           settings: Record<string, any>
-          plan: 'free' | 'professional' | 'growth'
+          plan: string | null
+          custom_domain: string | null
+          domain_verified: boolean
+          meta_title: string | null
+          meta_description: string | null
+          meta_image_url: string | null
+          favicon_url: string | null
+          brand_color: string | null
+          custom_css: string | null
+          custom_css_enabled: boolean | null
         }
         Insert: {
           id?: string
           created_at?: string
           updated_at?: string
           name: string
-          description?: string
-          slug?: string
-          user_id: string
+          slug: string
+          description?: string | null
+          user_id?: string | null
+          logo_url?: string | null
           settings?: Record<string, any>
-          plan?: 'free' | 'professional' | 'growth'
+          plan?: string | null
+          custom_domain?: string | null
+          domain_verified?: boolean
+          meta_title?: string | null
+          meta_description?: string | null
+          meta_image_url?: string | null
+          favicon_url?: string | null
+          brand_color?: string | null
+          custom_css?: string | null
+          custom_css_enabled?: boolean | null
         }
         Update: {
           id?: string
           created_at?: string
           updated_at?: string
           name?: string
-          description?: string
           slug?: string
-          user_id?: string
+          description?: string | null
+          user_id?: string | null
+          logo_url?: string | null
           settings?: Record<string, any>
-          plan?: 'free' | 'professional' | 'growth'
+          plan?: string | null
+          custom_domain?: string | null
+          domain_verified?: boolean
+          meta_title?: string | null
+          meta_description?: string | null
+          meta_image_url?: string | null
+          favicon_url?: string | null
+          brand_color?: string | null
+          custom_css?: string | null
+          custom_css_enabled?: boolean | null
         }
       }
       organization_members: {
@@ -48,8 +83,8 @@ export interface Database {
           organization_id: string
           user_id: string
           role: 'owner' | 'admin' | 'editor' | 'viewer'
-          invited_by?: string
-          joined_at?: string
+          invited_by: string | null
+          joined_at: string | null
         }
         Insert: {
           id?: string
@@ -57,8 +92,8 @@ export interface Database {
           organization_id: string
           user_id: string
           role?: 'owner' | 'admin' | 'editor' | 'viewer'
-          invited_by?: string
-          joined_at?: string
+          invited_by?: string | null
+          joined_at?: string | null
         }
         Update: {
           id?: string
@@ -66,8 +101,8 @@ export interface Database {
           organization_id?: string
           user_id?: string
           role?: 'owner' | 'admin' | 'editor' | 'viewer'
-          invited_by?: string
-          joined_at?: string
+          invited_by?: string | null
+          joined_at?: string | null
         }
       }
       integrations: {
@@ -75,22 +110,37 @@ export interface Database {
           id: string
           created_at: string
           organization_id: string
-          type: 'github' | 'jira' | 'linear' | 'slack'
+          type: 'github' | 'jira' | 'linear'
+          external_id: string | null
+          encrypted_credentials: Record<string, any> | null
           config: Record<string, any>
+          is_active: boolean | null
+          last_sync: string | null
+          updated_at: string | null
         }
         Insert: {
           id?: string
           created_at?: string
           organization_id: string
-          type: 'github' | 'jira' | 'linear' | 'slack'
-          config: Record<string, any>
+          type: 'github' | 'jira' | 'linear'
+          external_id?: string | null
+          encrypted_credentials?: Record<string, any> | null
+          config?: Record<string, any>
+          is_active?: boolean | null
+          last_sync?: string | null
+          updated_at?: string | null
         }
         Update: {
           id?: string
           created_at?: string
           organization_id?: string
-          type?: 'github' | 'jira' | 'linear' | 'slack'
+          type?: 'github' | 'jira' | 'linear'
+          external_id?: string | null
+          encrypted_credentials?: Record<string, any> | null
           config?: Record<string, any>
+          is_active?: boolean | null
+          last_sync?: string | null
+          updated_at?: string | null
         }
       }
       release_notes: {
@@ -99,51 +149,72 @@ export interface Database {
           created_at: string
           updated_at: string
           organization_id: string
-          title?: string
-          slug?: string
-          version?: string
-          content?: string
-          content_markdown?: string
-          content_html?: string
-          status: 'draft' | 'published' | 'scheduled'
-          author_id?: string
-          published_at?: string
-          source_ticket_ids?: string[]
-          views: number
+          integration_id: string | null
+          title: string
+          slug: string
+          version: string | null
+          content: string | null
+          content_markdown: string | null
+          content_html: string | null
+          content_json: Record<string, any> | null
+          status: 'draft' | 'published' | 'scheduled' | 'archived'
+          author_id: string | null
+          published_at: string | null
+          scheduled_at: string | null
+          published_by: string | null
+          tags: string[] | null
+          category: string | null
+          featured_image_url: string | null
+          excerpt: string | null
+          views: number | null
         }
         Insert: {
           id?: string
           created_at?: string
           updated_at?: string
           organization_id: string
-          title?: string
+          integration_id?: string | null
+          title: string
           slug?: string
-          version?: string
-          content?: string
-          content_markdown?: string
-          content_html?: string
-          status?: 'draft' | 'published' | 'scheduled'
-          author_id?: string
-          published_at?: string
-          source_ticket_ids?: string[]
-          views?: number
+          version?: string | null
+          content?: string | null
+          content_markdown?: string | null
+          content_html?: string | null
+          content_json?: Record<string, any> | null
+          status?: 'draft' | 'published' | 'scheduled' | 'archived'
+          author_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          published_by?: string | null
+          tags?: string[] | null
+          category?: string | null
+          featured_image_url?: string | null
+          excerpt?: string | null
+          views?: number | null
         }
         Update: {
           id?: string
           created_at?: string
           updated_at?: string
           organization_id?: string
+          integration_id?: string | null
           title?: string
           slug?: string
-          version?: string
-          content?: string
-          content_markdown?: string
-          content_html?: string
-          status?: 'draft' | 'published' | 'scheduled'
-          author_id?: string
-          published_at?: string
-          source_ticket_ids?: string[]
-          views?: number
+          version?: string | null
+          content?: string | null
+          content_markdown?: string | null
+          content_html?: string | null
+          content_json?: Record<string, any> | null
+          status?: 'draft' | 'published' | 'scheduled' | 'archived'
+          author_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          published_by?: string | null
+          tags?: string[] | null
+          category?: string | null
+          featured_image_url?: string | null
+          excerpt?: string | null
+          views?: number | null
         }
       }
       templates: {
@@ -217,9 +288,14 @@ export interface Database {
           organization_id: string
           integration_type: 'github' | 'jira' | 'linear'
           ticket_id: string
-          ticket_data: Record<string, any>
+          title: string | null
+          description: string | null
+          status: string | null
+          assignee: string | null
+          url: string | null
+          metadata: Record<string, any>
           cached_at: string
-          expires_at?: string
+          updated_at: string | null
         }
         Insert: {
           id?: string
@@ -227,9 +303,14 @@ export interface Database {
           organization_id: string
           integration_type: 'github' | 'jira' | 'linear'
           ticket_id: string
-          ticket_data: Record<string, any>
+          title?: string | null
+          description?: string | null
+          status?: string | null
+          assignee?: string | null
+          url?: string | null
+          metadata?: Record<string, any>
           cached_at?: string
-          expires_at?: string
+          updated_at?: string | null
         }
         Update: {
           id?: string
@@ -237,38 +318,14 @@ export interface Database {
           organization_id?: string
           integration_type?: 'github' | 'jira' | 'linear'
           ticket_id?: string
-          ticket_data?: Record<string, any>
+          title?: string | null
+          description?: string | null
+          status?: string | null
+          assignee?: string | null
+          url?: string | null
+          metadata?: Record<string, any>
           cached_at?: string
-          expires_at?: string
-        }
-      }
-      user_oauth_states: {
-        Row: {
-          id: string
-          created_at: string
-          user_id: string
-          provider: string
-          state: string
-          expires_at: string
-          used_at?: string
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          user_id: string
-          provider: string
-          state: string
-          expires_at: string
-          used_at?: string
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          user_id?: string
-          provider?: string
-          state?: string
-          expires_at?: string
-          used_at?: string
+          updated_at?: string | null
         }
       }
     }
@@ -319,7 +376,3 @@ export type SubscriberUpdate = Database['public']['Tables']['subscribers']['Upda
 export type TicketCache = Database['public']['Tables']['ticket_cache']['Row']
 export type TicketCacheInsert = Database['public']['Tables']['ticket_cache']['Insert']
 export type TicketCacheUpdate = Database['public']['Tables']['ticket_cache']['Update']
-
-export type UserOAuthState = Database['public']['Tables']['user_oauth_states']['Row']
-export type UserOAuthStateInsert = Database['public']['Tables']['user_oauth_states']['Insert']
-export type UserOAuthStateUpdate = Database['public']['Tables']['user_oauth_states']['Update']

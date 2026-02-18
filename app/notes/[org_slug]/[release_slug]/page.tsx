@@ -1,7 +1,7 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import { Database, ReleaseNoteWithOrganization } from '@/types/supabase'
+import { Database } from '@/types/supabase'
 import Image from 'next/image'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { UI_CONSTANTS, DB_CONSTANTS, DATE_FORMAT_OPTIONS } from '@/lib/constants'
@@ -17,7 +17,7 @@ interface ReleaseNotePageData {
     title: string
     content_html: string | null
     published_at: string | null
-    cover_image_url: string | null
+    featured_image_url: string | null
   }
   organization: {
     name: string
@@ -61,19 +61,32 @@ async function getReleaseNote(orgSlug: string, releaseSlug: string): Promise<Rel
     return null
   }
 
-  // Type-safe access to joined data
-  const releaseNoteData = data as ReleaseNoteWithOrganization
+  // PostgREST embedded relations can come back as an object or an array depending on schema
+  // and (for typed clients) relationship metadata. Normalize defensively.
+  const releaseNoteData = data as {
+    title: string
+    content_html: string | null
+    published_at: string | null
+    featured_image_url: string | null
+    organizations:
+      | { name: string; logo_url: string | null }
+      | Array<{ name: string; logo_url: string | null }>
+  }
+
+  const organizationRow = Array.isArray(releaseNoteData.organizations)
+    ? releaseNoteData.organizations[0]
+    : releaseNoteData.organizations
 
   const result: ReleaseNotePageData = {
     note: {
       title: releaseNoteData.title,
       content_html: releaseNoteData.content_html,
       published_at: releaseNoteData.published_at,
-      cover_image_url: releaseNoteData.cover_image_url
+      featured_image_url: releaseNoteData.featured_image_url
     },
     organization: {
-      name: releaseNoteData.organizations.name,
-      logo_url: releaseNoteData.organizations.logo_url,
+      name: organizationRow?.name ?? 'Unknown',
+      logo_url: organizationRow?.logo_url ?? null,
     }
   }
 
@@ -120,13 +133,13 @@ export async function generateMetadata({ params }: Props) {
     openGraph: {
       title: pageTitle,
       description: description,
-      images: note.cover_image_url ? [note.cover_image_url] : [], // Use cover image if available
+      images: note.featured_image_url ? [note.featured_image_url] : [], // Use featured image if available
     },
     twitter: {
         card: 'summary_large_image',
         title: pageTitle,
         description: description,
-        images: note.cover_image_url ? [note.cover_image_url] : [],
+        images: note.featured_image_url ? [note.featured_image_url] : [],
     },
   }
 }
@@ -150,11 +163,11 @@ export default async function PublicReleaseNotePage({ params }: Props) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <article className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
         {/* Optional Cover Image */}
-        {note.cover_image_url && (
+        {note.featured_image_url && (
            <div className="w-full h-64 relative">
             <Image 
-              src={note.cover_image_url} 
-              alt={`${note.title} cover image`} 
+              src={note.featured_image_url} 
+              alt={`${note.title} featured image`} 
               fill
               style={{ objectFit: 'cover' }}
               priority // Prioritize loading cover image

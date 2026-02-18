@@ -115,17 +115,19 @@ export class OrganizationService {
       return null
     }
 
-    return {
-      organization: membership.organizations,
-      membership: {
-        id: membership.id,
-        user_id: membership.user_id,
-        organization_id: membership.organization_id,
-        role: membership.role,
-        created_at: membership.created_at
+      return {
+        organization: membership.organizations,
+        membership: {
+          id: membership.id,
+          user_id: membership.user_id,
+          organization_id: membership.organization_id,
+          role: membership.role,
+          created_at: membership.created_at,
+          invited_by: membership.invited_by ?? null,
+          joined_at: membership.joined_at ?? null
+        }
       }
     }
-  }
 
   /**
    * Create a new organization
