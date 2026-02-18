@@ -375,6 +375,7 @@ export interface Database {
           state: string
           provider: 'github' | 'jira' | 'linear'
           user_id: string
+          pkce_verifier: string | null
           created_at: string
           expires_at: string
         }
@@ -383,6 +384,7 @@ export interface Database {
           state: string
           provider: 'github' | 'jira' | 'linear'
           user_id: string
+          pkce_verifier?: string | null
           created_at?: string
           expires_at: string
         }
@@ -391,6 +393,7 @@ export interface Database {
           state?: string
           provider?: 'github' | 'jira' | 'linear'
           user_id?: string
+          pkce_verifier?: string | null
           created_at?: string
           expires_at?: string
         }

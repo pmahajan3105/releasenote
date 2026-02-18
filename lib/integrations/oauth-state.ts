@@ -11,6 +11,7 @@ export type OAuthStateRecord = {
   provider: OAuthProvider
   user_id: string
   expires_at: string
+  pkce_verifier: string | null
 }
 
 export function createOAuthState(): string {
@@ -23,6 +24,7 @@ export async function persistOAuthState(
     provider: OAuthProvider
     state: string
     userId: string
+    pkceVerifier?: string | null
     ttlMs?: number
   }
 ): Promise<void> {
@@ -32,6 +34,7 @@ export async function persistOAuthState(
     state: params.state,
     provider: params.provider,
     user_id: params.userId,
+    pkce_verifier: params.pkceVerifier ?? null,
     created_at: new Date().toISOString(),
     expires_at: new Date(Date.now() + ttlMs).toISOString(),
   })
@@ -47,7 +50,7 @@ export async function consumeOAuthState(
 ): Promise<{ ok: true; record: OAuthStateRecord } | { ok: false; error: 'invalid_state' | 'expired_state' }> {
   const { data, error } = await supabase
     .from('oauth_states')
-    .select('state, provider, user_id, expires_at')
+    .select('state, provider, user_id, expires_at, pkce_verifier')
     .eq('state', params.state)
     .eq('provider', params.provider)
     .single()
@@ -76,5 +79,11 @@ export async function consumeOAuthState(
   }
 
   await supabase.from('oauth_states').delete().eq('state', params.state).eq('provider', params.provider)
-  return { ok: true, record: record as OAuthStateRecord }
+  return {
+    ok: true,
+    record: {
+      ...(record as OAuthStateRecord),
+      pkce_verifier: typeof record.pkce_verifier === 'string' ? record.pkce_verifier : null,
+    },
+  }
 }
