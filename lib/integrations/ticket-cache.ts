@@ -2,6 +2,7 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
+import type { Json } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { changeItemToTicketId } from '@/lib/integrations/change-item'
 
@@ -11,16 +12,17 @@ export function changeItemToTicketCacheRow(
 ): Database['public']['Tables']['ticket_cache']['Insert'] {
   const now = new Date().toISOString()
 
-  const metadata: Record<string, unknown> = {
-    type: item.type,
-  }
+  const metadata: Record<string, Json> = { type: item.type }
 
   if (item.labels.length > 0) {
     metadata.labels = item.labels
   }
 
   if (item.raw) {
-    metadata.raw = item.raw
+    const raw = tryCoerceJson(item.raw)
+    if (raw !== undefined) {
+      metadata.raw = raw
+    }
   }
 
   return {
@@ -36,6 +38,15 @@ export function changeItemToTicketCacheRow(
     cached_at: now,
     created_at: item.createdAt ?? now,
     updated_at: item.updatedAt ?? null,
+  }
+}
+
+function tryCoerceJson(value: unknown): Json | undefined {
+  try {
+    // Ensures the payload is JSON-serializable (e.g. avoids functions/symbols/cycles).
+    return JSON.parse(JSON.stringify(value)) as Json
+  } catch {
+    return undefined
   }
 }
 
@@ -61,4 +72,3 @@ export async function cacheChangeItems(
     console.error('Ticket cache upsert failed:', error)
   }
 }
-

@@ -8,6 +8,15 @@
  * primarily for typed clients (`createClient<Database>()`) and server components.
  */
 
+// Supabase-style JSON type (keeps JSON columns type-safe without `any`).
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 export interface Database {
   public: {
     Tables: {
@@ -21,7 +30,7 @@ export interface Database {
           description: string | null
           user_id: string | null
           logo_url: string | null
-          settings: Record<string, any>
+          settings: Json
           plan: string | null
           custom_domain: string | null
           domain_verified: boolean
@@ -42,7 +51,7 @@ export interface Database {
           description?: string | null
           user_id?: string | null
           logo_url?: string | null
-          settings?: Record<string, any>
+          settings?: Json
           plan?: string | null
           custom_domain?: string | null
           domain_verified?: boolean
@@ -63,7 +72,7 @@ export interface Database {
           description?: string | null
           user_id?: string | null
           logo_url?: string | null
-          settings?: Record<string, any>
+          settings?: Json
           plan?: string | null
           custom_domain?: string | null
           domain_verified?: boolean
@@ -112,8 +121,8 @@ export interface Database {
           organization_id: string
           type: 'github' | 'jira' | 'linear'
           external_id: string | null
-          encrypted_credentials: Record<string, any> | null
-          config: Record<string, any>
+          encrypted_credentials: Json | null
+          config: Json
           is_active: boolean | null
           last_sync: string | null
           updated_at: string | null
@@ -124,8 +133,8 @@ export interface Database {
           organization_id: string
           type: 'github' | 'jira' | 'linear'
           external_id?: string | null
-          encrypted_credentials?: Record<string, any> | null
-          config?: Record<string, any>
+          encrypted_credentials?: Json | null
+          config?: Json
           is_active?: boolean | null
           last_sync?: string | null
           updated_at?: string | null
@@ -136,8 +145,8 @@ export interface Database {
           organization_id?: string
           type?: 'github' | 'jira' | 'linear'
           external_id?: string | null
-          encrypted_credentials?: Record<string, any> | null
-          config?: Record<string, any>
+          encrypted_credentials?: Json | null
+          config?: Json
           is_active?: boolean | null
           last_sync?: string | null
           updated_at?: string | null
@@ -156,7 +165,7 @@ export interface Database {
           content: string | null
           content_markdown: string | null
           content_html: string | null
-          content_json: Record<string, any> | null
+          content_json: Json | null
           status: 'draft' | 'published' | 'scheduled' | 'archived'
           author_id: string | null
           published_at: string | null
@@ -180,7 +189,7 @@ export interface Database {
           content?: string | null
           content_markdown?: string | null
           content_html?: string | null
-          content_json?: Record<string, any> | null
+          content_json?: Json | null
           status?: 'draft' | 'published' | 'scheduled' | 'archived'
           author_id?: string | null
           published_at?: string | null
@@ -204,7 +213,7 @@ export interface Database {
           content?: string | null
           content_markdown?: string | null
           content_html?: string | null
-          content_json?: Record<string, any> | null
+          content_json?: Json | null
           status?: 'draft' | 'published' | 'scheduled' | 'archived'
           author_id?: string | null
           published_at?: string | null
@@ -325,7 +334,7 @@ export interface Database {
           status: string | null
           assignee: string | null
           url: string | null
-          metadata: Record<string, any>
+          metadata: Json
           cached_at: string
           updated_at: string | null
         }
@@ -340,7 +349,7 @@ export interface Database {
           status?: string | null
           assignee?: string | null
           url?: string | null
-          metadata?: Record<string, any>
+          metadata?: Json
           cached_at?: string
           updated_at?: string | null
         }
@@ -355,7 +364,7 @@ export interface Database {
           status?: string | null
           assignee?: string | null
           url?: string | null
-          metadata?: Record<string, any>
+          metadata?: Json
           cached_at?: string
           updated_at?: string | null
         }

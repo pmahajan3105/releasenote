@@ -4,8 +4,8 @@ import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
 import {
   getJiraAccessToken,
-  getJiraResources,
   isJiraIntegrationRecord,
+  parseJiraIntegrationConfig,
   transformIssueTypeForDiagnostics,
 } from '@/lib/integrations/jira-route-helpers'
 
@@ -43,7 +43,7 @@ export async function POST(_request: NextRequest) {
       }, { status: 400 })
     }
 
-    const resources = getJiraResources(integration.config ?? integration.metadata)
+    const { resources } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)
 
     const tests = []
     let overallSuccess = true

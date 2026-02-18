@@ -10,6 +10,7 @@ import type {
   OrganizationMembershipWithOrg,
   MembershipQueryResult
 } from '@/types/auth'
+import type { Json } from '@/types/database'
 
 /**
  * Validates if an object is a valid Supabase User
@@ -194,7 +195,7 @@ export function validateOrganizationData(data: unknown): {
     slug: org.slug as string,
     user_id: (org.user_id as string) ?? (org.id as string),
     logo_url: (org.logo_url as string | null) ?? null,
-    settings: org.settings as Record<string, unknown>,
+    settings: org.settings as Json,
     plan: (org.plan as 'free' | 'professional' | 'growth') || 'free',
     custom_domain: (org.custom_domain as string | null) ?? null,
     domain_verified: (org.domain_verified as boolean) ?? false,

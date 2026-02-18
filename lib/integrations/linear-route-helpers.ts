@@ -1,7 +1,7 @@
 import { parseBooleanParam, parseEnumParam, parseIntegerParam } from '@/lib/integrations/route-utils'
 import { getAccessTokenFromEncryptedCredentials } from '@/lib/integrations/credentials'
-
-type JsonObject = Record<string, unknown>
+import { isJsonObject } from '@/lib/json'
+import { z } from 'zod'
 
 export type LinearStateType = 'backlog' | 'unstarted' | 'started' | 'completed' | 'canceled'
 
@@ -10,16 +10,8 @@ export interface LinearIntegrationRecord {
   created_at: string
   access_token?: string
   encrypted_credentials?: unknown
-  config?: {
-    organization?: {
-      name?: string
-    }
-  } | null
-  metadata?: {
-    organization?: {
-      name?: string
-    }
-  } | null
+  config?: unknown | null
+  metadata?: unknown | null
 }
 
 export interface LinearPageInfo {
@@ -153,7 +145,7 @@ export function parseLinearStateType(value: string | null): LinearStateType | un
 }
 
 export function isLinearIntegrationRecord(value: unknown): value is LinearIntegrationRecord {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return false
   }
 
@@ -161,7 +153,11 @@ export function isLinearIntegrationRecord(value: unknown): value is LinearIntegr
     return false
   }
 
-  if ('metadata' in value && value.metadata != null && !isObject(value.metadata)) {
+  if ('metadata' in value && value.metadata != null && !isJsonObject(value.metadata)) {
+    return false
+  }
+
+  if ('config' in value && value.config != null && !isJsonObject(value.config)) {
     return false
   }
 
@@ -182,19 +178,17 @@ export function getLinearAccessToken(integration: LinearIntegrationRecord): stri
 }
 
 export function getLinearOrganizationName(value: unknown): string {
-  if (isObject(value) && isObject(value.organization) && typeof value.organization.name === 'string') {
-    return value.organization.name
-  }
-
-  return 'Unknown Organization'
+  const config = parseLinearIntegrationConfig(value)
+  const name = config?.organization?.name
+  return typeof name === 'string' && name.trim() ? name : 'Unknown Organization'
 }
 
 export function normalizeLinearViewer(value: unknown): LinearViewer {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return {}
   }
 
-  const organization = isObject(value.organization)
+  const organization = isJsonObject(value.organization)
     ? {
         id: asString(value.organization.id),
         name: asString(value.organization.name),
@@ -213,7 +207,7 @@ export function normalizeLinearViewer(value: unknown): LinearViewer {
 }
 
 export function normalizeLinearIssuesResponse(value: unknown): LinearIssuesResponse {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return { nodes: [], pageInfo: defaultPageInfo() }
   }
 
@@ -225,7 +219,7 @@ export function normalizeLinearIssuesResponse(value: unknown): LinearIssuesRespo
 }
 
 export function normalizeLinearTeamsResponse(value: unknown): LinearTeamsResponse {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return { nodes: [], pageInfo: defaultPageInfo() }
   }
 
@@ -237,7 +231,7 @@ export function normalizeLinearTeamsResponse(value: unknown): LinearTeamsRespons
 }
 
 export function normalizeLinearProjectsResponse(value: unknown): LinearProjectsResponse {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return { nodes: [], pageInfo: defaultPageInfo() }
   }
 
@@ -366,7 +360,7 @@ export function summarizeLinearProject(project: LinearProjectNode) {
 }
 
 function normalizePageInfo(value: unknown): LinearPageInfo {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return defaultPageInfo()
   }
 
@@ -395,6 +389,24 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined
 }
 
-function isObject(value: unknown): value is JsonObject {
-  return typeof value === 'object' && value !== null
+const linearIntegrationConfigSchema = z
+  .object({
+    organization: z
+      .object({
+        name: z.string().min(1).optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough()
+
+export function parseLinearIntegrationConfig(
+  value: unknown
+): z.infer<typeof linearIntegrationConfigSchema> | null {
+  if (!value) {
+    return null
+  }
+
+  const result = linearIntegrationConfigSchema.safeParse(value)
+  return result.success ? result.data : null
 }

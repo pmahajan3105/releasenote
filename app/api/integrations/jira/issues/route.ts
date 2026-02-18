@@ -7,8 +7,8 @@ import type { ChangeItem } from '@/lib/integrations/change-item'
 import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
 import {
   getJiraAccessToken,
-  getJiraResources,
   isJiraIntegrationRecord,
+  parseJiraIntegrationConfig,
   parseCsvParam,
   parseIntegerParam,
   resolveJiraSite,
@@ -57,9 +57,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Jira access token not found' }, { status: 400 })
     }
 
-    const resources = getJiraResources(integration.config ?? integration.metadata)
-
-    const selectedSite = resolveJiraSite(resources, siteId)
+    const { resources, preferredSiteId } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)
+    const selectedSite = resolveJiraSite(resources, siteId ?? preferredSiteId)
     if (!selectedSite) {
       return NextResponse.json({ error: 'No Jira site available' }, { status: 400 })
     }

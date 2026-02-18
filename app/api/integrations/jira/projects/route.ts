@@ -4,8 +4,8 @@ import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
 import {
   getJiraAccessToken,
-  getJiraResources,
   isJiraIntegrationRecord,
+  parseJiraIntegrationConfig,
   parseIntegerParam,
   resolveJiraSite,
   transformJiraProject,
@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Jira access token not found' }, { status: 400 })
     }
 
-    const resources = getJiraResources(integration.config ?? integration.metadata)
+    const { resources, preferredSiteId } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)
 
     // Determine which site to use
-    const selectedSite = resolveJiraSite(resources, siteId)
+    const selectedSite = resolveJiraSite(resources, siteId ?? preferredSiteId)
     if (!selectedSite) {
       return NextResponse.json({ error: 'No Jira site available' }, { status: 400 })
     }
