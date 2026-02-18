@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { jiraAPI } from '@/lib/integrations/jira-client'
+import { jiraJsGetProjectIssues, jiraJsSearchIssues } from '@/lib/integrations/jira-js'
 import type { Database } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
       if (jql) {
         // Use custom JQL query
-        issues = await jiraAPI.searchIssues(accessToken, selectedSite.id, {
+        issues = await jiraJsSearchIssues(accessToken, selectedSite.id, {
           jql,
           startAt,
           maxResults,
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         })
       } else if (projectKey) {
         // Search by project with optional filters
-        issues = await jiraAPI.getProjectIssues(accessToken, selectedSite.id, projectKey, {
+        issues = await jiraJsGetProjectIssues(accessToken, selectedSite.id, projectKey, {
           issueTypes,
           statuses,
           updatedSince,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
           ? `updated >= "${updatedSince}" ORDER BY updated DESC`
           : 'updated >= -30d ORDER BY updated DESC'
           
-        issues = await jiraAPI.searchIssues(accessToken, selectedSite.id, {
+        issues = await jiraJsSearchIssues(accessToken, selectedSite.id, {
           jql: defaultJql,
           startAt,
           maxResults,

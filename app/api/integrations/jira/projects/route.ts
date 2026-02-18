@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { jiraAPI } from '@/lib/integrations/jira-client'
+import { jiraJsGetProjects } from '@/lib/integrations/jira-js'
 import {
   getJiraAccessToken,
   isJiraIntegrationRecord,
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const projects = await jiraAPI.getProjects(accessToken, selectedSite.id, {
+      const projects = await jiraJsGetProjects(accessToken, selectedSite.id, {
         maxResults,
         startAt,
         expand: ['description', 'lead', 'issueTypes', 'url', 'projectKeys']
