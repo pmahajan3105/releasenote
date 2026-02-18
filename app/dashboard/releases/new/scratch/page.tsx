@@ -48,7 +48,7 @@ export default function NewReleaseNotesScratchPage() {
       }
 
       // Redirect to the Editor Page
-      router.push(`/releases/edit/${draftNote.id}`)
+      router.push(`/dashboard/releases/edit/${draftNote.id}`)
 
     } catch (err) {
       console.error("Error creating draft from scratch:", err);
