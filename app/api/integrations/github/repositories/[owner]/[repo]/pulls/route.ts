@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { GitHubService } from '@/lib/integrations/github'
+import { createGitHubClient, listPullRequests } from '@/lib/integrations/github-octokit'
 import type { Database } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
@@ -62,9 +62,10 @@ export async function GET(
     const per_page = parsePerPage(url.searchParams.get('per_page'), 30)
     const page = parsePage(url.searchParams.get('page'), 1)
 
-    // Initialize GitHub service and fetch pull requests
-    const github = new GitHubService(accessToken)
-    const pullRequests = await github.getPullRequests(owner, repo, {
+    const github = createGitHubClient(accessToken)
+    const pullRequests = await listPullRequests(github, {
+      owner,
+      repo,
       state,
       sort,
       direction,

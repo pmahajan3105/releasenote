@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { GitHubService } from '@/lib/integrations/github'
+import { createGitHubClient, listCommits } from '@/lib/integrations/github-octokit'
 import type { Database } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { titleFromCommitMessage } from '@/lib/integrations/change-item'
@@ -61,9 +61,10 @@ export async function GET(
     const per_page = parsePerPage(url.searchParams.get('per_page'), 30)
     const page = parsePage(url.searchParams.get('page'), 1)
 
-    // Initialize GitHub service and fetch commits
-    const github = new GitHubService(accessToken)
-    const commits = await github.getCommits(owner, repo, {
+    const github = createGitHubClient(accessToken)
+    const commits = await listCommits(github, {
+      owner,
+      repo,
       sha,
       path,
       since,

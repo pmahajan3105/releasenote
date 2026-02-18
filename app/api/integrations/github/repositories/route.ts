@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { GitHubService } from '@/lib/integrations/github'
+import { createGitHubClient, listRepositories } from '@/lib/integrations/github-octokit'
 import {
   getGitHubAccessToken,
   isGitHubIntegrationRecord,
@@ -53,14 +53,8 @@ export async function GET(request: NextRequest) {
     const per_page = parsePerPage(url.searchParams.get('per_page'), 50)
     const page = parsePage(url.searchParams.get('page'), 1)
 
-    // Initialize GitHub service and fetch repositories
-    const github = new GitHubService(accessToken)
-    const repositories = await github.getRepositories({
-      sort,
-      direction,
-      per_page,
-      page
-    })
+    const github = createGitHubClient(accessToken)
+    const repositories = await listRepositories(github, { sort, direction, per_page, page })
 
     return NextResponse.json({
       repositories,
