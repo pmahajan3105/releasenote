@@ -7,19 +7,19 @@ const options = [
   {
     name: 'Create with AI',
     description: 'Generate notes automatically by selecting an integration and tickets.',
-    href: '/releases/new/ai', // Updated link
+    href: '/dashboard/releases/new/ai',
     icon: SparklesIcon,
   },
   {
     name: 'Create from Template',
     description: 'Start with a pre-defined structure or your own custom template.',
-    href: '/releases/new/template', // Updated link
+    href: '/dashboard/releases/new/template',
     icon: DocumentDuplicateIcon,
   },
   {
     name: 'Create from Scratch',
     description: 'Begin with a blank canvas and write your release notes manually.',
-    href: '/releases/new/scratch', // Updated link
+    href: '/dashboard/releases/new/scratch',
     icon: PencilSquareIcon,
   },
 ]
