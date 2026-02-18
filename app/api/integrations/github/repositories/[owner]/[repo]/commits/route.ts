@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { GitHubService } from '@/lib/integrations/github'
+import type { Database } from '@/types/database'
+import type { ChangeItem } from '@/lib/integrations/change-item'
+import { titleFromCommitMessage } from '@/lib/integrations/change-item'
+import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
 import {
   getGitHubAccessToken,
   isGitHubIntegrationRecord,
@@ -18,7 +22,7 @@ export async function GET(
 ) {
   try {
     const { owner, repo } = await params
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
     if (sessionError || !session?.user) {
@@ -67,6 +71,23 @@ export async function GET(
       per_page,
       page
     })
+
+    const changeItems: ChangeItem[] = commits.map((commit) => ({
+      provider: 'github',
+      externalId: `${owner}/${repo}@${commit.sha}`,
+      type: 'commit',
+      title: titleFromCommitMessage(commit.message),
+      description: commit.message,
+      status: 'committed',
+      url: commit.url,
+      assignee: commit.author?.name ?? null,
+      labels: [],
+      createdAt: commit.author?.date ?? null,
+      updatedAt: commit.author?.date ?? null,
+      raw: commit,
+    }))
+
+    await cacheChangeItems(supabase, session.user.id, changeItems)
 
     return NextResponse.json({
       commits,

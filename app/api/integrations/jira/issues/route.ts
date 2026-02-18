@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
+import type { Database } from '@/types/database'
+import type { ChangeItem } from '@/lib/integrations/change-item'
+import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
 import {
   getJiraAccessToken,
   getJiraResources,
@@ -17,7 +20,7 @@ const MAX_ALLOWED_RESULTS = 100
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -99,38 +102,27 @@ export async function GET(request: NextRequest) {
 
       const transformedIssues = issues.issues.map((issue) => transformJiraIssue(issue, selectedSite))
 
-      // Cache the issues in our ticket_cache table
-      if (transformedIssues.length > 0) {
-        const cachePromises = transformedIssues.map(issue => 
-          supabase
-            .from('ticket_cache')
-            .upsert({
-              organization_id: session.user.id,
-              integration_type: 'jira',
-              ticket_id: issue.key,
-              title: issue.summary,
-              description: issue.description,
-              status: issue.status.name,
-              assignee: issue.assignee?.displayName || null,
-              created_at: issue.created,
-              updated_at: issue.updated,
-              metadata: {
-                issue_type: issue.issueType,
-                priority: issue.priority,
-                fix_versions: issue.fixVersions,
-                labels: issue.labels,
-                url: issue.url,
-                changelog: issue.changelog
-              },
-              cached_at: new Date().toISOString()
-            }, {
-              onConflict: 'organization_id,integration_type,ticket_id'
-            })
-        )
+      const changeItems: ChangeItem[] = transformedIssues.map((issue) => ({
+        provider: 'jira',
+        externalId: issue.key,
+        type: 'issue',
+        title: issue.summary,
+        description: issue.description,
+        status: issue.status.name,
+        url: issue.url,
+        assignee: issue.assignee?.displayName ?? null,
+        labels: issue.labels,
+        createdAt: issue.created,
+        updatedAt: issue.updated,
+        raw: {
+          issueType: issue.issueType,
+          priority: issue.priority,
+          fixVersions: issue.fixVersions,
+          changelog: issue.changelog,
+        },
+      }))
 
-        // Execute cache updates in parallel
-        await Promise.allSettled(cachePromises)
-      }
+      await cacheChangeItems(supabase, session.user.id, changeItems)
 
       return NextResponse.json({
         issues: transformedIssues,

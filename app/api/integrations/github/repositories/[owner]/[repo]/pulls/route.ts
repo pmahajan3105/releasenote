@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { GitHubService } from '@/lib/integrations/github'
+import type { Database } from '@/types/database'
+import type { ChangeItem } from '@/lib/integrations/change-item'
+import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
 import {
   getGitHubAccessToken,
   isGitHubIntegrationRecord,
@@ -21,7 +24,7 @@ export async function GET(
 ) {
   try {
     const { owner, repo } = await params
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
     if (sessionError || !session?.user) {
@@ -68,6 +71,29 @@ export async function GET(
       per_page,
       page
     })
+
+    const changeItems: ChangeItem[] = pullRequests.map((pull) => ({
+      provider: 'github',
+      externalId: `${owner}/${repo}#${pull.number}`,
+      type: 'pr',
+      title: pull.title,
+      description: pull.body ?? null,
+      status: pull.state,
+      url: pull.html_url,
+      assignee: pull.user?.login ?? null,
+      labels: [],
+      createdAt: pull.created_at,
+      updatedAt: pull.updated_at,
+      raw: {
+        id: pull.id,
+        number: pull.number,
+        merged_at: pull.merged_at,
+        head: pull.head,
+        base: pull.base,
+      },
+    }))
+
+    await cacheChangeItems(supabase, session.user.id, changeItems)
 
     return NextResponse.json({
       pull_requests: pullRequests,
