@@ -4,6 +4,7 @@
  */
 
 import { Resend } from 'resend'
+import { sanitizeHtml, stripHtml } from '@/lib/sanitize'
 
 let resend: Resend | null = null
 
@@ -78,6 +79,7 @@ export function generateReleaseNotesEmail(
   },
   publicUrl: string
 ): EmailTemplate {
+  const safeContentHtml = sanitizeHtml(releaseNote.content_html || '')
   const publishedDate = releaseNote.published_at 
     ? new Date(releaseNote.published_at).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -143,7 +145,7 @@ export function generateReleaseNotesEmail(
       </div>
 
       <div class="content">
-        ${releaseNote.content_html || '<p>New release notes are available!</p>'}
+        ${safeContentHtml || '<p>New release notes are available!</p>'}
       </div>
 
       <div style="text-align: center;">
@@ -163,7 +165,7 @@ ${organization.name} - ${releaseNote.title}
 
 Published ${publishedDate}
 
-${releaseNote.content_html ? 'New release notes are available!' : ''}
+${safeContentHtml ? stripHtml(safeContentHtml) : 'New release notes are available!'}
 
 View full release notes: ${publicUrl}
 
