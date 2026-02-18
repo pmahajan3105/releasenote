@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { createOAuthState, persistOAuthState } from '@/lib/integrations/oauth-state'
+import { createPkcePair } from '@/lib/integrations/pkce'
 import type { Database } from '@/types/database'
 
 export async function GET(request: NextRequest) {
@@ -26,10 +27,12 @@ export async function GET(request: NextRequest) {
   }
 
   const state = createOAuthState()
+  const pkce = createPkcePair()
   await persistOAuthState(supabase, {
     provider: 'github',
     state,
     userId: session.user.id,
+    pkceVerifier: pkce.verifier,
   })
 
   const githubOAuthUrl = new URL('https://github.com/login/oauth/authorize')
@@ -37,6 +40,8 @@ export async function GET(request: NextRequest) {
   githubOAuthUrl.searchParams.set('redirect_uri', redirectUri)
   githubOAuthUrl.searchParams.set('scope', scopes)
   githubOAuthUrl.searchParams.set('state', state)
+  githubOAuthUrl.searchParams.set('code_challenge', pkce.challenge)
+  githubOAuthUrl.searchParams.set('code_challenge_method', pkce.method)
 
   return NextResponse.redirect(githubOAuthUrl.toString())
 }

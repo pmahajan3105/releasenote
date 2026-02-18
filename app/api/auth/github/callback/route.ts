@@ -63,6 +63,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
+  const codeVerifier = stateResult.record.pkce_verifier ?? undefined
+
   try {
     const clientId = process.env.GITHUB_CLIENT_ID
     const clientSecret = process.env.GITHUB_CLIENT_SECRET
@@ -85,6 +87,7 @@ export async function GET(request: NextRequest) {
         client_secret: clientSecret,
         code,
         redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
       }),
     })
 

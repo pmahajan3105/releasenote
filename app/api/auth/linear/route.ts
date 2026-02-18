@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { createOAuthState, persistOAuthState } from '@/lib/integrations/oauth-state'
+import { createPkcePair } from '@/lib/integrations/pkce'
 import type { Database } from '@/types/database'
 
 export async function GET(request: NextRequest) {
@@ -25,12 +26,14 @@ export async function GET(request: NextRequest) {
     }
 
     const state = createOAuthState()
+    const pkce = createPkcePair()
     
     // Store state in database for validation
     await persistOAuthState(supabase, {
       provider: 'linear',
       state,
       userId: session.user.id,
+      pkceVerifier: pkce.verifier,
     })
 
     const params = new URLSearchParams({
@@ -41,6 +44,8 @@ export async function GET(request: NextRequest) {
       state,
       prompt: 'consent'
     })
+    params.set('code_challenge', pkce.challenge)
+    params.set('code_challenge_method', pkce.method)
 
     const authUrl = `${linearAuthUrl}?${params.toString()}`
     return NextResponse.redirect(authUrl)

@@ -65,6 +65,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
+    const codeVerifier = stateResult.record.pkce_verifier ?? undefined
+
     const clientId = process.env.LINEAR_CLIENT_ID
     const clientSecret = process.env.LINEAR_CLIENT_SECRET
     const redirectUri = process.env.LINEAR_REDIRECT_URL || `${new URL(request.url).origin}/api/auth/linear/callback`
@@ -75,19 +77,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
+    const tokenBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      redirect_uri: redirectUri,
+    })
+    if (codeVerifier) {
+      tokenBody.set('code_verifier', codeVerifier)
+    }
+
     const tokenResponse = await fetch('https://api.linear.app/oauth/token', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-      }),
+      body: tokenBody,
     })
 
     if (!tokenResponse.ok) {

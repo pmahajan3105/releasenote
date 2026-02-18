@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
+    const codeVerifier = stateResult.record.pkce_verifier ?? undefined
+
     const clientId = process.env.JIRA_CLIENT_ID
     const clientSecret = process.env.JIRA_CLIENT_SECRET
     const redirectUri = process.env.JIRA_REDIRECT_URL || `${new URL(request.url).origin}/api/auth/jira/callback`
@@ -88,6 +90,7 @@ export async function GET(request: NextRequest) {
         client_secret: clientSecret,
         code,
         redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
       }),
     })
 
