@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useReleaseNotes } from '@/lib/store'
 
 interface GitHubRepository {
   id: number
@@ -14,13 +14,14 @@ interface GitHubRepository {
 }
 
 export function GitHubReleaseGenerator() {
+  const router = useRouter()
   const [repositories, setRepositories] = useState<GitHubRepository[]>([])
   const [selectedRepo, setSelectedRepo] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [generatedContent, setGeneratedContent] = useState('')
+  const [draftId, setDraftId] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const { createReleaseNote } = useReleaseNotes()
 
   // Load user's GitHub repositories
   const loadRepositories = async () => {
@@ -53,6 +54,7 @@ export function GitHubReleaseGenerator() {
     setLoading(true)
     setError('')
     setGeneratedContent('')
+    setDraftId(null)
 
     try {
       const [owner, repo] = selectedRepo.split('/')
@@ -78,6 +80,7 @@ export function GitHubReleaseGenerator() {
 
       const data = await response.json()
       setGeneratedContent(data.content)
+      setDraftId(data.draftId || null)
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate release notes')
@@ -88,22 +91,8 @@ export function GitHubReleaseGenerator() {
 
   // Save generated content as a new release note
   const saveAsReleaseNote = async () => {
-    if (!generatedContent) return
-
-    try {
-      await createReleaseNote({
-        title: `GitHub Release Notes - ${new Date().toLocaleDateString()}`,
-        content_html: generatedContent,
-        status: 'draft'
-      })
-      
-      // Reset the form
-      setGeneratedContent('')
-      setSelectedRepo('')
-      alert('Release note saved as draft!')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save release note')
-    }
+    if (!draftId) return
+    router.push(`/dashboard/releases/edit/${draftId}`)
   }
 
   return (
@@ -176,8 +165,8 @@ export function GitHubReleaseGenerator() {
             />
             
             <div className="flex gap-2">
-              <Button onClick={saveAsReleaseNote}>
-                Save as Draft
+              <Button onClick={saveAsReleaseNote} disabled={!draftId}>
+                Open Draft Editor
               </Button>
               <Button 
                 variant="outline" 

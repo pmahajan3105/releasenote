@@ -3,6 +3,9 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { GitHubService } from '@/lib/integrations/github'
 import { getAiProvider } from '@/lib/ai'
+import { getGitHubAccessToken, isGitHubIntegrationRecord } from '@/lib/integrations/github-route-helpers'
+import { sanitizeHtml, stripHtml } from '@/lib/sanitize'
+import { generateSlug } from '@/lib/utils'
 
 /**
  * Generate release notes from GitHub repository data
@@ -29,19 +32,19 @@ export async function POST(request: NextRequest) {
     // Get GitHub integration
     const { data: integration, error: integrationError } = await supabase
       .from('integrations')
-      .select('config')
+      .select('*')
       .eq('type', 'github')
       .eq('organization_id', session.user.id)
       .single()
 
-    if (integrationError || !integration) {
+    if (integrationError || !isGitHubIntegrationRecord(integration)) {
       return NextResponse.json(
         { error: 'GitHub integration not found. Please connect your GitHub account first.' },
         { status: 404 }
       )
     }
 
-    const accessToken = integration.config?.access_token
+    const accessToken = getGitHubAccessToken(integration)
     if (!accessToken) {
       return NextResponse.json(
         { error: 'GitHub access token not found. Please reconnect your GitHub account.' },
@@ -101,12 +104,18 @@ export async function POST(request: NextRequest) {
       includeBreakingChanges: options?.includeBreakingChanges || true
     })
 
+    const safeHtml = sanitizeHtml(generatedContent)
+
     // Save as draft release note
+    const title = options?.title || `Release Notes - ${new Date().toLocaleDateString()}`
+    const slug = `${generateSlug(title)}-${Date.now().toString(36)}`
     const { data: draftNote, error: saveError } = await supabase
       .from('release_notes')
       .insert([{
-        title: options?.title || `Release Notes - ${new Date().toLocaleDateString()}`,
-        content_html: generatedContent,
+        title,
+        slug,
+        content_markdown: stripHtml(safeHtml),
+        content_html: safeHtml,
         status: 'draft',
         organization_id: session.user.id,
         author_id: session.user.id,
@@ -123,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      content: generatedContent,
+      content: safeHtml,
       repository: {
         owner: repository.owner,
         repo: repository.repo
