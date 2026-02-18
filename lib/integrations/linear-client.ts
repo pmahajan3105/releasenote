@@ -1,4 +1,8 @@
 import type { ProjectFilterInput } from '@/types/linear'
+import 'server-only'
+
+import { withProviderLimit } from '@/lib/http/limit'
+import { fetchWithRetry, HttpError } from '@/lib/http/request'
 
 /**
  * Linear API Client with GraphQL support
@@ -36,17 +40,41 @@ export class LinearAPIClient {
     token: string
   ): Promise<unknown> {
     try {
-      const response = await fetch(this.baseURL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query,
-          variables
-        })
-      })
+      let response: Response
+      try {
+        response = await withProviderLimit('linear', () =>
+          fetchWithRetry(
+            this.baseURL,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ query, variables }),
+            },
+            {
+              timeoutMs: 30000,
+              retry: {
+                retries: 3,
+                minTimeoutMs: 500,
+                maxTimeoutMs: 8000,
+                respectRetryAfter: true,
+                randomize: true,
+              },
+            }
+          )
+        )
+      } catch (error) {
+        if (error instanceof HttpError) {
+          throw new LinearAPIError(
+            `Linear API request failed: ${error.status} ${error.message}`,
+            error.status,
+            { retryAfterMs: error.retryAfterMs }
+          )
+        }
+        throw error
+      }
 
       if (!response.ok) {
         // Check for rate limiting
