@@ -5,6 +5,7 @@ import { listLinearIssues } from '@/lib/integrations/linear-sdk'
 import type { Database } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getLinearAccessToken,
   isLinearIntegrationRecord,
@@ -41,9 +42,14 @@ export async function GET(request: NextRequest) {
     if (integrationError || !isLinearIntegrationRecord(data)) {
       return NextResponse.json({ error: 'Linear integration not found' }, { status: 404 })
     }
-    const accessToken = getLinearAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Linear access token not found' }, { status: 400 })
+    let accessToken = getLinearAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     try {

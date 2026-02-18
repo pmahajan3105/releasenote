@@ -6,6 +6,7 @@ import type { Database } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { titleFromCommitMessage } from '@/lib/integrations/change-item'
 import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getGitHubAccessToken,
   isGitHubIntegrationRecord,
@@ -44,12 +45,14 @@ export async function GET(
       )
     }
 
-    const accessToken = getGitHubAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'GitHub access token not found' },
-        { status: 400 }
-      )
+    let accessToken = getGitHubAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     // Parse query parameters

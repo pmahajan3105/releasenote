@@ -5,6 +5,7 @@ import { jiraJsGetProjectIssues, jiraJsSearchIssues } from '@/lib/integrations/j
 import type { Database } from '@/types/database'
 import type { ChangeItem } from '@/lib/integrations/change-item'
 import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getJiraAccessToken,
   isJiraIntegrationRecord,
@@ -52,9 +53,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Jira integration not found' }, { status: 404 })
     }
     const integration = data
-    const accessToken = getJiraAccessToken(integration)
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Jira access token not found' }, { status: 400 })
+    let accessToken = getJiraAccessToken(integration)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, integration, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     const { resources, preferredSiteId } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)

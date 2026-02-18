@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import type { Database } from '@/types/database'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   buildGitHubHeaders,
   getGitHubAccessToken,
@@ -27,7 +29,7 @@ interface GitHubRateLimitResponse {
 
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -50,13 +52,20 @@ export async function POST(_request: NextRequest) {
       }, { status: 404 })
     }
 
-    const accessToken = getGitHubAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json({
-        success: false,
-        error: 'GitHub access token not found',
-        tests: []
-      }, { status: 400 })
+    let accessToken = getGitHubAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          tests: [],
+        }, { status: error.status })
+      }
+      throw error
     }
 
     const tests = []

@@ -6,6 +6,8 @@ import { z } from 'zod'
 export interface GitHubIntegrationRecord {
   id: string
   created_at: string
+  organization_id: string
+  type: 'github'
   access_token?: string
   encrypted_credentials?: unknown
   config?: unknown | null
@@ -27,6 +29,10 @@ export function isGitHubIntegrationRecord(value: unknown): value is GitHubIntegr
   }
 
   if (typeof value.id !== 'string' || typeof value.created_at !== 'string') {
+    return false
+  }
+
+  if (typeof value.organization_id !== 'string' || value.type !== 'github') {
     return false
   }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { createGitHubClient, listRepositories } from '@/lib/integrations/github-octokit'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getGitHubAccessToken,
   isGitHubIntegrationRecord,
@@ -10,13 +11,14 @@ import {
   parsePage,
   parsePerPage,
 } from '@/lib/integrations/github-route-helpers'
+import type { Database } from '@/types/database'
 
 /**
  * Get GitHub repositories for the authenticated user
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
     if (sessionError || !session?.user) {
@@ -38,12 +40,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const accessToken = getGitHubAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'GitHub access token not found. Please reconnect your GitHub account.' },
-        { status: 400 }
-      )
+    let accessToken = getGitHubAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     // Parse query parameters

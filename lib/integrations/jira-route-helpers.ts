@@ -14,6 +14,8 @@ export { parseCsvParam, parseIntegerParam } from '@/lib/integrations/route-utils
 export interface JiraIntegrationRecord {
   id: string
   created_at: string
+  organization_id: string
+  type: 'jira'
   access_token?: string
   encrypted_credentials?: unknown
   metadata?: unknown | null
@@ -144,6 +146,10 @@ export function isJiraIntegrationRecord(value: unknown): value is JiraIntegratio
   }
 
   if (typeof value.id !== 'string' || typeof value.created_at !== 'string') {
+    return false
+  }
+
+  if (typeof value.organization_id !== 'string' || value.type !== 'jira') {
     return false
   }
 

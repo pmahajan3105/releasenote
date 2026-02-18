@@ -8,6 +8,8 @@ export type LinearStateType = 'backlog' | 'unstarted' | 'started' | 'completed' 
 export interface LinearIntegrationRecord {
   id: string
   created_at: string
+  organization_id: string
+  type: 'linear'
   access_token?: string
   encrypted_credentials?: unknown
   config?: unknown | null
@@ -150,6 +152,10 @@ export function isLinearIntegrationRecord(value: unknown): value is LinearIntegr
   }
 
   if (typeof value.id !== 'string' || typeof value.created_at !== 'string') {
+    return false
+  }
+
+  if (typeof value.organization_id !== 'string' || value.type !== 'linear') {
     return false
   }
 

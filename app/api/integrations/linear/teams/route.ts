@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { listLinearTeams } from '@/lib/integrations/linear-sdk'
+import type { Database } from '@/types/database'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getLinearAccessToken,
   isLinearIntegrationRecord,
@@ -12,7 +14,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -34,9 +36,14 @@ export async function GET(request: NextRequest) {
     if (integrationError || !isLinearIntegrationRecord(data)) {
       return NextResponse.json({ error: 'Linear integration not found' }, { status: 404 })
     }
-    const accessToken = getLinearAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Linear access token not found' }, { status: 400 })
+    let accessToken = getLinearAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     try {

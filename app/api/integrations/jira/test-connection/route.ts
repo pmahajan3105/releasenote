@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
+import type { Database } from '@/types/database'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getJiraAccessToken,
   isJiraIntegrationRecord,
@@ -11,7 +13,7 @@ import {
 
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -34,13 +36,20 @@ export async function POST(_request: NextRequest) {
       }, { status: 404 })
     }
     const integration = data
-    const accessToken = getJiraAccessToken(integration)
-    if (!accessToken) {
-      return NextResponse.json({
-        success: false,
-        error: 'Jira access token not found',
-        tests: []
-      }, { status: 400 })
+    let accessToken = getJiraAccessToken(integration)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, integration, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          tests: [],
+        }, { status: error.status })
+      }
+      throw error
     }
 
     const { resources } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)
