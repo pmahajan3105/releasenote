@@ -13,7 +13,10 @@ import {
 
 // Protected routes that require authentication
 const protectedRoutes = [
+  '/dashboard',
+  '/onboarding',
   '/releases',
+  '/release-notes',
   '/settings',
   '/integrations',
   '/configuration',
@@ -83,23 +86,29 @@ export async function middleware(request: NextRequest) {
     )
   }
 
-  // Check for protected routes (including root dashboard)
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route)) || 
-                          pathname === '/'
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  const isRootRoute = pathname === '/'
   
-  if (isProtectedRoute) {
+  if (isProtectedRoute || isRootRoute) {
     try {
       const supabase = createMiddlewareClient({ req: request, res: response })
       const { data: { session } } = await supabase.auth.getSession()
 
-      if (!session) {
+      // Root is public, but we prefer to send authed users to the dashboard.
+      if (isRootRoute && session) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+
+      if (isProtectedRoute && !session) {
         const redirectUrl = new URL('/login', request.url)
         redirectUrl.searchParams.set('redirectTo', pathname)
         return NextResponse.redirect(redirectUrl)
       }
 
       // Add user context to response headers (for logging)
-      response.headers.set('X-User-ID', session.user.id)
+      if (session) {
+        response.headers.set('X-User-ID', session.user.id)
+      }
       
     } catch (error) {
       console.error('Middleware auth error:', error)
@@ -125,18 +134,21 @@ export async function middleware(request: NextRequest) {
     response.headers.set('X-API-Version', '1.0')
     response.headers.set('X-Request-ID', crypto.randomUUID())
     
-    // Validate Content-Type for POST/PUT requests
-    if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
-      const contentType = request.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
+    const isMultipartAllowedRoute =
+      pathname.startsWith('/api/organizations/') && pathname.endsWith('/upload-logo')
+
+    // Validate Content-Type for JSON endpoints (allow multipart for uploads)
+    if (['POST', 'PUT', 'PATCH'].includes(request.method) && !isMultipartAllowedRoute) {
+      const contentType = request.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
         return new NextResponse(
-          JSON.stringify({ 
-            error: 'Invalid Content-Type', 
-            message: 'Content-Type must be application/json' 
+          JSON.stringify({
+            error: 'Invalid Content-Type',
+            message: 'Content-Type must be application/json',
           }),
-          { 
+          {
             status: 400,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
           }
         )
       }
