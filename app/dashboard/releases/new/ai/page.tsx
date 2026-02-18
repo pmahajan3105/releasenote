@@ -5,12 +5,14 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '@/lib/store'
+import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { GitHubReleaseGenerator } from '@/components/features/GitHubReleaseGenerator'
 import { handleApiError } from '@/lib/error-handler-standard'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { slugify } from '@/lib/utils'
 
 // Define the Jira ticket type
 type JiraTicket = {
@@ -60,6 +62,7 @@ type ReleaseNotesFormData = z.infer<typeof releaseNotesSchema>
 
 // Renamed function to reflect its purpose
 export default function AIReleaseNotePage() {
+  const router = useRouter()
   const [selectedTickets, setSelectedTickets] = useState<string[]>([])
   const [tickets, setTickets] = useState<JiraTicket[]>([])
   const [activeTab, setActiveTab] = useState<'github' | 'jira'>('github')
@@ -263,25 +266,92 @@ export default function AIReleaseNotePage() {
   const generateReleaseNote = async () => {
     try {
       setIsGenerating(true)
-      const response = await fetch('/api/ai/generate', {
+      const formData = watch()
+      const selected = tickets.filter((ticket) => selectedTickets.includes(ticket.id))
+
+      if (!user) {
+        setError('User not authenticated')
+        return
+      }
+
+      if (!formData.title?.trim()) {
+        setError('Please enter a release notes title')
+        return
+      }
+
+      if (selected.length === 0) {
+        setError('Please select at least one ticket')
+        return
+      }
+
+      const promptTickets = selected.map((ticket) => ({
+        type: mapJiraIssueType(ticket.type),
+        title: `${ticket.key}: ${ticket.title}`,
+        description: ticket.description,
+        labels: [ticket.status, ticket.priority].filter(Boolean),
+      }))
+
+      const response = await fetch('/api/release-notes/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tickets: selectedTickets,
+          tickets: promptTickets,
+          tone: 'professional',
         }),
       })
 
       if (response.ok) {
         const result = await response.json()
-        setValue('description', result.content || '')
+        const generatedHtml = result.content as string | undefined
+        if (!generatedHtml) {
+          setError('AI generation returned empty content')
+          return
+        }
+
+        const slug = `${slugify(formData.title)}-${Date.now().toString(36)}`
+
+        const { data: draftNote, error: insertError } = await supabase
+          .from('release_notes')
+          .insert({
+            organization_id: user.id,
+            author_id: user.id,
+            title: formData.title,
+            slug,
+            status: 'draft',
+            content_html: generatedHtml,
+            content_markdown: '',
+            source_ticket_ids: selected.map((ticket) => ticket.key),
+          })
+          .select('id')
+          .single()
+
+        if (insertError) {
+          throw insertError
+        }
+
+        if (!draftNote?.id) {
+          throw new Error('Failed to create draft release note')
+        }
+
+        router.push(`/dashboard/releases/edit/${draftNote.id}`)
       }
     } catch (error) {
       console.error('Error generating release note:', error)
+      setError(error instanceof Error ? error.message : 'Failed to generate release note')
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const mapJiraIssueType = (issueType: string) => {
+    const normalized = issueType.toLowerCase()
+    if (normalized.includes('bug')) return 'bugfix'
+    if (normalized.includes('break')) return 'breaking'
+    if (normalized.includes('improve')) return 'improvement'
+    if (normalized.includes('feature') || normalized.includes('story') || normalized.includes('task')) return 'feature'
+    return 'improvement'
   }
 
   return (
