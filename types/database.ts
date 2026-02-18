@@ -328,6 +328,32 @@ export interface Database {
           updated_at?: string | null
         }
       }
+      oauth_states: {
+        Row: {
+          id: string
+          state: string
+          provider: 'github' | 'jira' | 'linear'
+          user_id: string
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          state: string
+          provider: 'github' | 'jira' | 'linear'
+          user_id: string
+          created_at?: string
+          expires_at: string
+        }
+        Update: {
+          id?: string
+          state?: string
+          provider?: 'github' | 'jira' | 'linear'
+          user_id?: string
+          created_at?: string
+          expires_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

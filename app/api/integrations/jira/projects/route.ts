@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
 import {
+  getJiraAccessToken,
   getJiraResources,
   isJiraIntegrationRecord,
   parseIntegerParam,
@@ -42,7 +43,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Jira integration not found' }, { status: 404 })
     }
     const integration = data
-    const resources = getJiraResources(integration.metadata)
+    const accessToken = getJiraAccessToken(integration)
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Jira access token not found' }, { status: 400 })
+    }
+
+    const resources = getJiraResources(integration.config ?? integration.metadata)
 
     // Determine which site to use
     const selectedSite = resolveJiraSite(resources, siteId)
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const projects = await jiraAPI.getProjects(integration.access_token, selectedSite.id, {
+      const projects = await jiraAPI.getProjects(accessToken, selectedSite.id, {
         maxResults,
         startAt,
         expand: ['description', 'lead', 'issueTypes', 'url', 'projectKeys']

@@ -6,6 +6,7 @@ import type {
   JiraProjectIssueType,
   JiraVersion,
 } from '@/lib/integrations/jira-client'
+import { getAccessTokenFromEncryptedCredentials } from '@/lib/integrations/credentials'
 export { parseCsvParam, parseIntegerParam } from '@/lib/integrations/route-utils'
 
 type JsonObject = Record<string, unknown>
@@ -17,8 +18,10 @@ interface JiraIntegrationMetadata {
 export interface JiraIntegrationRecord {
   id: string
   created_at: string
-  access_token: string
+  access_token?: string
+  encrypted_credentials?: unknown
   metadata?: JiraIntegrationMetadata | null
+  config?: JiraIntegrationMetadata | null
 }
 
 export interface TransformedJiraProject {
@@ -125,6 +128,19 @@ export function getJiraResources(metadata: JiraIntegrationRecord['metadata']): J
     }))
 }
 
+export function getJiraAccessToken(integration: JiraIntegrationRecord): string | null {
+  if (typeof integration.access_token === 'string' && integration.access_token) {
+    return integration.access_token
+  }
+
+  const encrypted = getAccessTokenFromEncryptedCredentials(integration.encrypted_credentials)
+  if (encrypted) {
+    return encrypted
+  }
+
+  return null
+}
+
 export function resolveJiraSite(
   resources: JiraAccessibleResource[],
   preferredSiteId: string | null
@@ -145,7 +161,14 @@ export function isJiraIntegrationRecord(value: unknown): value is JiraIntegratio
     return false
   }
 
-  if (typeof value.id !== 'string' || typeof value.created_at !== 'string' || typeof value.access_token !== 'string') {
+  if (typeof value.id !== 'string' || typeof value.created_at !== 'string') {
+    return false
+  }
+
+  const hasLegacyAccessToken = typeof value.access_token === 'string' && value.access_token.length > 0
+  const hasEncrypted = 'encrypted_credentials' in value && value.encrypted_credentials != null
+
+  if (!hasLegacyAccessToken && !hasEncrypted) {
     return false
   }
 

@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
 import {
+  getJiraAccessToken,
   getJiraResources,
   isJiraIntegrationRecord,
   parseCsvParam,
@@ -48,7 +49,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Jira integration not found' }, { status: 404 })
     }
     const integration = data
-    const resources = getJiraResources(integration.metadata)
+    const accessToken = getJiraAccessToken(integration)
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Jira access token not found' }, { status: 400 })
+    }
+
+    const resources = getJiraResources(integration.config ?? integration.metadata)
 
     const selectedSite = resolveJiraSite(resources, siteId)
     if (!selectedSite) {
@@ -60,7 +66,7 @@ export async function GET(request: NextRequest) {
 
       if (jql) {
         // Use custom JQL query
-        issues = await jiraAPI.searchIssues(integration.access_token, selectedSite.id, {
+        issues = await jiraAPI.searchIssues(accessToken, selectedSite.id, {
           jql,
           startAt,
           maxResults,
@@ -69,7 +75,7 @@ export async function GET(request: NextRequest) {
         })
       } else if (projectKey) {
         // Search by project with optional filters
-        issues = await jiraAPI.getProjectIssues(integration.access_token, selectedSite.id, projectKey, {
+        issues = await jiraAPI.getProjectIssues(accessToken, selectedSite.id, projectKey, {
           issueTypes,
           statuses,
           updatedSince,
@@ -82,7 +88,7 @@ export async function GET(request: NextRequest) {
           ? `updated >= "${updatedSince}" ORDER BY updated DESC`
           : 'updated >= -30d ORDER BY updated DESC'
           
-        issues = await jiraAPI.searchIssues(integration.access_token, selectedSite.id, {
+        issues = await jiraAPI.searchIssues(accessToken, selectedSite.id, {
           jql: defaultJql,
           startAt,
           maxResults,

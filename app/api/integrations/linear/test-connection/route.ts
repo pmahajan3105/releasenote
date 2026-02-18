@@ -217,8 +217,7 @@ export async function POST(_request: NextRequest) {
     await supabase
       .from('integrations')
       .update({ 
-        updated_at: new Date().toISOString(),
-        last_test_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', data.id)
 
@@ -229,7 +228,7 @@ export async function POST(_request: NextRequest) {
         id: data.id,
         type: 'linear',
         connected_at: data.created_at,
-        organization: getLinearOrganizationName(data.metadata)
+        organization: getLinearOrganizationName(data.config ?? data.metadata)
       },
       tests,
       summary: {

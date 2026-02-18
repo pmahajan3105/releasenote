@@ -1,23 +1,42 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { createOAuthState, persistOAuthState } from '@/lib/integrations/oauth-state'
+import type { Database } from '@/types/database'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
-  
-  // GitHub OAuth parameters for integration (not user auth)
-  const clientId = process.env.GITHUB_CLIENT_ID
-  const redirectUri = `${requestUrl.origin}/api/auth/github/callback`
-  const scopes = 'repo,user:email,read:user,read:org' // Scopes for repository access
-  
-  if (!clientId) {
-    return NextResponse.redirect(`${requestUrl.origin}/integrations/new?error=GitHub integration not configured`)
+
+  const supabase = createRouteHandlerClient<Database>({ cookies })
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) {
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirectTo', '/dashboard/integrations')
+    return NextResponse.redirect(redirectUrl)
   }
 
-  // Build GitHub OAuth URL for integration
+  const clientId = process.env.GITHUB_CLIENT_ID
+  const redirectUri = process.env.GITHUB_REDIRECT_URL || `${requestUrl.origin}/api/auth/github/callback`
+  const scopes = 'repo,user:email,read:user,read:org'
+
+  if (!clientId) {
+    const redirectUrl = new URL('/dashboard/integrations', request.url)
+    redirectUrl.searchParams.set('error', 'github_not_configured')
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  const state = createOAuthState()
+  await persistOAuthState(supabase, {
+    provider: 'github',
+    state,
+    userId: session.user.id,
+  })
+
   const githubOAuthUrl = new URL('https://github.com/login/oauth/authorize')
   githubOAuthUrl.searchParams.set('client_id', clientId)
   githubOAuthUrl.searchParams.set('redirect_uri', redirectUri)
   githubOAuthUrl.searchParams.set('scope', scopes)
-  githubOAuthUrl.searchParams.set('state', 'integration') // Mark as integration flow
+  githubOAuthUrl.searchParams.set('state', state)
 
   return NextResponse.redirect(githubOAuthUrl.toString())
-} 
+}

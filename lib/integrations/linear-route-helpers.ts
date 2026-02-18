@@ -1,4 +1,5 @@
 import { parseBooleanParam, parseEnumParam, parseIntegerParam } from '@/lib/integrations/route-utils'
+import { getAccessTokenFromEncryptedCredentials } from '@/lib/integrations/credentials'
 
 type JsonObject = Record<string, unknown>
 
@@ -8,6 +9,12 @@ export interface LinearIntegrationRecord {
   id: string
   created_at: string
   access_token?: string
+  encrypted_credentials?: unknown
+  config?: {
+    organization?: {
+      name?: string
+    }
+  } | null
   metadata?: {
     organization?: {
       name?: string
@@ -166,12 +173,17 @@ export function getLinearAccessToken(integration: LinearIntegrationRecord): stri
     return integration.access_token
   }
 
+  const encrypted = getAccessTokenFromEncryptedCredentials(integration.encrypted_credentials)
+  if (encrypted) {
+    return encrypted
+  }
+
   return null
 }
 
-export function getLinearOrganizationName(metadata: LinearIntegrationRecord['metadata']): string {
-  if (metadata && isObject(metadata.organization) && typeof metadata.organization.name === 'string') {
-    return metadata.organization.name
+export function getLinearOrganizationName(value: unknown): string {
+  if (isObject(value) && isObject(value.organization) && typeof value.organization.name === 'string') {
+    return value.organization.name
   }
 
   return 'Unknown Organization'

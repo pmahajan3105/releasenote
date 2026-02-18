@@ -245,8 +245,7 @@ export async function POST(_request: NextRequest) {
     await supabase
       .from('integrations')
       .update({ 
-        updated_at: new Date().toISOString(),
-        last_test_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', data.id)
 

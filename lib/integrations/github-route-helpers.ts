@@ -1,4 +1,5 @@
 import { parseEnumParam, parseIntegerParam } from '@/lib/integrations/route-utils'
+import { getAccessTokenFromEncryptedCredentials } from '@/lib/integrations/credentials'
 
 type JsonObject = Record<string, unknown>
 
@@ -6,6 +7,7 @@ export interface GitHubIntegrationRecord {
   id: string
   created_at: string
   access_token?: string
+  encrypted_credentials?: unknown
   config?: {
     access_token?: string
   } | null
@@ -44,6 +46,11 @@ export function getGitHubAccessToken(integration: GitHubIntegrationRecord): stri
 
   if (integration.config && typeof integration.config.access_token === 'string' && integration.config.access_token) {
     return integration.config.access_token
+  }
+
+  const encrypted = getAccessTokenFromEncryptedCredentials(integration.encrypted_credentials)
+  if (encrypted) {
+    return encrypted
   }
 
   return null
