@@ -206,20 +206,17 @@ export const useIntegrationsStore = create<IntegrationsState>()(
         connectIntegration: async (type: string, config: Record<string, unknown>) => {
           try {
             set({ isConnecting: true, error: null }, false, 'connectIntegrationStart')
-            const response = await fetch('/api/integrations', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ type, config })
-            })
-            
-            if (!response.ok) throw new Error('Failed to connect integration')
-            
-            const integration = await response.json()
-            get().addIntegration(integration)
-            get().setIntegrationStatus(type, { connected: true })
-            
-            set({ isConnecting: false }, false, 'connectIntegrationSuccess')
-            return integration
+            void config
+
+            set(
+              {
+                error: `Direct integration connect is no longer supported. Start OAuth at /api/auth/${type}.`,
+                isConnecting: false,
+              },
+              false,
+              'connectIntegrationUnsupported'
+            )
+            return null
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to connect integration'
             set({ error: errorMessage, isConnecting: false }, false, 'connectIntegrationError')
@@ -230,11 +227,13 @@ export const useIntegrationsStore = create<IntegrationsState>()(
         disconnectIntegration: async (id: string) => {
           try {
             set({ isDisconnecting: true, error: null }, false, 'disconnectIntegrationStart')
-            const response = await fetch(`/api/integrations/${id}`, {
-              method: 'DELETE'
-            })
-            
-            if (!response.ok) throw new Error('Failed to disconnect integration')
+            const supabase = createClientComponentClient()
+            const { error } = await supabase
+              .from('integrations')
+              .delete()
+              .eq('id', id)
+
+            if (error) throw error
             
             get().removeIntegration(id)
             set({ isDisconnecting: false }, false, 'disconnectIntegrationSuccess')
@@ -279,8 +278,8 @@ export const useIntegrationsStore = create<IntegrationsState>()(
             
             if (!response.ok) throw new Error('Failed to fetch GitHub repositories')
             
-            const repositories = await response.json()
-            set({ githubRepositories: repositories }, false, 'fetchGitHubRepositoriesSuccess')
+            const data = await response.json() as { repositories?: GitHubRepository[] }
+            set({ githubRepositories: data.repositories ?? [] }, false, 'fetchGitHubRepositoriesSuccess')
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch GitHub repositories'
             set({ error: errorMessage }, false, 'fetchGitHubRepositoriesError')
@@ -291,14 +290,18 @@ export const useIntegrationsStore = create<IntegrationsState>()(
         
         fetchGitHubCommits: async (owner: string, repo: string, since?: string) => {
           try {
-            const params = new URLSearchParams({ owner, repo })
+            const params = new URLSearchParams()
             if (since) params.append('since', since)
             
-            const response = await fetch(`/api/integrations/github/repositories/${owner}/${repo}/commits?${params}`)
+            const suffix = params.toString()
+            const response = await fetch(
+              `/api/integrations/github/repositories/${owner}/${repo}/commits${suffix ? `?${suffix}` : ''}`
+            )
             
             if (!response.ok) throw new Error('Failed to fetch GitHub commits')
             
-            return await response.json()
+            const data = await response.json() as { commits?: unknown[] }
+            return data.commits ?? []
           } catch (error) {
             console.error('Error fetching GitHub commits:', error)
             return []
@@ -307,14 +310,18 @@ export const useIntegrationsStore = create<IntegrationsState>()(
         
         fetchGitHubPullRequests: async (owner: string, repo: string, state?: string) => {
           try {
-            const params = new URLSearchParams({ owner, repo })
+            const params = new URLSearchParams()
             if (state) params.append('state', state)
             
-            const response = await fetch(`/api/integrations/github/repositories/${owner}/${repo}/pulls?${params}`)
+            const suffix = params.toString()
+            const response = await fetch(
+              `/api/integrations/github/repositories/${owner}/${repo}/pulls${suffix ? `?${suffix}` : ''}`
+            )
             
             if (!response.ok) throw new Error('Failed to fetch GitHub pull requests')
             
-            return await response.json()
+            const data = await response.json() as { pull_requests?: unknown[] }
+            return data.pull_requests ?? []
           } catch (error) {
             console.error('Error fetching GitHub pull requests:', error)
             return []
@@ -329,8 +336,8 @@ export const useIntegrationsStore = create<IntegrationsState>()(
             
             if (!response.ok) throw new Error('Failed to fetch Jira projects')
             
-            const projects = await response.json()
-            set({ jiraProjects: projects }, false, 'fetchJiraProjectsSuccess')
+            const data = await response.json() as { projects?: JiraProject[] }
+            set({ jiraProjects: data.projects ?? [] }, false, 'fetchJiraProjectsSuccess')
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch Jira projects'
             set({ error: errorMessage }, false, 'fetchJiraProjectsError')
@@ -348,7 +355,8 @@ export const useIntegrationsStore = create<IntegrationsState>()(
             
             if (!response.ok) throw new Error('Failed to fetch Jira issues')
             
-            return await response.json()
+            const data = await response.json() as { issues?: unknown[] }
+            return data.issues ?? []
           } catch (error) {
             console.error('Error fetching Jira issues:', error)
             return []
@@ -363,8 +371,8 @@ export const useIntegrationsStore = create<IntegrationsState>()(
             
             if (!response.ok) throw new Error('Failed to fetch Linear teams')
             
-            const teams = await response.json()
-            set({ linearTeams: teams }, false, 'fetchLinearTeamsSuccess')
+            const data = await response.json() as { teams?: LinearTeam[] }
+            set({ linearTeams: data.teams ?? [] }, false, 'fetchLinearTeamsSuccess')
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch Linear teams'
             set({ error: errorMessage }, false, 'fetchLinearTeamsError')
@@ -386,7 +394,8 @@ export const useIntegrationsStore = create<IntegrationsState>()(
             
             if (!response.ok) throw new Error('Failed to fetch Linear issues')
             
-            return await response.json()
+            const data = await response.json() as { issues?: unknown[] }
+            return data.issues ?? []
           } catch (error) {
             console.error('Error fetching Linear issues:', error)
             return []
