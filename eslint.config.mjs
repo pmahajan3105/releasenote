@@ -1,17 +1,8 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextCoreVitals from "eslint-config-next/core-web-vitals";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals"),
+  ...nextCoreVitals,
   {
     plugins: { '@typescript-eslint': tsPlugin },
     rules: {
@@ -27,6 +18,8 @@ const eslintConfig = [
       "react/no-unescaped-entities": "error",
       "@next/next/no-img-element": "error",
       "react-hooks/exhaustive-deps": "error",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/static-components": "off",
       "prefer-const": "error",
     },
   },
