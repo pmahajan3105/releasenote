@@ -163,7 +163,12 @@ function buildReleaseNotesSystemPrompt(data: {
 
 Return ONLY valid HTML (no Markdown). Do not wrap the output in code fences. Do not include <html>, <head>, or <body> tags.
 
-Write in a ${tone} tone. Make it skimmable and user-focused.`
+Write in a ${tone} tone. Make it skimmable and user-focused.
+
+Hard constraints:
+- Never invent features, timelines, metrics, or migration steps.
+- If source text is vague, use conservative wording ("improved stability", "updated workflow") without guessing.
+- Avoid mentioning internal IDs, ticket keys, branch names, and raw commit SHAs.`
 
   prompt += `
 
@@ -177,6 +182,8 @@ Required structure:
 
 Writing rules:
 - Each <li> should be one short sentence and describe the user benefit.
+- Prefer present tense and active voice.
+- Keep each bullet concise (ideally under ~24 words).
 - Remove internal IDs (e.g., ABC-123, commit SHAs) unless they are clearly user-facing.
 - Avoid implementation details, stack names, or internal systems.
 - If an item has little context, be conservative and do not invent details.`
