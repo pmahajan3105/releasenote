@@ -1,10 +1,24 @@
 import { createBrowserClient, createServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { NextRequest, NextResponse } from 'next/server'
-import { cookies as nextCookies } from 'next/headers'
 import type { Database } from '@/types/database'
 
-type CookieGetter = typeof nextCookies
+type CookieOptions = {
+  domain?: string
+  expires?: Date
+  httpOnly?: boolean
+  maxAge?: number
+  path?: string
+  sameSite?: 'lax' | 'strict' | 'none' | boolean
+  secure?: boolean
+}
+
+type CookieStore = {
+  getAll: () => Array<{ name: string; value: string }>
+  set?: (name: string, value: string, options?: CookieOptions) => void
+}
+
+type CookieGetter = () => CookieStore | Promise<CookieStore>
 
 let browserClient: SupabaseClient<Database> | null = null
 
@@ -19,15 +33,22 @@ function getSupabaseEnv() {
   return { supabaseUrl, supabaseAnonKey }
 }
 
-function createServerSupabaseClient<Db = Database>(cookieGetter: CookieGetter = nextCookies) {
+function createServerSupabaseClient<Db = Database>(cookieGetter: CookieGetter) {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv()
 
   return createServerClient<Db>(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      getAll: async () => (await cookieGetter()).getAll(),
+      getAll: async () => {
+        const cookieStore = await cookieGetter()
+        return cookieStore.getAll()
+      },
       setAll: async (cookiesToSet) => {
         try {
           const cookieStore = await cookieGetter()
+          if (!cookieStore.set) {
+            return
+          }
+
           for (const cookie of cookiesToSet) {
             cookieStore.set(cookie.name, cookie.value, cookie.options)
           }

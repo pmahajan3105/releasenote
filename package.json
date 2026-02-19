@@ -8,15 +8,16 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
+    "build:turbo": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint app components lib middleware.ts --ext .js,.jsx,.ts,.tsx",
+    "lint": "eslint app components lib proxy.ts --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:new": "jest __tests__/ --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "vercel-build": "next build",
+    "vercel-build": "next build --webpack",
     "audit": "npm audit --audit-level=moderate"
   },
   "dependencies": {
