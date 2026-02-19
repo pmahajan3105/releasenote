@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function LegacyCreateReleaseNotePage() {
-  redirect('/dashboard/releases/start')
+  redirect('/dashboard/releases/new')
 }

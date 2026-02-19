@@ -5,6 +5,7 @@ import {
   ChevronDownIcon,
   FileHeartIcon,
   LifeBuoyIcon,
+  LinkIcon,
   LogOutIcon,
   SearchIcon,
   SettingsIcon,
@@ -47,8 +48,8 @@ export const Sidebar = (): React.JSX.Element | null => {
   }
 
   const isActive = (path: string) => {
-    if (path === '/dashboard' && (pathname === '/' || pathname === '/dashboard')) {
-      return true
+    if (path === '/dashboard') {
+      return pathname === '/dashboard'
     }
     return pathname === path || pathname.startsWith(path)
   }
@@ -69,10 +70,16 @@ export const Sidebar = (): React.JSX.Element | null => {
       active: isActive("/dashboard/releases") || isActive("/release-notes"),
       subItems: [
         { label: "View All", path: "/dashboard/releases" },
-        { label: "Create New", path: "/dashboard/releases/new/ai" },
+        { label: "Create New", path: "/dashboard/releases/new" },
         { label: "From Template", path: "/dashboard/releases/new/template" },
         { label: "From Scratch", path: "/dashboard/releases/new/scratch" },
       ],
+    },
+    {
+      icon: <LinkIcon className="w-6 h-6" />,
+      label: "Integrations",
+      path: "/dashboard/integrations",
+      active: isActive("/dashboard/integrations"),
     },
     {
       icon: <SettingsIcon className="w-6 h-6" />,

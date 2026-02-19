@@ -109,7 +109,7 @@ export default function ReleasesPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Release Notes</h1>
                     <p className="text-gray-600 mt-1">Manage and publish your release notes</p>
                 </div>
-                <Link href="/dashboard/releases/start">
+                <Link href="/dashboard/releases/new">
                     <Button className="bg-blue-600 hover:bg-blue-700">
                         <PlusIcon className="w-4 h-4 mr-2" />
                         Create New
@@ -176,7 +176,7 @@ export default function ReleasesPage() {
                                             : 'Create your first release note to start sharing updates.'
                                     }
                                     action={
-                                        <Link href="/dashboard/releases/start">
+                                        <Link href="/dashboard/releases/new">
                                             <Button className="bg-blue-600 hover:bg-blue-700">
                                                 <PlusIcon className="w-4 h-4 mr-2" />
                                                 Create Release Note
