@@ -39,9 +39,27 @@ describe('SearchFilter Component', () => {
     onFilter: jest.fn(),
     className: ''
   }
+  const originalConsoleError = console.error
+  let consoleErrorSpy: jest.SpyInstance
 
   beforeEach(() => {
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      const [firstArg] = args
+      if (
+        typeof firstArg === 'string' &&
+        (firstArg.includes('not wrapped in act') || firstArg.includes('suspended inside an `act` scope'))
+      ) {
+        return
+      }
+
+      originalConsoleError(...(args as Parameters<typeof console.error>))
+    })
+
     jest.clearAllMocks()
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
   })
 
   describe('Rendering', () => {
