@@ -40,6 +40,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
@@ -59,6 +60,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
@@ -80,6 +82,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
@@ -124,6 +127,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
@@ -174,6 +178,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test Title</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
@@ -189,6 +194,10 @@ describe('Dialog Components', () => {
       render(
         <Dialog defaultOpen>
           <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Footer Dialog</DialogTitle>
+              <DialogDescription>Footer dialog description</DialogDescription>
+            </DialogHeader>
             <DialogFooter>
               <button>Cancel</button>
               <button>Save</button>
@@ -205,6 +214,10 @@ describe('Dialog Components', () => {
       render(
         <Dialog defaultOpen>
           <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Footer Layout Dialog</DialogTitle>
+              <DialogDescription>Footer layout dialog description</DialogDescription>
+            </DialogHeader>
             <DialogFooter data-testid="dialog-footer">
               <button>Cancel</button>
             </DialogFooter>
@@ -227,6 +240,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
             <input placeholder="First input" />
             <input placeholder="Second input" />
@@ -248,6 +262,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Test Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
             <input placeholder="First input" />
             <input placeholder="Second input" />
@@ -301,6 +316,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Controlled Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
@@ -317,6 +333,7 @@ describe('Dialog Components', () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Controlled Dialog</DialogTitle>
+              <DialogDescription>Test dialog description</DialogDescription>
             </DialogHeader>
           </DialogContent>
         </Dialog>
