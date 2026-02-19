@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { generateSlug } from '@/lib/utils'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 /**
  * GET /api/release-notes/[id] - Get single release note
@@ -105,10 +106,17 @@ export async function PUT(
     ]
 
     // Only update provided fields
-    allowedFields.forEach(field => {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field]
+    allowedFields.forEach((field) => {
+      if (body[field] === undefined) {
+        return
       }
+
+      if (field === 'content_html') {
+        updateData[field] = typeof body[field] === 'string' ? sanitizeHtml(body[field]) : ''
+        return
+      }
+
+      updateData[field] = body[field]
     })
 
     // Update slug if title changed
