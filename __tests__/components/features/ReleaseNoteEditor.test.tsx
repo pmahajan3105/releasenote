@@ -31,7 +31,7 @@ jest.mock('next/dynamic', () => {
 })
 
 // Mock Supabase
-jest.mock('@supabase/auth-helpers-nextjs', () => ({
+jest.mock('@/lib/supabase/ssr', () => ({
   createClientComponentClient: jest.fn(() => ({
     storage: {
       from: jest.fn(() => ({

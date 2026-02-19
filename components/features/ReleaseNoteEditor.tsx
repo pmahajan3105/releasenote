@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useRef, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 // Dynamically import react-quill to avoid SSR issues
 import dynamic from 'next/dynamic'
 import type { ReactQuillProps } from 'react-quill'

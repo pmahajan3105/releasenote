@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
+import type { Database } from '@/types/database'
 
-type RouteSupabaseClient = ReturnType<typeof createRouteHandlerClient<Record<string, unknown>, 'public'>>
+type RouteSupabaseClient = ReturnType<typeof createRouteHandlerClient<Database>>
 
 interface SSLCertificateRecord {
   id: string | number

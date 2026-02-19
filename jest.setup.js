@@ -18,7 +18,7 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
-jest.mock('@supabase/auth-helpers-nextjs', () => {
+jest.mock('@/lib/supabase/ssr', () => {
   const queryBuilder = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),

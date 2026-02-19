@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { consumeOAuthState } from '@/lib/integrations/oauth-state'
 import { encryptCredentials } from '@/lib/integrations/credentials'

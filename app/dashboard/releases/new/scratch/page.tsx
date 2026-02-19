@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import { useAuthStore } from '@/lib/store/use-auth'
 import { slugify } from '@/lib/utils' // Import slugify
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'

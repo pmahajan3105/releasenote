@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 import { config } from '@/lib/config'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 
 let resend: Resend | null = null
