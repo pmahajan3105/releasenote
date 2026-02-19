@@ -34,3 +34,6 @@ next-env.d.ts
 
 # vercel environment variables
 .env.vercel
+
+# supabase local artifacts
+supabase/.temp/
