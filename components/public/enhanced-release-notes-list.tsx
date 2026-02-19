@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SearchFilter } from './search-filter'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { CalendarIcon, EyeIcon, TagIcon } from 'lucide-react'
 
 interface ReleaseNote {
@@ -36,222 +35,175 @@ interface EnhancedReleaseNotesListProps {
   orgSlug: string
 }
 
+type GroupedNotes = {
+  month: string
+  notes: ReleaseNote[]
+}
+
+function extractTextPreview(html: string, maxLength = 220): string {
+  if (!html) return ''
+  const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, maxLength).trimEnd()}…`
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function monthLabel(value: string): string {
+  return new Date(value).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export function EnhancedReleaseNotesList({
   organization,
   releaseNotes,
-  orgSlug
+  orgSlug,
 }: EnhancedReleaseNotesListProps) {
   const [filteredNotes, setFilteredNotes] = useState<ReleaseNote[]>(releaseNotes)
-  
-  const brandColor = organization.brand_color || '#7F56D9'
+  const brandColor = organization.brand_color || '#1062fe'
 
-  const extractTextPreview = (html: string, maxLength: number = 160): string => {
-    if (!html) return ''
-    const text = html.replace(/<[^>]*>/g, '').trim()
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength).trim() + '...'
-  }
+  const groupedNotes = useMemo<GroupedNotes[]>(() => {
+    const map = new Map<string, ReleaseNote[]>()
+    for (const note of filteredNotes) {
+      const key = monthLabel(note.published_at)
+      const current = map.get(key) ?? []
+      current.push(note)
+      map.set(key, current)
+    }
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
-  const getCategoryColor = (category: string): string => {
-    // Generate consistent colors for categories
-    const colors = [
-      'bg-blue-100 text-blue-800',
-      'bg-green-100 text-green-800', 
-      'bg-purple-100 text-purple-800',
-      'bg-orange-100 text-orange-800',
-      'bg-pink-100 text-pink-800',
-      'bg-indigo-100 text-indigo-800'
-    ]
-    
-    const hash = category.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0)
-      return a & a
-    }, 0)
-    
-    return colors[Math.abs(hash) % colors.length]
-  }
+    return [...map.entries()].map(([month, notes]) => ({
+      month,
+      notes,
+    }))
+  }, [filteredNotes])
 
   return (
-    <div 
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 md:py-12 px-4 sm:px-6 lg:px-8 release-notes-container"
+    <div
+      className="release-notes-container min-h-screen px-4 py-8 sm:px-6 sm:py-10 lg:px-8"
       style={{
+        background:
+          'radial-gradient(1200px 700px at 10% -20%, rgba(16, 98, 254, 0.1), transparent 60%), #f6f8fc',
         '--brand-color': brandColor,
-        '--brand-color-hover': `${brandColor}dd`,
       } as React.CSSProperties}
     >
-      {/* Inject Custom CSS if enabled */}
       {organization.custom_css_enabled && organization.custom_css && (
         <style dangerouslySetInnerHTML={{ __html: organization.custom_css }} />
       )}
-      <div className="max-w-6xl mx-auto">
-        {/* Organization Header */}
-        <header className="text-center mb-8 sm:mb-10 md:mb-12">
-          <div className="flex justify-center mb-4 sm:mb-6">
+
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-8 rounded-2xl border border-[#e4e7ec] bg-white px-6 py-8 shadow-sm sm:px-8">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <Image
               src={organization.logo_url || '/branding/org-logo-placeholder.svg'}
               alt={`${organization.name} logo`}
-              width={60}
-              height={60}
-              className="rounded-full sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-700 object-cover"
+              width={64}
+              height={64}
+              className="rounded-xl border border-[#eaecf0] bg-[#f9fafb] object-cover"
             />
+
+            <div>
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-[#101828] sm:text-4xl">
+                {organization.name}
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#475467] sm:text-base">
+                {organization.description || 'Product updates, improvements, and fixes published by this organization.'}
+              </p>
+            </div>
           </div>
-          
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-2">
-            {organization.name}
-          </h1>
-          
-          {organization.description && (
-            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed px-4">
-              {organization.description}
-            </p>
-          )}
         </header>
 
-        {/* Search and Filters - Mobile Optimized */}
-        <div className="mb-6 md:mb-8 px-2 sm:px-0">
-          <SearchFilter
-            releaseNotes={releaseNotes}
-            onFilter={setFilteredNotes}
-            brandColor={brandColor}
-          />
-        </div>
+        <section className="mb-6">
+          <SearchFilter releaseNotes={releaseNotes} onFilter={setFilteredNotes} brandColor={brandColor} />
+        </section>
 
-        {/* Release Notes Grid - Mobile Optimized */}
         {filteredNotes.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <div className="mb-4">
-              <CalendarIcon className="w-12 h-12 md:w-16 md:h-16 text-gray-300 mx-auto" />
-            </div>
-            <h3 className="text-lg md:text-xl font-semibold text-gray-500 dark:text-gray-400 mb-2">
-              No release notes found
-            </h3>
-            <p className="text-sm md:text-base text-gray-400 dark:text-gray-500 max-w-sm mx-auto">
-              {releaseNotes.length === 0 
-                ? `${organization.name} hasn't published any release notes yet.`
-                : 'Try adjusting your search or filter criteria.'
-              }
+          <section className="rounded-xl border border-dashed border-[#d0d5dd] bg-white px-6 py-14 text-center">
+            <CalendarIcon className="mx-auto mb-3 h-10 w-10 text-[#98a2b3]" />
+            <h2 className="text-lg font-semibold text-[#101828]">No release notes found</h2>
+            <p className="mt-2 text-sm text-[#667085]">
+              {releaseNotes.length === 0
+                ? `${organization.name} has not published release notes yet.`
+                : 'Try a different search term or remove filters.'}
             </p>
-          </div>
+          </section>
         ) : (
-          <div className="grid gap-4 sm:gap-6 md:gap-8 lg:grid-cols-2">
-            {filteredNotes.map((note) => (
-              <Card
-                key={note.id}
-                className="bg-white dark:bg-gray-800 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group release-note-card mx-2 sm:mx-0"
-              >
-                <CardContent className="p-0">
-                  <article className="h-full flex flex-col">
-                    {/* Featured Image */}
-                    {note.featured_image_url && (
-                      <div className="relative h-40 sm:h-48 overflow-hidden">
-                        <Image
-                          src={note.featured_image_url}
-                          alt={`${note.title} featured image`}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, 50vw"
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="p-4 sm:p-6 flex-1 flex flex-col">
-                      {/* Category and Tags */}
-                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-3">
-                        {note.category && (
-                          <Badge 
-                            variant="secondary" 
-                            className={`text-xs ${getCategoryColor(note.category)}`}
-                          >
-                            {note.category}
-                          </Badge>
-                        )}
-                        
-                        {note.tags && note.tags.slice(0, 2).map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            <TagIcon className="w-3 h-3 mr-1" />
-                            {tag}
-                          </Badge>
-                        ))}
-                        
-                        {note.tags && note.tags.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{note.tags.length - 2} more
-                          </Badge>
-                        )}
-                      </div>
+          <section className="space-y-8">
+            {groupedNotes.map((group) => (
+              <div key={group.month} className="space-y-4">
+                <h2 className="font-display text-xl font-semibold text-[#101828]">{group.month}</h2>
 
-                      {/* Title */}
-                      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2 group-hover:text-opacity-80 transition-colors release-note-title leading-tight">
-                        <Link
-                          href={`/notes/${orgSlug}/${note.slug}`}
-                          className="transition-colors hover:opacity-80 touch-none"
-                          style={{ color: 'var(--brand-color)' }}
-                        >
-                          {note.title}
-                        </Link>
-                      </h2>
+                <div className="space-y-4">
+                  {group.notes.map((note) => (
+                    <article
+                      key={note.id}
+                      className="rounded-xl border border-[#e4e7ec] bg-white px-5 py-5 shadow-sm transition-shadow hover:shadow-md sm:px-6"
+                    >
+                      <div className="grid gap-4 sm:grid-cols-[140px_1fr] sm:gap-6">
+                        <div className="sm:border-r sm:border-[#eaecf0] sm:pr-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#667085]">Published</p>
+                          <p className="mt-1 text-sm font-medium text-[#101828]">{formatDate(note.published_at)}</p>
 
-                      {/* Excerpt */}
-                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4 flex-1 line-clamp-3 release-note-content leading-relaxed">
-                        {note.excerpt || extractTextPreview(note.content_html || '')}
-                      </p>
-
-                      {/* Meta Information */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 pt-3 sm:pt-4 border-t border-gray-100 dark:border-gray-700 release-note-meta">
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                            <span className="truncate">{formatDate(note.published_at)}</span>
-                          </div>
-                          
-                          {note.views && note.views > 0 && (
-                            <div className="flex items-center gap-1">
-                              <EyeIcon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                              <span>{note.views.toLocaleString()}</span>
-                            </div>
+                          {(note.views ?? 0) > 0 && (
+                            <p className="mt-3 flex items-center gap-1 text-xs text-[#667085]">
+                              <EyeIcon className="h-3.5 w-3.5" />
+                              {note.views?.toLocaleString()} views
+                            </p>
                           )}
                         </div>
 
-                        <Link
-                          href={`/notes/${orgSlug}/${note.slug}`}
-                          className="font-medium transition-colors hover:opacity-80 touch-none text-left sm:text-right"
-                          style={{ color: 'var(--brand-color)' }}
-                        >
-                          Read more →
-                        </Link>
+                        <div>
+                          <h3 className="font-display text-xl font-semibold leading-tight text-[#101828]">
+                            <Link
+                              href={`/notes/${orgSlug}/${note.slug}`}
+                              className="hover:opacity-80"
+                              style={{ color: 'var(--brand-color)' }}
+                            >
+                              {note.title}
+                            </Link>
+                          </h3>
+
+                          <p className="mt-3 text-sm leading-6 text-[#475467] sm:text-base">
+                            {note.excerpt || extractTextPreview(note.content_html || '')}
+                          </p>
+
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            {note.category && (
+                              <Badge variant="outline" className="border-[#d0d5dd] bg-[#f9fafb] text-[#344054]">
+                                {note.category}
+                              </Badge>
+                            )}
+
+                            {note.tags?.slice(0, 3).map((tag) => (
+                              <Badge key={tag} variant="secondary" className="bg-[#f2f4f7] text-[#344054]">
+                                <TagIcon className="mr-1 h-3 w-3" />
+                                {tag}
+                              </Badge>
+                            ))}
+
+                            {note.tags && note.tags.length > 3 && (
+                              <Badge variant="outline">+{note.tags.length - 3} more</Badge>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                </CardContent>
-              </Card>
+                    </article>
+                  ))}
+                </div>
+              </div>
             ))}
-          </div>
+          </section>
         )}
 
-        {/* Load More / Pagination Placeholder */}
-        {filteredNotes.length > 0 && filteredNotes.length === releaseNotes.length && releaseNotes.length >= 50 && (
-          <div className="text-center mt-8 sm:mt-12 px-4">
-            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-              Showing latest 50 release notes
-            </p>
-          </div>
-        )}
-
-        {/* Footer */}
-        <footer className="mt-16 sm:mt-20 text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm border-t border-gray-200 dark:border-gray-700 pt-6 sm:pt-8 px-4">
-          <p>Powered by <span className="font-medium">ReleaseNoteAI</span></p>
+        <footer className="mt-14 border-t border-[#e4e7ec] pt-6 text-center text-xs text-[#667085] sm:text-sm">
+          Powered by <span className="font-semibold">ReleaseNoteAI</span>
         </footer>
       </div>
     </div>

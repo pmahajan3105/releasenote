@@ -3,27 +3,41 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --surface-0: #f4f6fb;
+  --surface-1: #ffffff;
+  --surface-2: #f9fafb;
+  --text-strong: #101828;
+  --text-muted: #667085;
+  --border-subtle: #e4e7ec;
+  --brand-500: #1062fe;
+  --brand-600: #0b4ed0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+  color: var(--text-strong);
+  background:
+    radial-gradient(1200px 600px at 10% -20%, rgba(16, 98, 254, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(10, 149, 255, 0.08), transparent 60%),
+    var(--surface-0);
+}
+
+a {
+  color: var(--brand-500);
+}
+
+a:hover {
+  color: var(--brand-600);
 }
 
 /* TipTap Editor Callout Styles */

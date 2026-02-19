@@ -160,65 +160,64 @@ export default async function PublicReleaseNotePage({ params }: Props) {
   const sanitizedHtml = sanitizeHtml(note.content_html || '')
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <article className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+    <div
+      className="min-h-screen px-4 py-10 sm:px-6 lg:px-8"
+      style={{
+        background:
+          'radial-gradient(1200px 700px at 10% -20%, rgba(16, 98, 254, 0.1), transparent 60%), #f6f8fc',
+      }}
+    >
+      <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-[#e4e7ec] bg-white shadow-sm">
         {/* Optional Cover Image */}
         {note.featured_image_url && (
-           <div className="w-full h-64 relative">
-            <Image 
-              src={note.featured_image_url} 
-              alt={`${note.title} featured image`} 
+          <div className="relative h-72 w-full">
+            <Image
+              src={note.featured_image_url}
+              alt={`${note.title} featured image`}
               fill
               style={{ objectFit: 'cover' }}
-              priority // Prioritize loading cover image
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              priority
+              sizes="(max-width: 768px) 100vw, 1024px"
             />
           </div>
         )}
 
         <div className="px-6 py-8 sm:px-10">
-          {/* Optional Org Header */}
           {(organization.name || organization.logo_url) && (
-             <div className="mb-6 flex items-center space-x-3">
-                {organization.logo_url && (
-                    <Image 
-                      src={organization.logo_url} 
-                      alt={`${organization.name} Logo`} 
-                      width={UI_CONSTANTS.LOGO_SIZE} 
-                      height={UI_CONSTANTS.LOGO_SIZE} 
-                      className="rounded-full" 
-                    />
-                )}
-                {organization.name && (
-                    <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">{organization.name}</span>
-                )}
+            <div className="mb-6 flex items-center space-x-3 border-b border-[#eaecf0] pb-5">
+              {organization.logo_url && (
+                <Image
+                  src={organization.logo_url}
+                  alt={`${organization.name} Logo`}
+                  width={UI_CONSTANTS.LOGO_SIZE}
+                  height={UI_CONSTANTS.LOGO_SIZE}
+                  className="rounded-full"
+                />
+              )}
+              {organization.name && <span className="text-lg font-semibold text-[#344054]">{organization.name}</span>}
             </div>
           )}
 
-          {/* Title */}
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="font-display mb-2 text-3xl font-semibold tracking-tight text-[#101828] sm:text-4xl">
             {note.title}
           </h1>
 
-          {/* Publish Date */}
           {publishedDate && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
+            <p className="mb-8 text-sm text-[#667085]">
               Published on {publishedDate.toLocaleDateString('en-US', DATE_FORMAT_OPTIONS)}
             </p>
           )}
 
-          {/* Content Area */}
-          <div 
-            className="prose prose-lg dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-primary-600 hover:prose-a:text-primary-500"
+          <div
+            className="prose prose-lg max-w-none prose-img:rounded-lg prose-a:text-[#1062fe] hover:prose-a:text-[#0b4ed0]"
             dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
           />
         </div>
       </article>
 
-      {/* Optional Footer */}
-      <footer className="max-w-3xl mx-auto mt-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-        Powered by ReleaseNoteAI {/* Or your app name/link */}
+      <footer className="mx-auto mt-8 max-w-4xl text-center text-sm text-[#667085]">
+        Powered by ReleaseNoteAI
       </footer>
     </div>
   )
-} 
+}
