@@ -4,12 +4,11 @@ import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@/lib/supabase/ssr'
-import { EyeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, ExclamationTriangleIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RichTextEditor } from '@/components/editor/rich-text-editor'
-import { ReleaseNotePreview } from '@/components/editor/release-note-preview'
 import { toast } from '@/lib/toast'
 
 // Assuming a type for your release note data
@@ -45,7 +44,7 @@ export default function EditReleasePage() {
   const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null)
   const [isUploadingFeatured, setIsUploadingFeatured] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [showPreview, setShowPreview] = useState(false)
+  const [viewMode, setViewMode] = useState<'editor' | 'split' | 'preview'>('editor')
   const [organization, setOrganization] = useState<Organization | null>(null)
   const releaseNoteId = params.id
   const supabase = createClientComponentClient()
@@ -227,26 +226,53 @@ export default function EditReleasePage() {
     return <div className="p-6">Loading editor...</div>
   }
 
-  // Show preview if enabled
-  if (showPreview) {
+  const renderInlinePreview = () => {
     return (
-      <div className="min-h-screen">
-        <div className="fixed top-4 right-4 z-50">
-          <Button
-            variant="outline"
-            onClick={() => setShowPreview(false)}
-            className="bg-white shadow-lg"
-          >
-            Back to Editor
-          </Button>
+      <div className="rounded-lg border border-[#e4e7ec] bg-white p-5 shadow-sm">
+        {(organization?.name || organization?.logo_url) && (
+          <div className="mb-4 flex items-center gap-3 border-b border-[#eaecf0] pb-4">
+            {organization?.logo_url ? (
+              <Image
+                src={organization.logo_url}
+                alt={`${organization.name} logo`}
+                width={36}
+                height={36}
+                className="rounded-full"
+              />
+            ) : null}
+            <p className="text-sm font-semibold text-[#344054]">{organization?.name}</p>
+          </div>
+        )}
+
+        {featuredImageUrl ? (
+          <div className="mb-4 overflow-hidden rounded-md border border-[#eaecf0]">
+            <Image
+              src={featuredImageUrl}
+              alt={`${title} featured`}
+              width={1024}
+              height={480}
+              unoptimized
+              className="h-52 w-full object-cover"
+            />
+          </div>
+        ) : null}
+
+        <h2 className="text-2xl font-bold text-[#101828]">{title || 'Untitled Release Note'}</h2>
+        <div className="mt-1 text-sm text-[#667085]">
+          {version ? <span className="mr-3">Version {version}</span> : null}
+          <span>
+            Preview date:{' '}
+            {new Date(note?.published_at || Date.now()).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </span>
         </div>
-        <ReleaseNotePreview
-          title={title}
-          content={content}
-          version={version}
-          featuredImageUrl={featuredImageUrl}
-          organization={organization ?? undefined}
-          publishedAt={note?.published_at}
+
+        <div
+          className="prose prose-sm mt-6 max-w-none rounded-md border border-[#eaecf0] p-4"
+          dangerouslySetInnerHTML={{ __html: content || '<p>No content yet.</p>' }}
         />
       </div>
     )
@@ -384,39 +410,73 @@ export default function EditReleasePage() {
             <label htmlFor="content" className="block text-sm font-medium mb-2">
               Content
             </label>
-            <RichTextEditor
-              content={contentJson ?? content}
-              onChange={(newContent) => {
-                setContent(newContent)
-                // Clear validation errors when user starts typing
-                if (validationErrors.length > 0) {
-                  setValidationErrors([])
-                }
-              }}
-              onChangeJson={setContentJson}
-              placeholder="Release note content"
-            />
+
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant={viewMode === 'editor' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('editor')}
+              >
+                <PencilSquareIcon className="mr-1 h-4 w-4" />
+                Editor
+              </Button>
+              <Button
+                type="button"
+                variant={viewMode === 'split' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('split')}
+              >
+                Split
+              </Button>
+              <Button
+                type="button"
+                variant={viewMode === 'preview' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('preview')}
+              >
+                <EyeIcon className="mr-1 h-4 w-4" />
+                Preview
+              </Button>
+            </div>
+
+            <div className={viewMode === 'split' ? 'grid gap-4 lg:grid-cols-2' : ''}>
+              {viewMode !== 'preview' && (
+                <RichTextEditor
+                  content={contentJson ?? content}
+                  onChange={(newContent) => {
+                    setContent(newContent)
+                    // Clear validation errors when user starts typing
+                    if (validationErrors.length > 0) {
+                      setValidationErrors([])
+                    }
+                  }}
+                  onChangeJson={setContentJson}
+                  onSaveShortcut={() => {
+                    void handleSave()
+                  }}
+                  onPublishShortcut={() => setViewMode('preview')}
+                  placeholder="Release note content"
+                />
+              )}
+
+              {(viewMode === 'split' || viewMode === 'preview') && renderInlinePreview()}
+            </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="sticky bottom-3 z-10 rounded-lg border border-[#e4e7ec] bg-white/95 p-3 backdrop-blur">
+            <div className="flex flex-wrap gap-2">
             <Button onClick={handleSave} disabled={loading}>
               {loading ? 'Saving...' : 'Apply Changes'}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                // Run validation before showing preview
-                validateReleaseNote()
-                setShowPreview(true)
-              }}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => setViewMode('preview')} disabled={loading}>
               <EyeIcon className="w-4 h-4 mr-2" />
-              Preview Public Page
+              Preview
             </Button>
             <Button variant="outline" onClick={() => router.push('/dashboard/releases')}>
               Cancel
             </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
