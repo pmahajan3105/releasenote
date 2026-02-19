@@ -1,7 +1,8 @@
 import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { mockFetchImpl } from './test-utils'
+import { rest } from 'msw'
 import SettingsPageComponent from '@/app/dashboard/settings/SettingsPageComponent'
+import { server } from '@/__tests__/msw/server'
 
 
 jest.mock('@/lib/store', () => ({
@@ -13,24 +14,39 @@ jest.mock('@/lib/store', () => ({
 }))
 
 // --- TESTS ---
+let updatedDomain: string | null = null
+
 beforeEach(() => {
-  global.fetch = jest.fn((...args) =>
-    mockFetchImpl({
-      '/api/organizations/org1/domain': () => ({ ok: true, body: { custom_domain: 'custom.example.com', public_portal_url: 'https://public.example.com' } }),
-      '/api/organizations/org1': () => ({ ok: true, body: { logo_url: null, favicon_url: null, settings: { default_template_id: null } } }),
-      '/api/templates': () => ({ ok: true, body: { templates: [] } }),
-      catchAll: (_opts: unknown, url?: string) => ({
-        ok: false,
-        body: { error: `Unhandled fetch: ${url}` },
-        status: 404,
-        statusText: 'Not Found'
-      })
-    })(args[0], args[1]) as ReturnType<typeof fetch>
-  ) as jest.MockedFunction<typeof fetch>
+  updatedDomain = null
+  server.use(
+    rest.get('/api/organizations/org1/domain', (_req, res, ctx) =>
+      res(
+        ctx.status(200),
+        ctx.json({
+          custom_domain: 'custom.example.com',
+          public_portal_url: 'https://public.example.com',
+        })
+      )
+    ),
+    rest.put('/api/organizations/org1/domain', async (req, res, ctx) => {
+      const body = (await req.json().catch(() => ({}))) as { domain?: string }
+      updatedDomain = body.domain ?? null
+      return res(ctx.status(200), ctx.json({ success: true }))
+    }),
+    rest.get('/api/organizations/org1', (_req, res, ctx) =>
+      res(
+        ctx.status(200),
+        ctx.json({
+          logo_url: null,
+          favicon_url: null,
+          settings: { default_template_id: null },
+        })
+      )
+    ),
+    rest.get('/api/templates', (_req, res, ctx) => res(ctx.status(200), ctx.json({ templates: [] })))
+  )
 })
-afterEach(() => {
-  jest.resetAllMocks()
-})
+
 describe('SettingsPage integration', () => {
   it('renders Domain Settings section and loads data', async () => {
     render(<SettingsPageComponent />)
@@ -46,29 +62,14 @@ describe('SettingsPage integration', () => {
     fireEvent.change(input, { target: { value: 'mydomain.com' } })
     const button = screen.getByText(/Save Domain/i)
     fireEvent.click(button)
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/organizations/org1/domain'),
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ domain: 'mydomain.com' })
-      })
-    ))
+    await waitFor(() => expect(updatedDomain).toBe('mydomain.com'))
   })
 
   it('shows error if domain API fails', async () => {
-    ;(global.fetch as jest.MockedFunction<typeof fetch>).mockImplementation(
-      (...args) =>
-        mockFetchImpl({
-          '/api/organizations/org1/domain': () => ({ ok: false, body: { error: 'fail' }, status: 500 }),
-          '/api/organizations/org1': () => ({ ok: true, body: { logo_url: null, favicon_url: null, settings: { default_template_id: null } } }),
-          '/api/templates': () => ({ ok: true, body: { templates: [] } }),
-          catchAll: (_opts: unknown, url?: string) => ({
-            ok: false,
-            body: { error: `Unhandled fetch: ${url}` },
-            status: 404,
-            statusText: 'Not Found'
-          })
-        })(args[0], args[1]) as ReturnType<typeof fetch>
+    server.use(
+      rest.get('/api/organizations/org1/domain', (_req, res, ctx) =>
+        res(ctx.status(500), ctx.json({ error: 'fail' }))
+      )
     )
     render(<SettingsPageComponent />)
     await waitFor(() => expect(screen.getByText(/fail/i)).toBeInTheDocument())

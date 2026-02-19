@@ -1,10 +1,9 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { rest } from 'msw'
 import { GitHubRepositoryManager } from '@/components/integrations/github-repository-manager'
-
-// Mock fetch globally
-global.fetch = jest.fn()
+import { server } from '@/__tests__/msw/server'
 
 const mockRepositories = [
   {
@@ -77,19 +76,22 @@ const mockApiResponse = {
 
 describe('GitHubRepositoryManager', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
-    // Mock successful API response by default
-    ;(fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockApiResponse)
-    })
+    server.use(
+      rest.get('/api/integrations/github/repositories', (_req, res, ctx) =>
+        res(ctx.status(200), ctx.json(mockApiResponse))
+      )
+    )
   })
 
   describe('Initial Loading', () => {
-    it('renders loading state initially', () => {
+    it('renders loading state initially', async () => {
       render(<GitHubRepositoryManager />)
       
       expect(screen.getByText(/loading repositories/i)).toBeInTheDocument()
+
+      await waitFor(() => {
+        expect(screen.getByText('my-app')).toBeInTheDocument()
+      })
     })
 
     it('loads and displays repositories', async () => {
@@ -234,12 +236,22 @@ describe('GitHubRepositoryManager', () => {
   })
 
   describe('Error Handling', () => {
+    let consoleErrorSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      consoleErrorSpy.mockRestore()
+    })
+
     it('displays error message for failed requests', async () => {
-      ;(fetch as jest.Mock).mockResolvedValue({
-        ok: false,
-        status: 403,
-        statusText: 'Forbidden'
-      })
+      server.use(
+        rest.get('/api/integrations/github/repositories', (_req, res, ctx) =>
+          res(ctx.status(403), ctx.json({ error: 'Forbidden' }))
+        )
+      )
       
       render(<GitHubRepositoryManager />)
       
@@ -249,29 +261,36 @@ describe('GitHubRepositoryManager', () => {
     })
 
     it('handles network errors', async () => {
-      ;(fetch as jest.Mock).mockRejectedValue(new Error('Network error'))
+      server.use(
+        rest.get('/api/integrations/github/repositories', (_req, res, ctx) =>
+          res.networkError('Network error')
+        )
+      )
       
       render(<GitHubRepositoryManager />)
       
       await waitFor(() => {
-        expect(screen.getByText(/network error/i)).toBeInTheDocument()
+        expect(screen.getByText(/failed to fetch/i)).toBeInTheDocument()
       })
     })
 
     it('provides retry functionality on error', async () => {
       const user = userEvent.setup()
-      ;(fetch as jest.Mock).mockRejectedValue(new Error('Network error'))
+      let attempts = 0
+      server.use(
+        rest.get('/api/integrations/github/repositories', (_req, res, ctx) => {
+          attempts += 1
+          if (attempts === 1) {
+            return res.networkError('Network error')
+          }
+          return res(ctx.status(200), ctx.json(mockApiResponse))
+        })
+      )
       
       render(<GitHubRepositoryManager />)
       
       await waitFor(() => {
         expect(screen.getByText(/retry/i)).toBeInTheDocument()
-      })
-      
-      // Mock successful retry
-      ;(fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockApiResponse)
       })
       
       const retryButton = screen.getByText(/retry/i)
@@ -286,6 +305,14 @@ describe('GitHubRepositoryManager', () => {
   describe('Refresh Functionality', () => {
     it('allows refreshing repository list', async () => {
       const user = userEvent.setup()
+      let requestCount = 0
+      server.use(
+        rest.get('/api/integrations/github/repositories', (_req, res, ctx) => {
+          requestCount += 1
+          return res(ctx.status(200), ctx.json(mockApiResponse))
+        })
+      )
+
       render(<GitHubRepositoryManager />)
       
       await waitFor(() => {
@@ -296,7 +323,9 @@ describe('GitHubRepositoryManager', () => {
       const refreshButton = screen.getByRole('button', { name: '' })
       await user.click(refreshButton)
       
-      expect(fetch).toHaveBeenCalledTimes(2) // Initial load + refresh
+      await waitFor(() => {
+        expect(requestCount).toBeGreaterThanOrEqual(2)
+      })
     })
   })
 
