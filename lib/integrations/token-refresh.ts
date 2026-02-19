@@ -3,8 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { decryptCredentials, encryptCredentials } from '@/lib/integrations/credentials'
-import { withProviderLimit } from '@/lib/http/limit'
-import { fetchWithRetry } from '@/lib/http/request'
+import { OAuthProviderConfigError, refreshProviderAccessToken } from '@/lib/integrations/oauth-client'
 import type { Database } from '@/types/database'
 
 type IntegrationRow = Database['public']['Tables']['integrations']['Row']
@@ -159,227 +158,36 @@ export async function ensureFreshIntegrationAccessToken(
 }
 
 async function refreshAccessToken(provider: IntegrationType, refreshToken: string): Promise<ProviderRefreshResponse> {
+  try {
+    return await refreshProviderAccessToken(provider, refreshToken)
+  } catch (error) {
+    if (error instanceof OAuthProviderConfigError) {
+      throw new IntegrationTokenError({
+        status: 500,
+        code: 'not_configured',
+        message: `${providerLabel(provider)} OAuth is not configured on this server.`,
+      })
+    }
+
+    const details = error instanceof Error ? error.message : String(error)
+    const shouldReauth = /invalid_grant|invalid_client|unauthorized|expired|revoked|reauth/i.test(details)
+
+    throw new IntegrationTokenError({
+      status: shouldReauth ? 400 : 502,
+      code: shouldReauth ? 'reauth_required' : 'refresh_failed',
+      message: `Failed to refresh ${providerLabel(provider)} token. Please reconnect your ${providerLabel(provider)} account.`,
+      details,
+    })
+  }
+}
+
+function providerLabel(provider: IntegrationType): string {
   switch (provider) {
     case 'github':
-      return refreshGitHubToken(refreshToken)
-    case 'linear':
-      return refreshLinearToken(refreshToken)
+      return 'GitHub'
     case 'jira':
-      return refreshJiraToken(refreshToken)
+      return 'Jira'
+    case 'linear':
+      return 'Linear'
   }
-}
-
-const gitHubTokenSchema = z
-  .object({
-    access_token: z.string().min(1),
-    expires_in: z.number().optional(),
-    refresh_token: z.string().min(1).optional(),
-    scope: z.string().optional(),
-    token_type: z.string().optional(),
-  })
-  .passthrough()
-
-const gitHubErrorSchema = z
-  .object({
-    error: z.string(),
-    error_description: z.string().optional(),
-  })
-  .passthrough()
-
-async function refreshGitHubToken(refreshToken: string): Promise<ProviderRefreshResponse> {
-  const clientId = process.env.GITHUB_CLIENT_ID
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET
-
-  if (!clientId || !clientSecret) {
-    throw new IntegrationTokenError({
-      status: 500,
-      code: 'not_configured',
-      message: 'GitHub OAuth is not configured on this server.',
-    })
-  }
-
-  const response = await withProviderLimit('github', () =>
-    fetchWithRetry(
-      'https://github.com/login/oauth/access_token',
-      {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          grant_type: 'refresh_token',
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: refreshToken,
-        }),
-      },
-      {
-        timeoutMs: 30000,
-        retry: { retries: 2, minTimeoutMs: 500, maxTimeoutMs: 8000, respectRetryAfter: true, randomize: true },
-      }
-    )
-  )
-
-  const payload = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    const details = payload && typeof payload === 'object' ? JSON.stringify(payload) : response.statusText
-    throw new IntegrationTokenError({
-      status: response.status >= 500 ? 502 : 400,
-      code: response.status >= 500 ? 'refresh_failed' : 'reauth_required',
-      message: 'Failed to refresh GitHub token. Please reconnect your GitHub account.',
-      details,
-    })
-  }
-
-  const asError = gitHubErrorSchema.safeParse(payload)
-  if (asError.success) {
-    throw new IntegrationTokenError({
-      status: 400,
-      code: 'reauth_required',
-      message: 'Failed to refresh GitHub token. Please reconnect your GitHub account.',
-      details: asError.data.error_description ?? asError.data.error,
-    })
-  }
-
-  const parsed = gitHubTokenSchema.safeParse(payload)
-  if (!parsed.success) {
-    throw new IntegrationTokenError({
-      status: 502,
-      code: 'refresh_failed',
-      message: 'GitHub returned an unexpected token refresh response.',
-    })
-  }
-
-  return parsed.data
-}
-
-const linearTokenSchema = z
-  .object({
-    access_token: z.string().min(1),
-    expires_in: z.number().optional(),
-    refresh_token: z.string().min(1).optional(),
-    scope: z.string().optional(),
-    token_type: z.string().optional(),
-  })
-  .passthrough()
-
-async function refreshLinearToken(refreshToken: string): Promise<ProviderRefreshResponse> {
-  const clientId = process.env.LINEAR_CLIENT_ID
-  const clientSecret = process.env.LINEAR_CLIENT_SECRET
-
-  if (!clientId || !clientSecret) {
-    throw new IntegrationTokenError({
-      status: 500,
-      code: 'not_configured',
-      message: 'Linear OAuth is not configured on this server.',
-    })
-  }
-
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    client_id: clientId,
-    client_secret: clientSecret,
-    refresh_token: refreshToken,
-  })
-
-  const response = await withProviderLimit('linear', () =>
-    fetchWithRetry(
-      'https://api.linear.app/oauth/token',
-      {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-        body,
-      },
-      {
-        timeoutMs: 30000,
-        retry: { retries: 2, minTimeoutMs: 500, maxTimeoutMs: 8000, respectRetryAfter: true, randomize: true },
-      }
-    )
-  )
-
-  const payload = await response.json().catch(() => null)
-  if (!response.ok) {
-    const details = payload && typeof payload === 'object' ? JSON.stringify(payload) : response.statusText
-    throw new IntegrationTokenError({
-      status: response.status >= 500 ? 502 : 400,
-      code: response.status >= 500 ? 'refresh_failed' : 'reauth_required',
-      message: 'Failed to refresh Linear token. Please reconnect your Linear account.',
-      details,
-    })
-  }
-
-  const parsed = linearTokenSchema.safeParse(payload)
-  if (!parsed.success) {
-    throw new IntegrationTokenError({
-      status: 502,
-      code: 'refresh_failed',
-      message: 'Linear returned an unexpected token refresh response.',
-    })
-  }
-
-  return parsed.data
-}
-
-const jiraTokenSchema = z
-  .object({
-    access_token: z.string().min(1),
-    expires_in: z.number().optional(),
-    refresh_token: z.string().min(1).optional(),
-    scope: z.string().optional(),
-    token_type: z.string().optional(),
-  })
-  .passthrough()
-
-async function refreshJiraToken(refreshToken: string): Promise<ProviderRefreshResponse> {
-  const clientId = process.env.JIRA_CLIENT_ID
-  const clientSecret = process.env.JIRA_CLIENT_SECRET
-
-  if (!clientId || !clientSecret) {
-    throw new IntegrationTokenError({
-      status: 500,
-      code: 'not_configured',
-      message: 'Jira OAuth is not configured on this server.',
-    })
-  }
-
-  const response = await withProviderLimit('jira', () =>
-    fetchWithRetry(
-      'https://auth.atlassian.com/oauth/token',
-      {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          grant_type: 'refresh_token',
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: refreshToken,
-        }),
-      },
-      {
-        timeoutMs: 30000,
-        retry: { retries: 2, minTimeoutMs: 500, maxTimeoutMs: 8000, respectRetryAfter: true, randomize: true },
-      }
-    )
-  )
-
-  const payload = await response.json().catch(() => null)
-  if (!response.ok) {
-    const details = payload && typeof payload === 'object' ? JSON.stringify(payload) : response.statusText
-    throw new IntegrationTokenError({
-      status: response.status >= 500 ? 502 : 400,
-      code: response.status >= 500 ? 'refresh_failed' : 'reauth_required',
-      message: 'Failed to refresh Jira token. Please reconnect your Jira account.',
-      details,
-    })
-  }
-
-  const parsed = jiraTokenSchema.safeParse(payload)
-  if (!parsed.success) {
-    throw new IntegrationTokenError({
-      status: 502,
-      code: 'refresh_failed',
-      message: 'Jira returned an unexpected token refresh response.',
-    })
-  }
-
-  return parsed.data
 }

@@ -3,15 +3,8 @@ import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { consumeOAuthState } from '@/lib/integrations/oauth-state'
 import { encryptCredentials } from '@/lib/integrations/credentials'
+import { exchangeAuthorizationCodeForTokens } from '@/lib/integrations/oauth-client'
 import type { Database } from '@/types/database'
-
-type LinearTokenResponse = {
-  access_token: string
-  token_type?: string
-  scope?: string
-  expires_in?: number
-  refresh_token?: string
-}
 
 type LinearViewer = {
   id?: string
@@ -77,33 +70,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    const tokenBody = new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: clientId,
-      client_secret: clientSecret,
+    const tokenData = await exchangeAuthorizationCodeForTokens('linear', {
       code,
-      redirect_uri: redirectUri,
+      redirectUri,
+      codeVerifier,
     })
-    if (codeVerifier) {
-      tokenBody.set('code_verifier', codeVerifier)
-    }
-
-    const tokenResponse = await fetch('https://api.linear.app/oauth/token', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: tokenBody,
-    })
-
-    if (!tokenResponse.ok) {
-      const redirectUrl = new URL('/dashboard/integrations', request.url)
-      redirectUrl.searchParams.set('error', 'token_exchange_failed')
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    const tokenData = (await tokenResponse.json()) as LinearTokenResponse
 
     let linearUser: LinearViewer | null = null
     try {

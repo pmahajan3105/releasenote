@@ -3,15 +3,8 @@ import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { consumeOAuthState } from '@/lib/integrations/oauth-state'
 import { encryptCredentials } from '@/lib/integrations/credentials'
+import { exchangeAuthorizationCodeForTokens } from '@/lib/integrations/oauth-client'
 import type { Database } from '@/types/database'
-
-type JiraTokenResponse = {
-  access_token: string
-  expires_in: number
-  refresh_token?: string
-  scope?: string
-  token_type?: string
-}
 
 type JiraAccessibleResource = {
   id?: string
@@ -78,29 +71,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    const tokenResponse = await fetch('https://auth.atlassian.com/oauth/token', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grant_type: 'authorization_code',
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-        code_verifier: codeVerifier,
-      }),
+    const tokenData = await exchangeAuthorizationCodeForTokens('jira', {
+      code,
+      redirectUri,
+      codeVerifier,
     })
-
-    if (!tokenResponse.ok) {
-      const redirectUrl = new URL('/dashboard/integrations', request.url)
-      redirectUrl.searchParams.set('error', 'token_exchange_failed')
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    const tokenData = (await tokenResponse.json()) as JiraTokenResponse
 
     const resourcesResponse = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
       headers: {
@@ -128,7 +103,9 @@ export async function GET(request: NextRequest) {
     }
 
     const externalId = typeof jiraUser?.accountId === 'string' ? jiraUser.accountId : null
-    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+    const expiresAt = tokenData.expires_in
+      ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+      : null
 
     const encryptedCredentials = encryptCredentials({
       access_token: tokenData.access_token,

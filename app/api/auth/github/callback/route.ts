@@ -3,21 +3,8 @@ import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { consumeOAuthState } from '@/lib/integrations/oauth-state'
 import { encryptCredentials } from '@/lib/integrations/credentials'
+import { exchangeAuthorizationCodeForTokens } from '@/lib/integrations/oauth-client'
 import type { Database } from '@/types/database'
-
-type GitHubTokenResponse =
-  | {
-      access_token: string
-      token_type?: string
-      scope?: string
-      expires_in?: number
-      refresh_token?: string
-      refresh_token_expires_in?: number
-    }
-  | {
-      error: string
-      error_description?: string
-    }
 
 type GitHubUserResponse = {
   id?: number
@@ -76,35 +63,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-        code_verifier: codeVerifier,
-      }),
+    const tokenData = await exchangeAuthorizationCodeForTokens('github', {
+      code,
+      redirectUri,
+      codeVerifier,
     })
-
-    if (!tokenResponse.ok) {
-      const redirectUrl = new URL('/dashboard/integrations', request.url)
-      redirectUrl.searchParams.set('error', 'token_exchange_failed')
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    const tokenData = (await tokenResponse.json()) as GitHubTokenResponse
-
-    if ('error' in tokenData) {
-      const redirectUrl = new URL('/dashboard/integrations', request.url)
-      redirectUrl.searchParams.set('error', 'token_exchange_failed')
-      redirectUrl.searchParams.set('details', tokenData.error_description || tokenData.error)
-      return NextResponse.redirect(redirectUrl)
-    }
 
     const accessToken = tokenData.access_token
 
