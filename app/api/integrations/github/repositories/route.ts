@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
-import { GitHubService } from '@/lib/integrations/github'
+import { createGitHubClient, listRepositories } from '@/lib/integrations/github-octokit'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getGitHubAccessToken,
   isGitHubIntegrationRecord,
@@ -10,13 +11,14 @@ import {
   parsePage,
   parsePerPage,
 } from '@/lib/integrations/github-route-helpers'
+import type { Database } from '@/types/database'
 
 /**
  * Get GitHub repositories for the authenticated user
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
     if (sessionError || !session?.user) {
@@ -38,12 +40,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const accessToken = getGitHubAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'GitHub access token not found. Please reconnect your GitHub account.' },
-        { status: 400 }
-      )
+    let accessToken = getGitHubAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     // Parse query parameters
@@ -53,14 +57,8 @@ export async function GET(request: NextRequest) {
     const per_page = parsePerPage(url.searchParams.get('per_page'), 50)
     const page = parsePage(url.searchParams.get('page'), 1)
 
-    // Initialize GitHub service and fetch repositories
-    const github = new GitHubService(accessToken)
-    const repositories = await github.getRepositories({
-      sort,
-      direction,
-      per_page,
-      page
-    })
+    const github = createGitHubClient(accessToken)
+    const repositories = await listRepositories(github, { sort, direction, per_page, page })
 
     return NextResponse.json({
       repositories,

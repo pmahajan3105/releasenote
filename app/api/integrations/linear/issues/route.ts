@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
-import { linearAPI } from '@/lib/integrations/linear-client'
+import { listLinearIssues } from '@/lib/integrations/linear-sdk'
+import type { Database } from '@/types/database'
+import type { ChangeItem } from '@/lib/integrations/change-item'
+import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getLinearAccessToken,
   isLinearIntegrationRecord,
-  normalizeLinearIssuesResponse,
   parseIntegerParam,
   parseLinearStateType,
   transformLinearIssue,
@@ -13,7 +16,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -39,13 +42,18 @@ export async function GET(request: NextRequest) {
     if (integrationError || !isLinearIntegrationRecord(data)) {
       return NextResponse.json({ error: 'Linear integration not found' }, { status: 404 })
     }
-    const accessToken = getLinearAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Linear access token not found' }, { status: 400 })
+    let accessToken = getLinearAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     try {
-      const issuesResponse = await linearAPI.getIssues(accessToken, {
+      const issues = await listLinearIssues(accessToken, {
         first,
         after,
         teamId: teamId || undefined,
@@ -53,45 +61,34 @@ export async function GET(request: NextRequest) {
         stateType,
         updatedSince: updatedSince || undefined
       })
-      const issues = normalizeLinearIssuesResponse(issuesResponse)
 
       const transformedIssues = issues.nodes.map((issue) => transformLinearIssue(issue))
 
-      // Cache the issues in our ticket_cache table
-      if (transformedIssues.length > 0) {
-        const cachePromises = transformedIssues.map(issue => 
-          supabase
-            .from('ticket_cache')
-            .upsert({
-              organization_id: session.user.id,
-              integration_type: 'linear',
-              ticket_id: issue.identifier,
-              title: issue.title,
-              description: issue.description,
-              status: issue.state?.name || 'Unknown',
-              assignee: issue.assignee?.displayName || null,
-              created_at: issue.createdAt,
-              updated_at: issue.updatedAt,
-              metadata: {
-                priority: issue.priority,
-                estimate: issue.estimate,
-                state: issue.state,
-                team: issue.team,
-                labels: issue.labels,
-                project: issue.project,
-                url: issue.url,
-                completed_at: issue.completedAt,
-                canceled_at: issue.canceledAt
-              },
-              cached_at: new Date().toISOString()
-            }, {
-              onConflict: 'organization_id,integration_type,ticket_id'
-            })
-        )
+      const changeItems: ChangeItem[] = transformedIssues.map((issue) => ({
+        provider: 'linear',
+        externalId: issue.identifier,
+        type: 'issue',
+        title: issue.title,
+        description: issue.description,
+        status: issue.state?.name ?? 'Unknown',
+        url: issue.url ?? null,
+        assignee: issue.assignee?.displayName ?? null,
+        labels: (issue.labels ?? []).map((label) => label.name).filter((label): label is string => Boolean(label)),
+        createdAt: issue.createdAt ?? null,
+        updatedAt: issue.updatedAt ?? null,
+        raw: {
+          priority: issue.priority,
+          estimate: issue.estimate,
+          state: issue.state,
+          team: issue.team,
+          labels: issue.labels,
+          project: issue.project,
+          completedAt: issue.completedAt,
+          canceledAt: issue.canceledAt,
+        },
+      }))
 
-        // Execute cache updates in parallel
-        await Promise.allSettled(cachePromises)
-      }
+      await cacheChangeItems(supabase, session.user.id, changeItems)
 
       return NextResponse.json({
         issues: transformedIssues,

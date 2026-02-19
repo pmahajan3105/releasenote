@@ -2,7 +2,7 @@ import React from 'react'
 import { useAuthStore, useAuthSelectors } from '../../../lib/store'
 import Link from 'next/link'
 import { LogoFaviconUploader } from '../../../components/settings/logo-favicon-uploader'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import { handleApiError, handleAsyncOperation } from '../../../lib/error-handler-standard'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { EmptyState } from '../../../components/ui/empty-state'
@@ -205,13 +205,15 @@ export default function SettingsPageComponent() {
 function DomainSettingsSection({ userId }: { userId: string }) {
     const [loading, setLoading] = React.useState(true)
     const [error, setError] = React.useState<string | null>(null)
+    const [success, setSuccess] = React.useState<string | null>(null)
     const [publicUrl, setPublicUrl] = React.useState('')
     const [customDomain, setCustomDomain] = React.useState('')
     const [saving, setSaving] = React.useState(false)
     React.useEffect(() => {
         setLoading(true)
         setError(null)
-        fetch(`/api/domain-settings?userId=${userId}`)
+        setSuccess(null)
+        fetch(`/api/organizations/${encodeURIComponent(userId)}/domain`)
             .then(res => res.json())
             .then(data => {
                 if (data.error) throw new Error(data.error)
@@ -225,14 +227,27 @@ function DomainSettingsSection({ userId }: { userId: string }) {
     const handleSave = async () => {
         setSaving(true)
         setError(null)
+        setSuccess(null)
         try {
-            const res = await fetch('/api/domain-settings', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, custom_domain: customDomain })
-            })
+            const normalizedDomain = customDomain.trim()
+            const endpoint = `/api/organizations/${encodeURIComponent(userId)}/domain`
+            const res = normalizedDomain
+                ? await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: normalizedDomain })
+                })
+                : await fetch(endpoint, { method: 'DELETE' })
+
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || 'Failed to update domain')
+            const refresh = await fetch(endpoint)
+            const refreshData = await refresh.json()
+            if (refresh.ok && !refreshData.error) {
+                setPublicUrl(refreshData.public_portal_url || '')
+                setCustomDomain(refreshData.custom_domain || '')
+            }
+            setSuccess(normalizedDomain ? 'Domain updated successfully.' : 'Custom domain removed.')
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Failed to update domain')
         } finally {
@@ -248,6 +263,9 @@ function DomainSettingsSection({ userId }: { userId: string }) {
                 <span className="text-red-500">{error}</span>
             ) : (
                 <>
+                    {success && (
+                        <span className="text-green-600">{success}</span>
+                    )}
                     <div>
                         <label className="block text-sm font-medium">Public Portal URL</label>
                         <input

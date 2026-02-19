@@ -4,6 +4,11 @@
  * Based on the comprehensive implementation from /project/server
  */
 
+import 'server-only'
+
+import { withProviderLimit } from '@/lib/http/limit'
+import { fetchWithRetry, HttpError } from '@/lib/http/request'
+
 export interface GitHubRepository {
   id: number
   name: string
@@ -111,19 +116,42 @@ export class GitHubService {
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'ReleaseNotesApp/1.0',
-        ...options.headers,
-      },
-    })
+
+    let response: Response
+    try {
+      response = await withProviderLimit('github', () =>
+        fetchWithRetry(
+          url,
+          {
+            ...options,
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+              Accept: 'application/vnd.github.v3+json',
+              'User-Agent': 'ReleaseNotesApp/1.0',
+              ...options.headers,
+            },
+          },
+          {
+            timeoutMs: 30000,
+            retry: {
+              retries: 3,
+              minTimeoutMs: 500,
+              maxTimeoutMs: 8000,
+              respectRetryAfter: true,
+              randomize: true,
+            },
+          }
+        )
+      )
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw new Error(`GitHub API error (${error.status}): ${error.message}`)
+      }
+      throw new Error(`GitHub API error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
 
     if (!response.ok) {
-      const errorText = await response.text()
+      const errorText = await response.text().catch(() => '')
       throw new Error(`GitHub API error (${response.status}): ${errorText}`)
     }
 

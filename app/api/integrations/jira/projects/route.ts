@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
-import { jiraAPI } from '@/lib/integrations/jira-client'
+import { jiraJsGetProjects } from '@/lib/integrations/jira-js'
+import type { Database } from '@/types/database'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
-  getJiraResources,
+  getJiraAccessToken,
   isJiraIntegrationRecord,
+  parseJiraIntegrationConfig,
   parseIntegerParam,
   resolveJiraSite,
   transformJiraProject,
@@ -15,7 +18,7 @@ const MAX_ALLOWED_RESULTS = 100
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -42,16 +45,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Jira integration not found' }, { status: 404 })
     }
     const integration = data
-    const resources = getJiraResources(integration.metadata)
+    let accessToken = getJiraAccessToken(integration)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, integration, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
+    }
+
+    const { resources, preferredSiteId } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)
 
     // Determine which site to use
-    const selectedSite = resolveJiraSite(resources, siteId)
+    const selectedSite = resolveJiraSite(resources, siteId ?? preferredSiteId)
     if (!selectedSite) {
       return NextResponse.json({ error: 'No Jira site available' }, { status: 400 })
     }
 
     try {
-      const projects = await jiraAPI.getProjects(integration.access_token, selectedSite.id, {
+      const projects = await jiraJsGetProjects(accessToken, selectedSite.id, {
         maxResults,
         startAt,
         expand: ['description', 'lead', 'issueTypes', 'url', 'projectKeys']

@@ -6,19 +6,20 @@ import type {
   JiraProjectIssueType,
   JiraVersion,
 } from '@/lib/integrations/jira-client'
+import { getAccessTokenFromEncryptedCredentials } from '@/lib/integrations/credentials'
+import { isJsonObject } from '@/lib/json'
+import { z } from 'zod'
 export { parseCsvParam, parseIntegerParam } from '@/lib/integrations/route-utils'
-
-type JsonObject = Record<string, unknown>
-
-interface JiraIntegrationMetadata {
-  resources?: unknown[]
-}
 
 export interface JiraIntegrationRecord {
   id: string
   created_at: string
-  access_token: string
-  metadata?: JiraIntegrationMetadata | null
+  organization_id: string
+  type: 'jira'
+  access_token?: string
+  encrypted_credentials?: unknown
+  metadata?: unknown | null
+  config?: unknown | null
 }
 
 export interface TransformedJiraProject {
@@ -108,21 +109,20 @@ export interface TransformedJiraIssue {
 }
 
 export function getJiraResources(metadata: JiraIntegrationRecord['metadata']): JiraAccessibleResource[] {
-  if (!metadata?.resources || !Array.isArray(metadata.resources)) {
-    return []
+  return parseJiraIntegrationConfig(metadata).resources
+}
+
+export function getJiraAccessToken(integration: JiraIntegrationRecord): string | null {
+  if (typeof integration.access_token === 'string' && integration.access_token) {
+    return integration.access_token
   }
 
-  return metadata.resources
-    .filter((resource): resource is JsonObject => isObject(resource) && typeof resource.id === 'string')
-    .map((resource) => ({
-      id: resource.id as string,
-      name: typeof resource.name === 'string' ? resource.name : 'Unknown Site',
-      url: typeof resource.url === 'string' ? resource.url : '',
-      scopes: Array.isArray(resource.scopes)
-        ? resource.scopes.filter((scope): scope is string => typeof scope === 'string')
-        : [],
-      avatarUrl: typeof resource.avatarUrl === 'string' ? resource.avatarUrl : undefined,
-    }))
+  const encrypted = getAccessTokenFromEncryptedCredentials(integration.encrypted_credentials)
+  if (encrypted) {
+    return encrypted
+  }
+
+  return null
 }
 
 export function resolveJiraSite(
@@ -141,31 +141,34 @@ export function resolveJiraSite(
 }
 
 export function isJiraIntegrationRecord(value: unknown): value is JiraIntegrationRecord {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return false
   }
 
-  if (typeof value.id !== 'string' || typeof value.created_at !== 'string' || typeof value.access_token !== 'string') {
+  if (typeof value.id !== 'string' || typeof value.created_at !== 'string') {
     return false
   }
 
-  if (!('metadata' in value) || value.metadata == null) {
-    return true
-  }
-
-  if (!isObject(value.metadata)) {
+  if (typeof value.organization_id !== 'string' || value.type !== 'jira') {
     return false
   }
 
-  if (!('resources' in value.metadata) || value.metadata.resources == null) {
-    return true
-  }
+  const hasLegacyAccessToken = typeof value.access_token === 'string' && value.access_token.length > 0
+  const hasEncrypted = 'encrypted_credentials' in value && value.encrypted_credentials != null
 
-  if (!Array.isArray(value.metadata.resources)) {
+  if (!hasLegacyAccessToken && !hasEncrypted) {
     return false
   }
 
-  return value.metadata.resources.every(isJiraAccessibleResource)
+  if ('metadata' in value && value.metadata != null && !isJsonObject(value.metadata)) {
+    return false
+  }
+
+  if ('config' in value && value.config != null && !isJsonObject(value.config)) {
+    return false
+  }
+
+  return true
 }
 
 export function transformJiraProject(project: JiraProject): TransformedJiraProject {
@@ -292,14 +295,44 @@ function buildIssueUrl(site: JiraAccessibleResource | null, issueKey: string): s
   return `${site.url.replace(/\/$/, '')}/browse/${issueKey}`
 }
 
-function isObject(value: unknown): value is JsonObject {
-  return typeof value === 'object' && value !== null
-}
+const jiraIntegrationConfigSchema = z
+  .object({
+    resources: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            name: z.string().optional(),
+            url: z.string().optional(),
+            scopes: z.array(z.string()).optional(),
+            avatarUrl: z.string().optional(),
+          })
+          .passthrough()
+      )
+      .optional(),
+    preferredSiteId: z.string().nullable().optional(),
+  })
+  .passthrough()
 
-function isJiraAccessibleResource(value: unknown): value is JiraAccessibleResource {
-  if (!isObject(value)) {
-    return false
+export function parseJiraIntegrationConfig(value: unknown): {
+  resources: JiraAccessibleResource[]
+  preferredSiteId: string | null
+} {
+  const result = jiraIntegrationConfigSchema.safeParse(value)
+  if (!result.success) {
+    return { resources: [], preferredSiteId: null }
   }
 
-  return typeof value.id === 'string'
+  const resources: JiraAccessibleResource[] = (result.data.resources ?? []).map((resource) => ({
+    id: resource.id,
+    name: resource.name ?? 'Unknown Site',
+    url: resource.url ?? '',
+    scopes: resource.scopes ?? [],
+    avatarUrl: resource.avatarUrl,
+  }))
+
+  return {
+    resources,
+    preferredSiteId: result.data.preferredSiteId ?? null,
+  }
 }

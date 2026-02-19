@@ -38,10 +38,24 @@ jest.mock('ioredis', () => ({
 }))
 
 describe('Cache', () => {
+  let consoleLogSpy: jest.SpyInstance
+  let consoleInfoSpy: jest.SpyInstance
+  let consoleErrorSpy: jest.SpyInstance
+
   beforeEach(() => {
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+    consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation(() => {})
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
     jest.clearAllMocks()
     setRedisMockDefaults()
     clearCache() // Clear in-memory cache
+  })
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore()
+    consoleInfoSpy.mockRestore()
+    consoleErrorSpy.mockRestore()
   })
 
   describe('Basic Cache Operations', () => {

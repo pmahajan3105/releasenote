@@ -217,8 +217,8 @@ export default function ReleasesPage() {
                                                     {note.version && (
                                                         <span>Version: {note.version}</span>
                                                     )}
-                                                    {note.views > 0 && (
-                                                        <span>{note.views} views</span>
+                                                    {(note.views ?? 0) > 0 && (
+                                                        <span>{note.views ?? 0} views</span>
                                                     )}
                                                 </div>
                                             </div>

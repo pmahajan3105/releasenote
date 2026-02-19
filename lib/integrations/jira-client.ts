@@ -1,6 +1,11 @@
 /**
  * Jira API Client with authentication and rate limiting
  */
+import 'server-only'
+
+import { withProviderLimit } from '@/lib/http/limit'
+import { fetchWithRetry, HttpError } from '@/lib/http/request'
+
 export interface JiraAccessibleResource {
   id: string
   name: string
@@ -173,11 +178,41 @@ export class JiraAPIClient {
     }
 
     try {
-      const response = await fetch(url, {
-        method,
-        headers: requestHeaders,
-        body
-      })
+      let response: Response
+      try {
+        response = await withProviderLimit('jira', () =>
+          fetchWithRetry(
+            url,
+            {
+              method,
+              headers: requestHeaders,
+              body,
+            },
+            {
+              timeoutMs: 30000,
+              retry: {
+                retries: 3,
+                minTimeoutMs: 500,
+                maxTimeoutMs: 8000,
+                respectRetryAfter: true,
+                randomize: true,
+              },
+            }
+          )
+        )
+      } catch (error) {
+        if (error instanceof HttpError) {
+          throw new JiraAPIError(error.message, error.status, {
+            retryAfterMs: error.retryAfterMs,
+          })
+        }
+
+        throw new JiraAPIError(
+          `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          0,
+          { originalError: error }
+        )
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))

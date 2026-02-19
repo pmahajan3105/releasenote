@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { generateSlug } from '@/lib/utils'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 /**
  * GET /api/release-notes/[id] - Get single release note
@@ -101,14 +102,21 @@ export async function PUT(
 
     const allowedFields = [
       'title', 'description', 'content_markdown', 'content_html',
-      'version', 'is_public'
+      'version', 'is_public', 'featured_image_url', 'content_json'
     ]
 
     // Only update provided fields
-    allowedFields.forEach(field => {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field]
+    allowedFields.forEach((field) => {
+      if (body[field] === undefined) {
+        return
       }
+
+      if (field === 'content_html') {
+        updateData[field] = typeof body[field] === 'string' ? sanitizeHtml(body[field]) : ''
+        return
+      }
+
+      updateData[field] = body[field]
     })
 
     // Update slug if title changed

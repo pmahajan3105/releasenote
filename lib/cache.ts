@@ -10,6 +10,8 @@ interface CacheItem {
   expiry: number
 }
 
+const shouldLogCacheInternals = process.env.NODE_ENV !== 'test'
+
 class MemoryCache {
   private cache = new Map<string, CacheItem>()
   private maxSize = 1000
@@ -64,7 +66,7 @@ class MemoryCache {
       }
     }
     
-    if (cleanedCount > 0) {
+    if (cleanedCount > 0 && shouldLogCacheInternals) {
       logger.info(`Cleaned up ${cleanedCount} expired cache entries`)
     }
   }
@@ -98,7 +100,9 @@ class CacheManager {
     try {
       const redisUrl = process.env.REDIS_URL
       if (!redisUrl) {
-        console.log('Redis URL not configured, using memory cache only')
+        if (shouldLogCacheInternals) {
+          console.log('Redis URL not configured, using memory cache only')
+        }
         return
       }
 
@@ -110,13 +114,19 @@ class CacheManager {
       })
 
       this.redisClient.on('error', (error: Error) => {
-        console.error('Redis connection error:', error)
+        if (shouldLogCacheInternals) {
+          console.error('Redis connection error:', error)
+        }
         this.redisClient = null
       })
 
-      console.log('Redis cache initialized successfully')
+      if (shouldLogCacheInternals) {
+        console.log('Redis cache initialized successfully')
+      }
     } catch (error) {
-      console.warn('Redis initialization failed, using memory cache:', error)
+      if (shouldLogCacheInternals) {
+        console.warn('Redis initialization failed, using memory cache:', error)
+      }
       this.redisClient = null
     }
   }
@@ -148,7 +158,9 @@ class CacheManager {
 
       return null
     } catch (error) {
-      console.error('Cache get error:', error)
+      if (shouldLogCacheInternals) {
+        console.error('Cache get error:', error)
+      }
       return null
     }
   }
@@ -165,7 +177,9 @@ class CacheManager {
         await this.redisClient.setex(key, ttlSeconds, JSON.stringify(value))
       }
     } catch (error) {
-      console.error('Cache set error:', error)
+      if (shouldLogCacheInternals) {
+        console.error('Cache set error:', error)
+      }
     }
   }
 
@@ -179,7 +193,9 @@ class CacheManager {
         await this.redisClient.del(key)
       }
     } catch (error) {
-      console.error('Cache delete error:', error)
+      if (shouldLogCacheInternals) {
+        console.error('Cache delete error:', error)
+      }
     }
   }
 
@@ -194,7 +210,9 @@ class CacheManager {
         }
       }
     } catch (error) {
-      console.error('Cache invalidate error:', error)
+      if (shouldLogCacheInternals) {
+        console.error('Cache invalidate error:', error)
+      }
     } finally {
       // Always invalidate the in-memory layer, even if Redis is unavailable.
       this.memoryCache.invalidatePattern(pattern)

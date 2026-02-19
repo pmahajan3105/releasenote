@@ -1,13 +1,10 @@
 import './globals.css'
 import '@/components/editor/prism-theme.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { PrismLoader } from '@/components/editor/prism-loader'
 import { initializeDatabaseOptimization } from '@/lib/database-config'
 import '@/lib/startup-validation' // Run startup validation
-
-const inter = Inter({ subsets: ['latin'] })
 
 // Initialize database optimization on server startup
 if (typeof window === 'undefined') {
@@ -28,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <PrismLoader />
         <ErrorBoundary>
           {children}

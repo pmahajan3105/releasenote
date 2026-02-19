@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useReleaseNotes } from '@/lib/store'
+import { generateSlug } from '@/lib/utils'
+import type { Database } from '@/types/database'
 
 interface GitHubRepository {
   id: number
@@ -13,14 +16,34 @@ interface GitHubRepository {
   private: boolean
 }
 
+type GitHubCommit = {
+  sha: string
+  message: string
+  author?: {
+    name?: string
+  }
+}
+
+type GitHubPullRequest = {
+  number: number
+  title: string
+  body?: string | null
+  merged_at?: string | null
+  user?: {
+    login?: string
+  }
+}
+
 export function GitHubReleaseGenerator() {
+  const router = useRouter()
+  const supabase = createClientComponentClient<Database>()
   const [repositories, setRepositories] = useState<GitHubRepository[]>([])
   const [selectedRepo, setSelectedRepo] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [generatedContent, setGeneratedContent] = useState('')
+  const [draftId, setDraftId] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const { createReleaseNote } = useReleaseNotes()
 
   // Load user's GitHub repositories
   const loadRepositories = async () => {
@@ -53,21 +76,71 @@ export function GitHubReleaseGenerator() {
     setLoading(true)
     setError('')
     setGeneratedContent('')
+    setDraftId(null)
 
     try {
       const [owner, repo] = selectedRepo.split('/')
+
+      if (!owner || !repo) {
+        throw new Error('Invalid repository selection')
+      }
+
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+      const commitsResponse = await fetch(
+        `/api/integrations/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?since=${encodeURIComponent(since)}&per_page=50&page=1`
+      )
+
+      if (!commitsResponse.ok) {
+        const data = await commitsResponse.json().catch(() => ({}))
+        const message = typeof data?.error === 'string' ? data.error : 'Failed to fetch commits'
+        throw new Error(message)
+      }
+
+      const commitsPayload = await commitsResponse.json()
+      const commits = Array.isArray(commitsPayload?.commits) ? (commitsPayload.commits as GitHubCommit[]) : []
+
+      const pullsResponse = await fetch(
+        `/api/integrations/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls?state=closed&sort=updated&direction=desc&per_page=20&page=1`
+      )
+
+      if (!pullsResponse.ok) {
+        const data = await pullsResponse.json().catch(() => ({}))
+        const message = typeof data?.error === 'string' ? data.error : 'Failed to fetch pull requests'
+        throw new Error(message)
+      }
+
+      const pullsPayload = await pullsResponse.json()
+      const pullRequests = Array.isArray(pullsPayload?.pull_requests)
+        ? (pullsPayload.pull_requests as GitHubPullRequest[])
+        : []
+
+      const mergedPullRequests = pullRequests.filter((pr) => Boolean(pr.merged_at)).slice(0, 10)
+
+      if (commits.length === 0 && mergedPullRequests.length === 0) {
+        throw new Error('No recent commits or merged pull requests found for this repository')
+      }
+
+      const promptCommits = [
+        ...commits.map((commit) => ({
+          message: commit.message,
+          author: commit.author?.name,
+          sha: commit.sha,
+        })),
+        ...mergedPullRequests.map((pr) => ({
+          message: `PR #${pr.number}: ${pr.title}${pr.body ? ` — ${pr.body.substring(0, 200)}` : ''}`,
+          author: pr.user?.login,
+          sha: String(pr.number),
+        })),
+      ]
       
-      const response = await fetch('/api/github/generate-release-notes', {
+      const response = await fetch('/api/release-notes/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          repository: { owner, repo },
-          options: {
-            template: 'traditional',
-            tone: 'professional',
-            includeBreakingChanges: true,
-            title: `${repo} Release Notes - ${new Date().toLocaleDateString()}`
-          }
+          commits: promptCommits,
+          template: 'traditional',
+          tone: 'professional'
         })
       })
 
@@ -77,7 +150,49 @@ export function GitHubReleaseGenerator() {
       }
 
       const data = await response.json()
-      setGeneratedContent(data.content)
+      const generatedHtml = typeof data?.content === 'string' ? data.content : ''
+      if (!generatedHtml) {
+        throw new Error('AI generation returned empty content')
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      if (authError || !authData.user) {
+        throw new Error('User not authenticated')
+      }
+
+      const title = `${repo} Release Notes - ${new Date().toLocaleDateString()}`
+      const slug = `${generateSlug(title)}-${Date.now().toString(36)}`
+
+      const sourceTicketIds: string[] = [
+        ...commits.map((c) => c.sha),
+        ...mergedPullRequests.map((pr) => String(pr.number)),
+      ]
+
+      const { data: draftNote, error: insertError } = await supabase
+        .from('release_notes')
+        .insert({
+          organization_id: authData.user.id,
+          author_id: authData.user.id,
+          title,
+          slug,
+          status: 'draft',
+          content_html: generatedHtml,
+          content_markdown: '',
+          source_ticket_ids: sourceTicketIds,
+        })
+        .select('id')
+        .single()
+
+      if (insertError) {
+        throw insertError
+      }
+
+      if (!draftNote?.id) {
+        throw new Error('Failed to create draft release note')
+      }
+
+      setGeneratedContent(generatedHtml)
+      setDraftId(draftNote.id)
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate release notes')
@@ -88,22 +203,8 @@ export function GitHubReleaseGenerator() {
 
   // Save generated content as a new release note
   const saveAsReleaseNote = async () => {
-    if (!generatedContent) return
-
-    try {
-      await createReleaseNote({
-        title: `GitHub Release Notes - ${new Date().toLocaleDateString()}`,
-        content_html: generatedContent,
-        status: 'draft'
-      })
-      
-      // Reset the form
-      setGeneratedContent('')
-      setSelectedRepo('')
-      alert('Release note saved as draft!')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save release note')
-    }
+    if (!draftId) return
+    router.push(`/dashboard/releases/edit/${draftId}`)
   }
 
   return (
@@ -176,8 +277,8 @@ export function GitHubReleaseGenerator() {
             />
             
             <div className="flex gap-2">
-              <Button onClick={saveAsReleaseNote}>
-                Save as Draft
+              <Button onClick={saveAsReleaseNote} disabled={!draftId}>
+                Open Draft Editor
               </Button>
               <Button 
                 variant="outline" 

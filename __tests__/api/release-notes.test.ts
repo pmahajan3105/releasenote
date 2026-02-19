@@ -1,5 +1,5 @@
 // Mock Supabase
-jest.mock('@supabase/auth-helpers-nextjs', () => ({
+jest.mock('@/lib/supabase/ssr', () => ({
   createRouteHandlerClient: jest.fn(() => ({
     auth: {
       getSession: jest.fn(() => ({

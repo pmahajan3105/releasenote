@@ -4,7 +4,7 @@
  */
 
 import type { User, Session } from '@supabase/supabase-js'
-import type { Organization, OrganizationMember } from './database'
+import type { Json, Organization, OrganizationMember } from './database'
 
 // Base auth user type extending Supabase User
 export interface AuthUser extends User {
@@ -106,11 +106,21 @@ export interface OrganizationQueryResult {
   created_at: string
   updated_at: string
   name: string
-  description?: string
-  slug?: string
-  user_id: string
-  settings: Record<string, unknown>
-  plan: 'free' | 'professional' | 'growth'
+  slug: string
+  description: string | null
+  user_id: string | null
+  logo_url: string | null
+  settings: Json
+  plan: string | null
+  custom_domain: string | null
+  domain_verified: boolean
+  meta_title: string | null
+  meta_description: string | null
+  meta_image_url: string | null
+  favicon_url: string | null
+  brand_color: string | null
+  custom_css: string | null
+  custom_css_enabled: boolean | null
 }
 
 export interface MembershipQueryResult {
@@ -119,8 +129,8 @@ export interface MembershipQueryResult {
   organization_id: string
   user_id: string
   role: string
-  invited_by?: string
-  joined_at?: string
+  invited_by: string | null
+  joined_at: string | null
   organizations: OrganizationQueryResult
 }
 

@@ -3,17 +3,17 @@
 > AI-powered release notes generator with GitHub integration, professional email notifications, and modern architecture.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16+-black.svg)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19+-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Generation**: Support for Anthropic Claude, OpenAI, and Azure OpenAI
+- 🤖 **AI-Powered Generation**: OpenAI, Azure OpenAI, and Anthropic-compatible provider flow
 - 🔗 **Multi-Platform Integration**: GitHub, Jira, and Linear integrations
 - 📧 **Professional Emails**: Beautiful email notifications via Resend
-- 🎨 **Modern UI**: Built with Next.js 15, React 18, Tailwind CSS, and Shadcn/ui
-- 🔒 **Enterprise Security**: Supabase Auth with RLS policies and middleware protection
+- 🎨 **Modern UI**: Built with Next.js 16, React 19, Tailwind CSS, and Shadcn/ui
+- 🔒 **Security Defaults**: Supabase Auth + RLS, route protection via `proxy.ts`, HTML sanitization
 - 📱 **Responsive Design**: Mobile-first design with excellent UX
 - 🏗️ **Modern Architecture**: Clean service layer, React Query caching, and TypeScript
 - 📊 **Public Release Notes**: SEO-optimized public pages with custom domains
@@ -24,7 +24,7 @@
 
 ### Prerequisites
 
-- Node.js 18+ installed
+- Node.js 22+ installed
 - Git installed
 - Supabase account (free tier available)
 - AI Provider account (Anthropic, OpenAI, or Azure OpenAI)
@@ -106,7 +106,8 @@ lib/                   # Core business logic
 ├── services/         # Business logic layer
 ├── hooks/           # React Query hooks
 ├── store/           # Zustand state management
-└── auth-helpers.ts  # Authentication utilities
+├── supabase/ssr.ts  # Supabase SSR/browser/middleware helpers
+└── security/edge.ts # Edge-safe security helpers for proxy
 
 components/           # Reusable UI components
 ├── ui/              # Base UI components
@@ -122,7 +123,7 @@ types/               # TypeScript definitions
 - **Type Safety**: Full TypeScript coverage with generated database types
 - **Error Boundaries**: Comprehensive error handling at component level
 - **Caching Strategy**: React Query for server state, Zustand for client state
-- **Authentication**: Supabase Auth with middleware-based route protection
+- **Authentication**: Supabase Auth with `@supabase/ssr` and proxy-based route protection
 - **API Design**: RESTful endpoints with consistent error handling
 
 ## 📖 Documentation
@@ -138,14 +139,16 @@ types/               # TypeScript definitions
 ### For Developers
 - **[OAuth Integration Guide](docs/EMAIL-SLACK-INTEGRATION.md)** - Adding new OAuth providers
 - **[Public Release Notes](docs/PUBLIC-RELEASE-NOTES.md)** - Public pages implementation
+- **[Implementation As Built](docs/IMPLEMENTATION-AS-BUILT.md)** - Current journeys, route inventory, and gap map
 
 ## 🛠️ Technology Stack
 
 ### Framework & Core
-- **Next.js 15** - Full-stack React framework with App Router
-- **React 18** - Modern React with concurrent features
+- **Next.js 16** - Full-stack React framework with App Router
+- **React 19** - Modern React runtime
 - **TypeScript 5** - Type-safe development
-- **Turbopack** - Ultra-fast bundler for development
+- **Webpack (build)** - Stable production builds (`npm run build`)
+- **Turbopack (optional)** - Experimental build path (`npm run build:turbo`)
 
 ### UI & Styling
 - **Tailwind CSS** - Utility-first CSS framework
@@ -158,6 +161,7 @@ types/               # TypeScript definitions
 - **Supabase** - PostgreSQL database with real-time features
 - **Row Level Security** - Database-level authorization
 - **Supabase Auth** - Authentication and user management
+- **@supabase/ssr** - SSR/auth helper layer for App Router + proxy
 
 ### State Management & Caching
 - **React Query** - Server state management and caching
@@ -181,6 +185,7 @@ types/               # TypeScript definitions
 - **ESLint** - Code linting and formatting
 - **Prettier** - Code formatting
 - **Jest** - Unit testing framework
+- **MSW** - HTTP mocking for deterministic integration tests
 - **React Testing Library** - Component testing
 - **TypeScript strict mode** - Maximum type safety
 
@@ -207,10 +212,19 @@ Follow our **[Complete Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** for step-by
 
 - **OAuth 2.0**: Industry-standard authentication
 - **HTTPS Only**: Encrypted communication in production
-- **Secure Headers**: Helmet.js security middleware
-- **CORS Protection**: Configurable cross-origin policies
+- **Secure Headers**: CSP and related headers in `proxy.ts`
+- **Rate Limiting**: Edge-safe route-aware throttling (`api`, `auth`, `public`)
 - **Environment Secrets**: Secure credential management
-- **Rate Limiting**: API abuse prevention
+- **Content Safety**: server-side HTML sanitization before publish/send
+
+## ✅ Local Validation
+
+```bash
+npm run typecheck
+npm run lint
+npm test -- --runInBand
+npm run build
+```
 
 ## 🗺️ Roadmap
 

@@ -1,14 +1,16 @@
 import { parseEnumParam, parseIntegerParam } from '@/lib/integrations/route-utils'
-
-type JsonObject = Record<string, unknown>
+import { getAccessTokenFromEncryptedCredentials } from '@/lib/integrations/credentials'
+import { isJsonObject } from '@/lib/json'
+import { z } from 'zod'
 
 export interface GitHubIntegrationRecord {
   id: string
   created_at: string
+  organization_id: string
+  type: 'github'
   access_token?: string
-  config?: {
-    access_token?: string
-  } | null
+  encrypted_credentials?: unknown
+  config?: unknown | null
 }
 
 export type GitHubDirection = 'asc' | 'desc'
@@ -22,7 +24,7 @@ const pullStateValues: readonly GitHubPullState[] = ['open', 'closed', 'all']
 const directionValues: readonly GitHubDirection[] = ['asc', 'desc']
 
 export function isGitHubIntegrationRecord(value: unknown): value is GitHubIntegrationRecord {
-  if (!isObject(value)) {
+  if (!isJsonObject(value)) {
     return false
   }
 
@@ -30,7 +32,11 @@ export function isGitHubIntegrationRecord(value: unknown): value is GitHubIntegr
     return false
   }
 
-  if ('config' in value && value.config != null && !isObject(value.config)) {
+  if (typeof value.organization_id !== 'string' || value.type !== 'github') {
+    return false
+  }
+
+  if ('config' in value && value.config != null && !isJsonObject(value.config)) {
     return false
   }
 
@@ -42,8 +48,15 @@ export function getGitHubAccessToken(integration: GitHubIntegrationRecord): stri
     return integration.access_token
   }
 
-  if (integration.config && typeof integration.config.access_token === 'string' && integration.config.access_token) {
-    return integration.config.access_token
+  const config = parseGitHubIntegrationConfig(integration.config)
+  const configToken = config?.access_token
+  if (typeof configToken === 'string' && configToken) {
+    return configToken
+  }
+
+  const encrypted = getAccessTokenFromEncryptedCredentials(integration.encrypted_credentials)
+  if (encrypted) {
+    return encrypted
   }
 
   return null
@@ -81,6 +94,19 @@ export function parsePage(value: string | null, fallback: number): number {
   return parseIntegerParam(value, fallback, { min: 1 })
 }
 
-function isObject(value: unknown): value is JsonObject {
-  return typeof value === 'object' && value !== null
+const gitHubIntegrationConfigSchema = z
+  .object({
+    access_token: z.string().min(1).optional(),
+  })
+  .passthrough()
+
+export function parseGitHubIntegrationConfig(
+  value: unknown
+): z.infer<typeof gitHubIntegrationConfigSchema> | null {
+  if (!value) {
+    return null
+  }
+
+  const result = gitHubIntegrationConfigSchema.safeParse(value)
+  return result.success ? result.data : null
 }

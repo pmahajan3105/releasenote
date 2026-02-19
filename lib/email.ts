@@ -4,6 +4,7 @@
  */
 
 import { Resend } from 'resend'
+import { sanitizeHtml, stripHtml } from '@/lib/sanitize'
 
 let resend: Resend | null = null
 
@@ -76,8 +77,10 @@ export function generateReleaseNotesEmail(
   organization: {
     name: string
   },
-  publicUrl: string
+  publicUrl: string,
+  unsubscribeUrl?: string
 ): EmailTemplate {
+  const safeContentHtml = sanitizeHtml(releaseNote.content_html || '')
   const publishedDate = releaseNote.published_at 
     ? new Date(releaseNote.published_at).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -143,7 +146,7 @@ export function generateReleaseNotesEmail(
       </div>
 
       <div class="content">
-        ${releaseNote.content_html || '<p>New release notes are available!</p>'}
+        ${safeContentHtml || '<p>New release notes are available!</p>'}
       </div>
 
       <div style="text-align: center;">
@@ -152,6 +155,7 @@ export function generateReleaseNotesEmail(
 
       <div class="footer">
         <p>You're receiving this because you subscribed to ${organization.name} release updates.</p>
+        ${unsubscribeUrl ? `<p><a href="${unsubscribeUrl}">Unsubscribe</a></p>` : ''}
         <p><small>Powered by ReleaseNoteAI</small></p>
       </div>
     </body>
@@ -163,9 +167,10 @@ ${organization.name} - ${releaseNote.title}
 
 Published ${publishedDate}
 
-${releaseNote.content_html ? 'New release notes are available!' : ''}
+${safeContentHtml ? stripHtml(safeContentHtml) : 'New release notes are available!'}
 
 View full release notes: ${publicUrl}
+${unsubscribeUrl ? `\nUnsubscribe: ${unsubscribeUrl}\n` : ''}
 
 ---
 You're receiving this because you subscribed to ${organization.name} release updates.

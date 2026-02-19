@@ -1,9 +1,11 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
+  outputFileTracingRoot: path.resolve(process.cwd()),
   
   // Image optimization
   images: {
@@ -47,15 +49,6 @@ const nextConfig: NextConfig = {
   //   return config;
   // },
   
-  // TypeScript configuration
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  
-  // ESLint configuration
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;

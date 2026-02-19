@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuthStore, useAuthSelectors } from '@/lib/store'
 import { PlusIcon, LinkIcon, PencilIcon, EyeIcon, WifiIcon, ArrowPathIcon, UserGroupIcon } from '@heroicons/react/24/outline'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import { toast } from '@/lib/toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 

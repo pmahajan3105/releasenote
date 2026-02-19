@@ -8,6 +8,12 @@ let aiProvider: AiProvider | null = null
 function initializeProvider(): AiProvider {
   if (!aiProvider) {
     switch (configuredProvider) {
+      case 'openai': {
+        // Lazy import to prevent build-time initialization
+        const { openAIProvider } = require('./openai')
+        aiProvider = openAIProvider
+        break
+      }
       case 'azure-openai':
       default:
         // Lazy import to prevent build-time initialization

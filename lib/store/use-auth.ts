@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import type { User } from '@supabase/supabase-js'
 import type { Organization, OrganizationMember } from '@/types/database'
 

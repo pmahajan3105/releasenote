@@ -26,7 +26,7 @@ export default function DashboardHomePage() {
                                 <Link href="/dashboard/releases/new/ai" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                                     <PlusIcon className="w-4 h-4 mr-1" /> Create Release Note
                                 </Link>
-                                <Link href="/integrations/manage" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                                <Link href="/dashboard/integrations" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
                                     <LinkIcon className="w-4 h-4 mr-1" /> Setup Integration
                                 </Link>
                                 <Link href="/dashboard/ai-context" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
@@ -70,13 +70,13 @@ export default function DashboardHomePage() {
                     <CardContent className="flex flex-col items-center justify-center py-12">
                         <LinkIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
                         <p className="text-gray-500 dark:text-gray-400 mb-4 text-center">No integrations connected yet.</p>
-                        <Link href="/integrations/manage" className="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
+                        <Link href="/dashboard/integrations" className="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
                             <PlusIcon className="w-4 h-4 mr-2" /> Connect your first integration
                         </Link>
                     </CardContent>
                 </Card>
                 <div className="mt-6 text-right">
-                    <Link href="/integrations/manage" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">
+                    <Link href="/dashboard/integrations" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">
                         Manage integrations →
                     </Link>
                 </div>
@@ -95,7 +95,7 @@ export default function DashboardHomePage() {
                                     <LinkIcon className="w-5 h-5 text-primary-500" />
                                 </span>
                                 <span className="flex-1">Connect an integration (Jira, GitHub, etc.)</span>
-                                <Link href="/integrations/manage" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Setup</Link>
+                                <Link href="/dashboard/integrations" className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 ml-2">Setup</Link>
                             </li>
                             <li className="flex items-center">
                                 <span className="mr-2">

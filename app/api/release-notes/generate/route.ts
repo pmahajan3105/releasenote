@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { getAiProvider } from '@/lib/ai'
 import DOMPurify from 'dompurify'
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
 
     const aiProvider = getAiProvider()
     let generatedContent: string
+    const systemPrompt = buildReleaseNotesSystemPrompt({ tone, template })
 
     if (streaming) {
       // Create a ReadableStream for streaming response
@@ -78,12 +79,12 @@ export async function POST(request: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            // Build prompt for streaming
-            const prompt = buildReleaseNotesPrompt({ tickets, commits, companyDetails, tone, template })
+            const prompt = customPrompt || buildReleaseNotesUserPrompt({ tickets, commits, companyDetails })
             
-            const content = await aiProvider.generateFromPrompt(prompt, {
-              temperature: 0.7,
-              maxTokens: 2000
+            const content = await aiProvider.generateText(prompt, {
+              systemPrompt,
+              temperature: 0.3,
+              maxTokens: 2500
             })
             const chunks = content.match(/.{1,256}/g) ?? []
 
@@ -109,26 +110,12 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Non-streaming generation
-      if (customPrompt) {
-        generatedContent = await aiProvider.generateFromPrompt(customPrompt, {
-          temperature: 0.7,
-          maxTokens: 2000
-        })
-      } else if (tickets.length > 0) {
-        const prompt = buildReleaseNotesPrompt({ tickets, companyDetails, tone, template })
-        generatedContent = await aiProvider.generateFromPrompt(prompt, {
-          temperature: 0.7,
-          maxTokens: 2000
-        })
-      } else if (commits.length > 0) {
-        generatedContent = await aiProvider.generateReleaseNotes(commits, {
-          template: template || 'traditional',
-          tone,
-          includeBreakingChanges: true
-        })
-      } else {
-        throw new Error('No valid input for generation')
-      }
+      const prompt = customPrompt || buildReleaseNotesUserPrompt({ tickets, commits, companyDetails })
+      generatedContent = await aiProvider.generateText(prompt, {
+        systemPrompt,
+        temperature: 0.3,
+        maxTokens: 2500
+      })
 
       // Sanitize the generated content
       const sanitizedContent = purify.sanitize(generatedContent, {
@@ -167,14 +154,47 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function buildReleaseNotesPrompt(data: {
-  tickets?: PromptTicket[]
-  commits?: PromptCommit[]
-  companyDetails?: string
+function buildReleaseNotesSystemPrompt(data: {
   tone?: string
   template?: string
 }): string {
-  let prompt = 'Generate professional release notes based on the following items:\n\n'
+  const tone = data.tone || 'professional'
+
+  let prompt = `You are an expert product writer creating release notes for a SaaS product.
+
+Return ONLY valid HTML (no Markdown). Do not wrap the output in code fences. Do not include <html>, <head>, or <body> tags.
+
+Write in a ${tone} tone. Make it skimmable and user-focused.`
+
+  prompt += `
+
+Required structure:
+- Start with a short <p> summary (1-3 sentences).
+- Then include only the sections that apply, each as <h2> + <ul><li>...</li></ul>:
+  - New Features
+  - Improvements
+  - Fixes
+  - Breaking Changes (only if truly breaking)
+
+Writing rules:
+- Each <li> should be one short sentence and describe the user benefit.
+- Remove internal IDs (e.g., ABC-123, commit SHAs) unless they are clearly user-facing.
+- Avoid implementation details, stack names, or internal systems.
+- If an item has little context, be conservative and do not invent details.`
+
+  if (data.template) {
+    prompt += `\n\nTemplate guidance (follow where it makes sense, but still output valid HTML):\n${data.template}`
+  }
+
+  return prompt
+}
+
+function buildReleaseNotesUserPrompt(data: {
+  tickets?: PromptTicket[]
+  commits?: PromptCommit[]
+  companyDetails?: string
+}): string {
+  let prompt = 'Use the following items as source material:\n\n'
   
   if (data.tickets && data.tickets.length > 0) {
     // Group tickets by type
@@ -184,9 +204,9 @@ function buildReleaseNotesPrompt(data: {
     const breaking = data.tickets.filter(t => t.type === 'breaking')
     
     if (features.length > 0) {
-      prompt += '## New Features\n'
+      prompt += 'New Features:\n'
       features.forEach(ticket => {
-        prompt += `- **${ticket.title}**: ${ticket.description}\n`
+        prompt += `- ${ticket.title || 'Untitled'}: ${ticket.description || ''}\n`
         if (ticket.labels?.length) {
           prompt += `  Labels: ${ticket.labels.join(', ')}\n`
         }
@@ -195,9 +215,9 @@ function buildReleaseNotesPrompt(data: {
     }
     
     if (improvements.length > 0) {
-      prompt += '## Improvements\n'
+      prompt += 'Improvements:\n'
       improvements.forEach(ticket => {
-        prompt += `- **${ticket.title}**: ${ticket.description}\n`
+        prompt += `- ${ticket.title || 'Untitled'}: ${ticket.description || ''}\n`
         if (ticket.labels?.length) {
           prompt += `  Labels: ${ticket.labels.join(', ')}\n`
         }
@@ -206,9 +226,9 @@ function buildReleaseNotesPrompt(data: {
     }
     
     if (bugfixes.length > 0) {
-      prompt += '## Bug Fixes\n'
+      prompt += 'Fixes:\n'
       bugfixes.forEach(ticket => {
-        prompt += `- **${ticket.title}**: ${ticket.description}\n`
+        prompt += `- ${ticket.title || 'Untitled'}: ${ticket.description || ''}\n`
         if (ticket.labels?.length) {
           prompt += `  Labels: ${ticket.labels.join(', ')}\n`
         }
@@ -217,9 +237,9 @@ function buildReleaseNotesPrompt(data: {
     }
     
     if (breaking.length > 0) {
-      prompt += '## Breaking Changes\n'
+      prompt += 'Breaking Changes:\n'
       breaking.forEach(ticket => {
-        prompt += `- **${ticket.title}**: ${ticket.description}\n`
+        prompt += `- ${ticket.title || 'Untitled'}: ${ticket.description || ''}\n`
         if (ticket.labels?.length) {
           prompt += `  Labels: ${ticket.labels.join(', ')}\n`
         }
@@ -229,7 +249,7 @@ function buildReleaseNotesPrompt(data: {
   }
   
   if (data.commits && data.commits.length > 0) {
-    prompt += '## Commits\n'
+    prompt += 'Commits / PRs:\n'
     data.commits.forEach((commit) => {
       prompt += `- ${commit.message}\n`
       if (commit.author) {
@@ -239,21 +259,11 @@ function buildReleaseNotesPrompt(data: {
     prompt += '\n'
   }
   
-  prompt += '\nPlease organize these into professional release notes with:\n'
-  prompt += '- Clear categorization (New Features, Improvements, Bug Fixes, Breaking Changes)\n'
-  prompt += '- User-friendly descriptions that explain the benefit to users\n'
-  prompt += '- Proper Markdown formatting\n'
-  prompt += '- A brief summary at the beginning if there are many changes\n'
-  
-  if (data.template) {
-    prompt += `\nPlease follow this template structure:\n${data.template}\n`
-  }
-  
   if (data.companyDetails) {
     prompt += `\nCompany context: ${data.companyDetails}\n`
   }
-  
-  prompt += `\nTone: ${data.tone || 'professional'}\n`
-  
+
+  prompt += '\nNow write the release notes from this source material.'
+
   return prompt
 }

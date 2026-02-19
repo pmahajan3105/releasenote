@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 /**
  * POST /api/release-notes/[id]/publish - Publish release note
@@ -49,12 +50,21 @@ export async function POST(
       )
     }
 
+    const rawHtml =
+      (typeof existingNote.content_html === 'string' && existingNote.content_html) ||
+      (typeof existingNote.content === 'string' && existingNote.content) ||
+      (typeof existingNote.content_markdown === 'string' && existingNote.content_markdown) ||
+      ''
+
+    const sanitizedHtml = sanitizeHtml(rawHtml)
+
     // Update status and published date
     const { data: updatedNote, error: updateError } = await supabase
       .from('release_notes')
       .update({
         status: 'published',
-        published_at: new Date().toISOString()
+        published_at: new Date().toISOString(),
+        content_html: sanitizedHtml,
       })
       .eq('id', releaseNoteId)
       .select()

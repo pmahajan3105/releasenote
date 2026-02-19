@@ -1,80 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
+import { consumeOAuthState } from '@/lib/integrations/oauth-state'
+import { encryptCredentials } from '@/lib/integrations/credentials'
+import { exchangeAuthorizationCodeForTokens } from '@/lib/integrations/oauth-client'
+import type { Database } from '@/types/database'
+
+type LinearViewer = {
+  id?: string
+  name?: string
+  email?: string
+  displayName?: string
+  avatarUrl?: string
+  organization?: {
+    id?: string
+    name?: string
+    urlKey?: string
+    logoUrl?: string
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     const { searchParams } = new URL(request.url)
-    
+
     const code = searchParams.get('code')
     const state = searchParams.get('state')
-    const error = searchParams.get('error')
+    const oauthError = searchParams.get('error')
 
-    if (error) {
-      console.error('Linear OAuth error:', error)
-      return NextResponse.redirect(new URL('/integrations?error=oauth_denied', request.url))
+    if (oauthError) {
+      const redirectUrl = new URL('/dashboard/integrations', request.url)
+      redirectUrl.searchParams.set('error', 'oauth_denied')
+      return NextResponse.redirect(redirectUrl)
     }
 
     if (!code || !state) {
-      return NextResponse.redirect(new URL('/integrations?error=invalid_callback', request.url))
+      const redirectUrl = new URL('/dashboard/integrations', request.url)
+      redirectUrl.searchParams.set('error', 'invalid_callback')
+      return NextResponse.redirect(redirectUrl)
     }
 
-    // Validate state
-    const { data: stateRecord, error: stateError } = await supabase
-      .from('oauth_states')
-      .select('*')
-      .eq('state', state)
-      .eq('provider', 'linear')
-      .single()
-
-    if (stateError || !stateRecord) {
-      return NextResponse.redirect(new URL('/integrations?error=invalid_state', request.url))
-    }
-
-    // Check if state is expired
-    if (new Date(stateRecord.expires_at) < new Date()) {
-      return NextResponse.redirect(new URL('/integrations?error=expired_state', request.url))
-    }
-
-    // Get current session
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session || session.user.id !== stateRecord.user_id) {
+    if (!session?.user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Exchange code for access token
-    const tokenResponse = await fetch('https://api.linear.app/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: process.env.LINEAR_CLIENT_ID!,
-        client_secret: process.env.LINEAR_CLIENT_SECRET!,
-        code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/linear/callback`
-      })
+    const stateResult = await consumeOAuthState(supabase, {
+      provider: 'linear',
+      state,
+      userId: session.user.id,
     })
 
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.text()
-      console.error('Linear token exchange failed:', errorData)
-      return NextResponse.redirect(new URL('/integrations?error=token_exchange_failed', request.url))
+    if (!stateResult.ok) {
+      const redirectUrl = new URL('/dashboard/integrations', request.url)
+      redirectUrl.searchParams.set('error', stateResult.error)
+      return NextResponse.redirect(redirectUrl)
     }
 
-    const tokenData = await tokenResponse.json()
+    const codeVerifier = stateResult.record.pkce_verifier ?? undefined
 
-    // Get user info from Linear
-    let linearUser = null
+    const clientId = process.env.LINEAR_CLIENT_ID
+    const clientSecret = process.env.LINEAR_CLIENT_SECRET
+    const redirectUri = process.env.LINEAR_REDIRECT_URL || `${new URL(request.url).origin}/api/auth/linear/callback`
+
+    if (!clientId || !clientSecret) {
+      const redirectUrl = new URL('/dashboard/integrations', request.url)
+      redirectUrl.searchParams.set('error', 'linear_not_configured')
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    const tokenData = await exchangeAuthorizationCodeForTokens('linear', {
+      code,
+      redirectUri,
+      codeVerifier,
+    })
+
+    let linearUser: LinearViewer | null = null
     try {
       const userResponse = await fetch('https://api.linear.app/graphql', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${tokenData.access_token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${tokenData.access_token}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           query: `
@@ -93,57 +101,68 @@ export async function GET(request: NextRequest) {
                 }
               }
             }
-          `
-        })
+          `,
+        }),
       })
 
       if (userResponse.ok) {
-        const userData = await userResponse.json()
-        linearUser = userData.data?.viewer
+        const userData = (await userResponse.json()) as { data?: { viewer?: LinearViewer } }
+        linearUser = userData.data?.viewer ?? null
       }
     } catch (error) {
       console.error('Failed to fetch Linear user info:', error)
     }
 
-    // Save integration to database
+    const externalId = typeof linearUser?.id === 'string' ? linearUser.id : null
+    const expiresAt =
+      typeof tokenData.expires_in === 'number'
+        ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+        : null
+
+    const encryptedCredentials = encryptCredentials({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expires_at: expiresAt,
+      scope: tokenData.scope,
+      token_type: tokenData.token_type,
+    })
+
+    const config = {
+      user: linearUser,
+      organization: linearUser?.organization,
+      scopes: tokenData.scope ? tokenData.scope.split(' ') : ['read'],
+      token_type: tokenData.token_type,
+    }
+
     const { error: integrationError } = await supabase
       .from('integrations')
-      .upsert({
-        organization_id: session.user.id,
-        type: 'linear',
-        provider_user_id: linearUser?.id || tokenData.access_token.substring(0, 20),
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: tokenData.expires_in 
-          ? new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString()
-          : null,
-        metadata: {
-          user: linearUser,
-          organization: linearUser?.organization,
-          scopes: tokenData.scope?.split(' ') || ['read'],
-          token_type: tokenData.token_type
+      .upsert(
+        {
+          organization_id: session.user.id,
+          type: 'linear',
+          external_id: externalId,
+          encrypted_credentials: encryptedCredentials,
+          config,
+          is_active: true,
+          updated_at: new Date().toISOString(),
         },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'organization_id,type'
-      })
+        { onConflict: 'organization_id,type' }
+      )
 
     if (integrationError) {
       console.error('Failed to save Linear integration:', integrationError)
-      return NextResponse.redirect(new URL('/integrations?error=save_failed', request.url))
+      const redirectUrl = new URL('/dashboard/integrations', request.url)
+      redirectUrl.searchParams.set('error', 'save_failed')
+      return NextResponse.redirect(redirectUrl)
     }
 
-    // Clean up used state
-    await supabase
-      .from('oauth_states')
-      .delete()
-      .eq('state', state)
-
-    return NextResponse.redirect(new URL('/integrations?success=linear_connected', request.url))
-
+    const redirectUrl = new URL('/dashboard/integrations', request.url)
+    redirectUrl.searchParams.set('success', 'linear_connected')
+    return NextResponse.redirect(redirectUrl)
   } catch (error) {
     console.error('Linear OAuth callback error:', error)
-    return NextResponse.redirect(new URL('/integrations?error=callback_failed', request.url))
+    const redirectUrl = new URL('/dashboard/integrations', request.url)
+    redirectUrl.searchParams.set('error', 'callback_failed')
+    return NextResponse.redirect(redirectUrl)
   }
 }

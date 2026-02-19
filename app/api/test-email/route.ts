@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
+import { cookies } from 'next/headers'
 import { testBasicEmail, testReleaseNotesTemplate, validateEmailConfig } from '@/lib/email-test'
 
 /**
@@ -7,8 +9,27 @@ import { testBasicEmail, testReleaseNotesTemplate, validateEmailConfig } from '@
  * POST /api/test-email - Send test email
  */
 
+async function requireAuthorizedUser() {
+  if (process.env.NODE_ENV !== 'production') {
+    return null
+  }
+
+  const supabase = createRouteHandlerClient({ cookies })
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error || !session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  return null
+}
+
 export async function GET() {
   try {
+    const authError = await requireAuthorizedUser()
+    if (authError) {
+      return authError
+    }
+
     const validation = validateEmailConfig()
     return NextResponse.json(validation)
   } catch (error) {
@@ -25,6 +46,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const authError = await requireAuthorizedUser()
+    if (authError) {
+      return authError
+    }
+
     const body = await request.json()
     const { recipientEmail, testType = 'basic' } = body
 

@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useAuthStore } from "@/lib/store/use-auth"
 
-export const Sidebar = (): JSX.Element | null => {
+export const Sidebar = (): React.JSX.Element | null => {
   const pathname = usePathname()
   const [openSections, setOpenSections] = useState<string[]>(['release-notes'])
   const { user, profile, signOut } = useAuthStore()

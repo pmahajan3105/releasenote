@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import type { ReleaseNote, Template } from '@/types/database'
 
 interface ReleaseNotesFilters {
@@ -102,6 +102,17 @@ const initialState = {
     total: 0,
     totalPages: 0
   }
+}
+
+const toTemplateContextPrompt = (data: Record<string, unknown>) => {
+  const entries = Object.entries(data)
+  if (entries.length === 0) {
+    return 'No additional context provided.'
+  }
+
+  return entries
+    .map(([key, value]) => `${key}: ${String(value ?? '')}`)
+    .join('\n')
 }
 
 export const useReleaseNotesStore = create<ReleaseNotesState>()(
@@ -275,13 +286,16 @@ export const useReleaseNotesStore = create<ReleaseNotesState>()(
         },
         
         // AI Generation methods
-        generateWithAI: async (prompt: string, organizationId: string) => {
+        generateWithAI: async (prompt: string, _organizationId: string) => {
           try {
             set({ isLoading: true, error: null }, false, 'generateWithAIStart')
-            const response = await fetch('/api/ai/generate', {
+            const response = await fetch('/api/release-notes/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, organizationId })
+              body: JSON.stringify({
+                commits: [{ message: prompt }],
+                customPrompt: prompt
+              })
             })
             
             if (!response.ok) throw new Error('Failed to generate content')
@@ -299,10 +313,13 @@ export const useReleaseNotesStore = create<ReleaseNotesState>()(
         generateWithTemplate: async (templateId: string, data: Record<string, unknown>) => {
           try {
             set({ isLoading: true, error: null }, false, 'generateWithTemplateStart')
-            const response = await fetch('/api/ai/generate', {
+            const response = await fetch('/api/release-notes/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ templateId, data })
+              body: JSON.stringify({
+                template: templateId,
+                commits: [{ message: toTemplateContextPrompt(data) }]
+              })
             })
             
             if (!response.ok) throw new Error('Failed to generate with template')

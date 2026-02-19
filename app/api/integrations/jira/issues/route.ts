@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
-import { jiraAPI } from '@/lib/integrations/jira-client'
+import { jiraJsGetProjectIssues, jiraJsSearchIssues } from '@/lib/integrations/jira-js'
+import type { Database } from '@/types/database'
+import type { ChangeItem } from '@/lib/integrations/change-item'
+import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
-  getJiraResources,
+  getJiraAccessToken,
   isJiraIntegrationRecord,
+  parseJiraIntegrationConfig,
   parseCsvParam,
   parseIntegerParam,
   resolveJiraSite,
@@ -16,7 +21,7 @@ const MAX_ALLOWED_RESULTS = 100
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -48,9 +53,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Jira integration not found' }, { status: 404 })
     }
     const integration = data
-    const resources = getJiraResources(integration.metadata)
+    let accessToken = getJiraAccessToken(integration)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, integration, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
+    }
 
-    const selectedSite = resolveJiraSite(resources, siteId)
+    const { resources, preferredSiteId } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)
+    const selectedSite = resolveJiraSite(resources, siteId ?? preferredSiteId)
     if (!selectedSite) {
       return NextResponse.json({ error: 'No Jira site available' }, { status: 400 })
     }
@@ -60,7 +74,7 @@ export async function GET(request: NextRequest) {
 
       if (jql) {
         // Use custom JQL query
-        issues = await jiraAPI.searchIssues(integration.access_token, selectedSite.id, {
+        issues = await jiraJsSearchIssues(accessToken, selectedSite.id, {
           jql,
           startAt,
           maxResults,
@@ -69,7 +83,7 @@ export async function GET(request: NextRequest) {
         })
       } else if (projectKey) {
         // Search by project with optional filters
-        issues = await jiraAPI.getProjectIssues(integration.access_token, selectedSite.id, projectKey, {
+        issues = await jiraJsGetProjectIssues(accessToken, selectedSite.id, projectKey, {
           issueTypes,
           statuses,
           updatedSince,
@@ -82,7 +96,7 @@ export async function GET(request: NextRequest) {
           ? `updated >= "${updatedSince}" ORDER BY updated DESC`
           : 'updated >= -30d ORDER BY updated DESC'
           
-        issues = await jiraAPI.searchIssues(integration.access_token, selectedSite.id, {
+        issues = await jiraJsSearchIssues(accessToken, selectedSite.id, {
           jql: defaultJql,
           startAt,
           maxResults,
@@ -93,38 +107,27 @@ export async function GET(request: NextRequest) {
 
       const transformedIssues = issues.issues.map((issue) => transformJiraIssue(issue, selectedSite))
 
-      // Cache the issues in our ticket_cache table
-      if (transformedIssues.length > 0) {
-        const cachePromises = transformedIssues.map(issue => 
-          supabase
-            .from('ticket_cache')
-            .upsert({
-              organization_id: session.user.id,
-              integration_type: 'jira',
-              ticket_id: issue.key,
-              title: issue.summary,
-              description: issue.description,
-              status: issue.status.name,
-              assignee: issue.assignee?.displayName || null,
-              created_at: issue.created,
-              updated_at: issue.updated,
-              metadata: {
-                issue_type: issue.issueType,
-                priority: issue.priority,
-                fix_versions: issue.fixVersions,
-                labels: issue.labels,
-                url: issue.url,
-                changelog: issue.changelog
-              },
-              cached_at: new Date().toISOString()
-            }, {
-              onConflict: 'organization_id,integration_type,ticket_id'
-            })
-        )
+      const changeItems: ChangeItem[] = transformedIssues.map((issue) => ({
+        provider: 'jira',
+        externalId: issue.key,
+        type: 'issue',
+        title: issue.summary,
+        description: issue.description,
+        status: issue.status.name,
+        url: issue.url,
+        assignee: issue.assignee?.displayName ?? null,
+        labels: issue.labels,
+        createdAt: issue.created,
+        updatedAt: issue.updated,
+        raw: {
+          issueType: issue.issueType,
+          priority: issue.priority,
+          fixVersions: issue.fixVersions,
+          changelog: issue.changelog,
+        },
+      }))
 
-        // Execute cache updates in parallel
-        await Promise.allSettled(cachePromises)
-      }
+      await cacheChangeItems(supabase, session.user.id, changeItems)
 
       return NextResponse.json({
         issues: transformedIssues,

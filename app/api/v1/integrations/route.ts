@@ -4,7 +4,8 @@ export async function GET() {
   return NextResponse.json(
     {
       error: 'Legacy API route removed',
-      message: 'Use /api/integrations endpoints instead.',
+      message:
+        'Use /api/integrations/github/*, /api/integrations/jira/*, or /api/integrations/linear/* endpoints instead.',
     },
     { status: 410 }
   )

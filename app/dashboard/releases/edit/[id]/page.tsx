@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import { EyeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,8 @@ type ReleaseNote = {
   id: string
   title: string
   content_html: string | null
-  cover_image_url: string | null
+  content_json: Record<string, unknown> | null
+  featured_image_url: string | null
   status: 'draft' | 'published'
   published_at?: string
   // Add other fields as needed
@@ -38,10 +39,11 @@ export default function EditReleasePage() {
   const [loading, setLoading] = useState(false)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [contentJson, setContentJson] = useState<Record<string, unknown> | null>(null)
   const [version, setVersion] = useState('')
   const [note, setNote] = useState<ReleaseNote | null>(null)
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
-  const [isUploadingCover, setIsUploadingCover] = useState(false)
+  const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null)
+  const [isUploadingFeatured, setIsUploadingFeatured] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [showPreview, setShowPreview] = useState(false)
   const [organization, setOrganization] = useState<Organization | null>(null)
@@ -56,10 +58,11 @@ export default function EditReleasePage() {
         if (response.ok) {
           const releaseNote = await response.json()
           setTitle(releaseNote.title || '')
-          setContent(releaseNote.content || '')
+          setContent(releaseNote.content_html || releaseNote.content || '')
+          setContentJson(releaseNote.content_json || null)
           setVersion(releaseNote.version || '')
           setNote(releaseNote)
-          setCoverImageUrl(releaseNote.cover_image_url)
+          setFeaturedImageUrl(releaseNote.featured_image_url)
         }
       } catch (error) {
         console.error('Error fetching release note:', error)
@@ -136,15 +139,16 @@ export default function EditReleasePage() {
         },
         body: JSON.stringify({
           title,
-          content,
+          content_html: content,
+          content_json: contentJson,
           version,
-          cover_image_url: coverImageUrl,
+          featured_image_url: featuredImageUrl,
         }),
       })
 
       if (response.ok) {
         toast.success('Release note saved successfully')
-        router.push('/releases')
+        router.push('/dashboard/releases')
       } else {
         const errorData = await response.json()
         toast.error(errorData.message || 'Failed to save release note')
@@ -157,7 +161,7 @@ export default function EditReleasePage() {
     }
   }
 
-  const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFeaturedImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return
 
     const file = event.target.files[0]
@@ -166,15 +170,15 @@ export default function EditReleasePage() {
         return
     }
 
-    setIsUploadingCover(true)
+    setIsUploadingFeatured(true)
     try {
         const timestamp = Date.now()
         const fileName = `cover_${releaseNoteId}_${timestamp}_${file.name}`
         const filePath = `${fileName}` // Consider nesting
 
         // Delete previous cover image if it exists (optional)
-        if (note?.cover_image_url) {
-            const oldFileName = note.cover_image_url.split('/').pop()
+        if (note?.featured_image_url) {
+            const oldFileName = note.featured_image_url.split('/').pop()
             if (oldFileName) {
                 await supabase.storage.from(COVER_IMAGE_BUCKET).remove([oldFileName])
             }
@@ -200,22 +204,22 @@ export default function EditReleasePage() {
         }
 
         // Update state and potentially save URL to DB immediately or on main save
-        setCoverImageUrl(urlData.publicUrl)
+        setFeaturedImageUrl(urlData.publicUrl)
         // Update the note state directly for immediate feedback
-        if (note) setNote({...note, cover_image_url: urlData.publicUrl });
+        if (note) setNote({ ...note, featured_image_url: urlData.publicUrl })
 
         // Also update the DB record
         const { error: updateError } = await supabase
             .from('release_notes')
-            .update({ cover_image_url: urlData.publicUrl, updated_at: new Date().toISOString() })
+            .update({ featured_image_url: urlData.publicUrl, updated_at: new Date().toISOString() })
             .eq('id', releaseNoteId)
 
         if (updateError) throw updateError
 
     } catch (err) {
-        console.error('Cover image upload failed:', err)
+        console.error('Featured image upload failed:', err)
     } finally {
-        setIsUploadingCover(false)
+        setIsUploadingFeatured(false)
     }
   }
 
@@ -240,7 +244,7 @@ export default function EditReleasePage() {
           title={title}
           content={content}
           version={version}
-          coverImageUrl={coverImageUrl}
+          featuredImageUrl={featuredImageUrl}
           organization={organization ?? undefined}
           publishedAt={note?.published_at}
         />
@@ -316,10 +320,10 @@ export default function EditReleasePage() {
           <div>
             <label className="block text-sm font-medium mb-2">Featured Image</label>
             <div className="flex items-center gap-4">
-              {coverImageUrl ? (
+              {featuredImageUrl ? (
                 <Image
-                  src={coverImageUrl}
-                  alt="Cover"
+                  src={featuredImageUrl ?? ''}
+                  alt="Featured image"
                   width={128}
                   height={80}
                   unoptimized
@@ -333,39 +337,42 @@ export default function EditReleasePage() {
                 accept="image/*"
                 id="cover-image-upload"
                 style={{ display: 'none' }}
-                onChange={handleCoverImageUpload}
-                disabled={isUploadingCover}
+                onChange={handleFeaturedImageUpload}
+                disabled={isUploadingFeatured}
               />
               <Button
                 variant="outline"
                 onClick={() => document.getElementById('cover-image-upload')?.click()}
-                disabled={isUploadingCover}
+                disabled={isUploadingFeatured}
               >
-                {isUploadingCover ? 'Uploading...' : (coverImageUrl ? 'Change Image' : 'Upload Image')}
+                {isUploadingFeatured ? 'Uploading...' : (featuredImageUrl ? 'Change Image' : 'Upload Image')}
               </Button>
-              {coverImageUrl && (
+              {featuredImageUrl && (
                 <Button
                   variant="destructive"
                   onClick={async () => {
-                    if (!coverImageUrl) return;
-                    setIsUploadingCover(true);
+                    if (!featuredImageUrl) return;
+                    setIsUploadingFeatured(true)
                     try {
                       // Remove from storage
-                      const fileName = coverImageUrl.split('/').pop();
+                      const fileName = featuredImageUrl.split('/').pop()
                       if (fileName) {
                         await supabase.storage.from(COVER_IMAGE_BUCKET).remove([fileName]);
                       }
-                      setCoverImageUrl(null);
-                      if (note) setNote({ ...note, cover_image_url: null });
+                      setFeaturedImageUrl(null)
+                      if (note) setNote({ ...note, featured_image_url: null })
                       // Remove from DB
-                      await supabase.from('release_notes').update({ cover_image_url: null, updated_at: new Date().toISOString() }).eq('id', releaseNoteId);
+                      await supabase
+                        .from('release_notes')
+                        .update({ featured_image_url: null, updated_at: new Date().toISOString() })
+                        .eq('id', releaseNoteId)
                     } catch (err) {
                       console.error('Failed to remove cover image:', err);
                     } finally {
-                      setIsUploadingCover(false);
+                      setIsUploadingFeatured(false)
                     }
                   }}
-                  disabled={isUploadingCover}
+                  disabled={isUploadingFeatured}
                 >
                   Remove
                 </Button>
@@ -378,7 +385,7 @@ export default function EditReleasePage() {
               Content
             </label>
             <RichTextEditor
-              content={content}
+              content={contentJson ?? content}
               onChange={(newContent) => {
                 setContent(newContent)
                 // Clear validation errors when user starts typing
@@ -386,6 +393,7 @@ export default function EditReleasePage() {
                   setValidationErrors([])
                 }
               }}
+              onChangeJson={setContentJson}
               placeholder="Release note content"
             />
           </div>
@@ -406,7 +414,7 @@ export default function EditReleasePage() {
               <EyeIcon className="w-4 h-4 mr-2" />
               Preview Public Page
             </Button>
-            <Button variant="outline" onClick={() => router.push('/releases')}>
+            <Button variant="outline" onClick={() => router.push('/dashboard/releases')}>
               Cancel
             </Button>
           </div>

@@ -10,6 +10,7 @@ import type {
   OrganizationMembershipWithOrg,
   MembershipQueryResult
 } from '@/types/auth'
+import type { Json } from '@/types/database'
 
 /**
  * Validates if an object is a valid Supabase User
@@ -190,11 +191,21 @@ export function validateOrganizationData(data: unknown): {
     created_at: org.created_at as string,
     updated_at: org.updated_at as string,
     name: org.name as string,
-    description: org.description as string | undefined,
-    slug: org.slug as string | undefined,
-    user_id: org.user_id as string,
-    settings: org.settings as Record<string, unknown>,
-    plan: (org.plan as 'free' | 'professional' | 'growth') || 'free'
+    description: (org.description as string | null) ?? null,
+    slug: org.slug as string,
+    user_id: (org.user_id as string) ?? (org.id as string),
+    logo_url: (org.logo_url as string | null) ?? null,
+    settings: org.settings as Json,
+    plan: (org.plan as 'free' | 'professional' | 'growth') || 'free',
+    custom_domain: (org.custom_domain as string | null) ?? null,
+    domain_verified: (org.domain_verified as boolean) ?? false,
+    meta_title: (org.meta_title as string | null) ?? null,
+    meta_description: (org.meta_description as string | null) ?? null,
+    meta_image_url: (org.meta_image_url as string | null) ?? null,
+    favicon_url: (org.favicon_url as string | null) ?? null,
+    brand_color: (org.brand_color as string | null) ?? null,
+    custom_css: (org.custom_css as string | null) ?? null,
+    custom_css_enabled: (org.custom_css_enabled as boolean | null) ?? false,
   }
 
   return { isValid: true, organization }
@@ -259,8 +270,8 @@ export function validateMembershipQueryResult(data: unknown): {
     organization_id: membership.organization_id as string,
     user_id: membership.user_id as string,
     role: membership.role as string,
-    invited_by: (membership.invited_by as string | null) ?? undefined,
-    joined_at: (membership.joined_at as string | null) ?? undefined,
+    invited_by: (membership.invited_by as string | null) ?? null,
+    joined_at: (membership.joined_at as string | null) ?? null,
     organizations: validateOrganizationData(membership.organizations).organization!
   }
 

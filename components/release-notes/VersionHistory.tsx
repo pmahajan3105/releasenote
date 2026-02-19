@@ -21,11 +21,11 @@ interface Version {
   id: string
   version_number: number
   title: string
-  content?: string
-  content_markdown?: string
-  content_html?: string
+  content?: string | null
+  content_markdown?: string | null
+  content_html?: string | null
   created_at: string
-  created_by?: string
+  created_by?: string | null
   change_summary?: string
   is_auto_save: boolean
   author?: {

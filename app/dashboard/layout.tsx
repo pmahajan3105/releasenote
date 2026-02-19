@@ -15,7 +15,7 @@ import {
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Release Notes', href: '/dashboard/releases', icon: DocumentTextIcon },
-    { name: 'Integrations', href: '/integrations/manage', icon: LinkIcon },
+    { name: 'Integrations', href: '/dashboard/integrations', icon: LinkIcon },
     { name: 'AI Context', href: '/dashboard/ai-context', icon: PencilIcon },
     { name: 'Templates', href: '/dashboard/templates', icon: EyeIcon },
     { name: 'Settings', href: '/dashboard/settings', icon: Cog6ToothIcon },

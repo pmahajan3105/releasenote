@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { linearAPI } from '@/lib/integrations/linear-client'
+import type { Database } from '@/types/database'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getLinearAccessToken,
   getLinearOrganizationName,
@@ -17,7 +19,7 @@ import {
 
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -39,13 +41,20 @@ export async function POST(_request: NextRequest) {
         tests: []
       }, { status: 404 })
     }
-    const accessToken = getLinearAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json({
-        success: false,
-        error: 'Linear access token not found',
-        tests: []
-      }, { status: 400 })
+    let accessToken = getLinearAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          tests: [],
+        }, { status: error.status })
+      }
+      throw error
     }
 
     const tests = []
@@ -217,8 +226,7 @@ export async function POST(_request: NextRequest) {
     await supabase
       .from('integrations')
       .update({ 
-        updated_at: new Date().toISOString(),
-        last_test_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', data.id)
 
@@ -229,7 +237,7 @@ export async function POST(_request: NextRequest) {
         id: data.id,
         type: 'linear',
         connected_at: data.created_at,
-        organization: getLinearOrganizationName(data.metadata)
+        organization: getLinearOrganizationName(data.config ?? data.metadata)
       },
       tests,
       summary: {

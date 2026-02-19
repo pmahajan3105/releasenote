@@ -2,7 +2,7 @@
  * Database integrity validation utilities
  */
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 
 interface DatabaseValidationResult {
   isValid: boolean

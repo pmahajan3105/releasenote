@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
-import { GitHubService } from '@/lib/integrations/github'
+import { createGitHubClient, listCommits } from '@/lib/integrations/github-octokit'
+import type { Database } from '@/types/database'
+import type { ChangeItem } from '@/lib/integrations/change-item'
+import { titleFromCommitMessage } from '@/lib/integrations/change-item'
+import { cacheChangeItems } from '@/lib/integrations/ticket-cache'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
   getGitHubAccessToken,
   isGitHubIntegrationRecord,
@@ -18,7 +23,7 @@ export async function GET(
 ) {
   try {
     const { owner, repo } = await params
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
     if (sessionError || !session?.user) {
@@ -40,12 +45,14 @@ export async function GET(
       )
     }
 
-    const accessToken = getGitHubAccessToken(data)
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'GitHub access token not found' },
-        { status: 400 }
-      )
+    let accessToken = getGitHubAccessToken(data)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, data, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: error.status })
+      }
+      throw error
     }
 
     // Parse query parameters
@@ -57,9 +64,10 @@ export async function GET(
     const per_page = parsePerPage(url.searchParams.get('per_page'), 30)
     const page = parsePage(url.searchParams.get('page'), 1)
 
-    // Initialize GitHub service and fetch commits
-    const github = new GitHubService(accessToken)
-    const commits = await github.getCommits(owner, repo, {
+    const github = createGitHubClient(accessToken)
+    const commits = await listCommits(github, {
+      owner,
+      repo,
       sha,
       path,
       since,
@@ -67,6 +75,23 @@ export async function GET(
       per_page,
       page
     })
+
+    const changeItems: ChangeItem[] = commits.map((commit) => ({
+      provider: 'github',
+      externalId: `${owner}/${repo}@${commit.sha}`,
+      type: 'commit',
+      title: titleFromCommitMessage(commit.message),
+      description: commit.message,
+      status: 'committed',
+      url: commit.url,
+      assignee: commit.author?.name ?? null,
+      labels: [],
+      createdAt: commit.author?.date ?? null,
+      updatedAt: commit.author?.date ?? null,
+      raw: commit,
+    }))
+
+    await cacheChangeItems(supabase, session.user.id, changeItems)
 
     return NextResponse.json({
       commits,

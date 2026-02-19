@@ -2,34 +2,33 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase/ssr'
 import { useAuthStore } from '@/lib/store/use-auth'
 import { slugify } from '@/lib/utils' // Import slugify
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 
 const DEFAULT_RELEASE_NOTES_TEMPLATE = `
-# Release Notes - [Your Release Title/Version]
-
-**Date:** [Date of Release]
-
-## ✨ New Features
-
-- Feature 1 description...
-- Feature 2 description...
-
-## 🐛 Bug Fixes
-
-- Fixed an issue where...
-- Corrected a problem with...
-
-## 🚀 Improvements
-
-- Enhanced the performance of...
-- Improved the usability of...
-
-## 📝 Notes
-
-- [Any additional context, known issues, or migration steps]
+<h1>Release Notes - [Your Release Title/Version]</h1>
+<p><strong>Date:</strong> [Date of Release]</p>
+<h2>New Features</h2>
+<ul>
+  <li>Feature 1 description...</li>
+  <li>Feature 2 description...</li>
+</ul>
+<h2>Bug Fixes</h2>
+<ul>
+  <li>Fixed an issue where...</li>
+  <li>Corrected a problem with...</li>
+</ul>
+<h2>Improvements</h2>
+<ul>
+  <li>Enhanced the performance of...</li>
+  <li>Improved the usability of...</li>
+</ul>
+<h2>Notes</h2>
+<ul>
+  <li>[Any additional context, known issues, or migration steps]</li>
+</ul>
 `
 
 export default function NewReleaseNotesTemplatePage() {
@@ -73,7 +72,7 @@ export default function NewReleaseNotesTemplatePage() {
       }
 
       // Redirect to the Editor Page
-      router.push(`/releases/edit/${draftNote.id}`)
+      router.push(`/dashboard/releases/edit/${draftNote.id}`)
 
     } catch (err) {
       console.error("Error creating draft from template:", err);

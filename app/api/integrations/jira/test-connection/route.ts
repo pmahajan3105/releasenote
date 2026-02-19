@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { jiraAPI } from '@/lib/integrations/jira-client'
+import type { Database } from '@/types/database'
+import { ensureFreshIntegrationAccessToken, IntegrationTokenError } from '@/lib/integrations/token-refresh'
 import {
-  getJiraResources,
+  getJiraAccessToken,
   isJiraIntegrationRecord,
+  parseJiraIntegrationConfig,
   transformIssueTypeForDiagnostics,
 } from '@/lib/integrations/jira-route-helpers'
 
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = createRouteHandlerClient<Database>({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -33,14 +36,30 @@ export async function POST(_request: NextRequest) {
       }, { status: 404 })
     }
     const integration = data
-    const resources = getJiraResources(integration.metadata)
+    let accessToken = getJiraAccessToken(integration)
+    try {
+      accessToken = await ensureFreshIntegrationAccessToken(supabase, integration, accessToken)
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          tests: [],
+        }, { status: error.status })
+      }
+      throw error
+    }
+
+    const { resources } = parseJiraIntegrationConfig(integration.config ?? integration.metadata)
 
     const tests = []
     let overallSuccess = true
 
     // Test 1: Basic Authentication & Resources
     try {
-      const connectionTest = await jiraAPI.testConnection(integration.access_token)
+      const connectionTest = await jiraAPI.testConnection(accessToken)
       
       if (connectionTest.success) {
         tests.push({
@@ -80,7 +99,7 @@ export async function POST(_request: NextRequest) {
     if (overallSuccess && resources.length > 0) {
       try {
         const firstSite = resources[0]
-        const projects = await jiraAPI.getProjects(integration.access_token, firstSite.id, {
+        const projects = await jiraAPI.getProjects(accessToken, firstSite.id, {
           maxResults: 10
         })
 
@@ -114,7 +133,7 @@ export async function POST(_request: NextRequest) {
         const firstSite = resources[0]
         
         // Search for recent issues across all projects
-        const recentIssues = await jiraAPI.searchIssues(integration.access_token, firstSite.id, {
+        const recentIssues = await jiraAPI.searchIssues(accessToken, firstSite.id, {
           jql: 'updated >= -7d ORDER BY updated DESC',
           maxResults: 5
         })
@@ -148,7 +167,7 @@ export async function POST(_request: NextRequest) {
     if (overallSuccess && resources.length > 0) {
       try {
         const firstSite = resources[0]
-        const issueTypes = await jiraAPI.getIssueTypes(integration.access_token, firstSite.id)
+        const issueTypes = await jiraAPI.getIssueTypes(accessToken, firstSite.id)
 
         tests.push({
           name: 'Issue Types & Metadata',
@@ -183,16 +202,16 @@ export async function POST(_request: NextRequest) {
           
           switch (endpoint.test) {
             case 'projects':
-              await jiraAPI.getProjects(integration.access_token, firstSite.id, { maxResults: 1 })
+              await jiraAPI.getProjects(accessToken, firstSite.id, { maxResults: 1 })
               break
             case 'search':
-              await jiraAPI.searchIssues(integration.access_token, firstSite.id, {
+              await jiraAPI.searchIssues(accessToken, firstSite.id, {
                 jql: 'updated >= -1d',
                 maxResults: 1
               })
               break
             case 'user':
-              await jiraAPI.getCurrentUser(integration.access_token, firstSite.id)
+              await jiraAPI.getCurrentUser(accessToken, firstSite.id)
               break
           }
           
@@ -219,8 +238,7 @@ export async function POST(_request: NextRequest) {
     await supabase
       .from('integrations')
       .update({ 
-        updated_at: new Date().toISOString(),
-        last_test_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', integration.id)
 

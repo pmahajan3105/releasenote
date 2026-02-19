@@ -1,13 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
 
 /**
  * Custom domain management API
+ * GET: Retrieve current custom domain settings
  * PUT: Configure custom domain for organization
  * DELETE: Remove custom domain
  */
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = createRouteHandlerClient({ cookies })
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError || !session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: organization, error: orgError } = await supabase
+      .from('organizations')
+      .select('id, slug, custom_domain, domain_verified')
+      .eq('id', id)
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (orgError || !organization) {
+      return NextResponse.json(
+        { error: 'Organization not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    const publicPortalUrl = organization.custom_domain
+      ? `https://${organization.custom_domain}`
+      : `${baseUrl}/notes/${organization.slug}`
+
+    return NextResponse.json({
+      custom_domain: organization.custom_domain || '',
+      domain_verified: Boolean(organization.domain_verified),
+      public_portal_url: publicPortalUrl,
+    })
+  } catch (error) {
+    console.error('Domain settings fetch error:', error)
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch domain settings',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    )
+  }
+}
 
 export async function PUT(
   request: NextRequest,
