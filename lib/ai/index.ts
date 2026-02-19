@@ -1,7 +1,21 @@
 import { AiProvider } from './types'
 
-// Primary provider as specified in PRD: Azure OpenAI with GPT-4o-mini
-const configuredProvider = process.env.AI_PROVIDER || 'azure-openai'
+export type SupportedAiProvider = 'openai' | 'azure-openai'
+
+function resolveProvider(rawProvider?: string): SupportedAiProvider {
+  const normalizedProvider = rawProvider?.trim().toLowerCase()
+  if (normalizedProvider === 'azure-openai') {
+    return 'azure-openai'
+  }
+  return 'openai'
+}
+
+export function getConfiguredAiProvider(): SupportedAiProvider {
+  return resolveProvider(process.env.AI_PROVIDER)
+}
+
+// Default to OpenAI GPT-5.2, keep Azure OpenAI as opt-in fallback.
+const configuredProvider = getConfiguredAiProvider()
 
 let aiProvider: AiProvider | null = null
 
@@ -15,11 +29,15 @@ function initializeProvider(): AiProvider {
         break
       }
       case 'azure-openai':
-      default:
         // Lazy import to prevent build-time initialization
         const { azureOpenAIProvider } = require('./azure-openai')
         aiProvider = azureOpenAIProvider
-        break;
+        break
+      default: {
+        const { openAIProvider } = require('./openai')
+        aiProvider = openAIProvider
+        break
+      }
     }
   }
   return aiProvider!
@@ -42,11 +60,10 @@ export function getAiProvider(): AiProvider {
 
 /**
  * Gets the enhanced AI provider with support for multiple models
- * Primary: Azure OpenAI as specified in PRD
+ * Primary: OpenAI (gpt-5.2 by default), with Azure OpenAI fallback support.
  */
-export function getEnhancedAiProvider(_provider: 'azure-openai' | 'openai' = 'azure-openai') {
+export function getEnhancedAiProvider(_provider: 'azure-openai' | 'openai' = 'openai') {
   try {
-    // Use Azure OpenAI as primary provider per PRD specifications
     return getAiProvider()
   } catch (error) {
     console.error('AI provider not available:', error)

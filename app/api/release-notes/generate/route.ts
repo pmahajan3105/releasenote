@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
-import { getAiProvider } from '@/lib/ai'
+import { getAiProvider, getConfiguredAiProvider } from '@/lib/ai'
 import DOMPurify from 'dompurify'
 import { JSDOM } from 'jsdom'
 
@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
       commits = [],
       companyDetails,
       tone = 'professional',
-      provider = 'anthropic',
       model,
       template_id: _templateId,
       template,
@@ -135,7 +134,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           ticketsProcessed: tickets.length,
           commitsProcessed: commits.length,
-          provider,
+          provider: getConfiguredAiProvider(),
           model,
           tone
         }

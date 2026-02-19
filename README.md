@@ -9,7 +9,7 @@
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Generation**: OpenAI, Azure OpenAI, and Anthropic-compatible provider flow
+- 🤖 **AI-Powered Generation**: OpenAI (`gpt-5.2` default) with Azure OpenAI fallback
 - 🔗 **Multi-Platform Integration**: GitHub, Jira, and Linear integrations
 - 📧 **Professional Emails**: Beautiful email notifications via Resend
 - 🎨 **Modern UI**: Built with Next.js 16, React 19, Tailwind CSS, and Shadcn/ui
@@ -27,7 +27,7 @@
 - Node.js 22+ installed
 - Git installed
 - Supabase account (free tier available)
-- AI Provider account (Anthropic, OpenAI, or Azure OpenAI)
+- AI Provider account (OpenAI recommended, Azure OpenAI optional fallback)
 
 ### 1. Clone and Setup
 
@@ -53,13 +53,15 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Required: AI Provider (choose one)
-ANTHROPIC_API_KEY=your-anthropic-key
-# OR
+# Required: AI Provider (default OpenAI)
+AI_PROVIDER=openai
 OPENAI_API_KEY=your-openai-key
-# OR
-AZURE_OPENAI_API_KEY=your-azure-key
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+OPENAI_MODEL=gpt-5.2
+
+# Optional: Azure OpenAI fallback
+# AI_PROVIDER=azure-openai
+# AZURE_OPENAI_API_KEY=your-azure-key
+# AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 
 # Required: GitHub OAuth
 GITHUB_CLIENT_ID=your-github-client-id
@@ -169,9 +171,8 @@ types/               # TypeScript definitions
 - **SWR patterns** - Stale-while-revalidate caching
 
 ### AI & Integrations
-- **Anthropic Claude** - Advanced AI text generation
-- **OpenAI GPT** - Alternative AI provider
-- **Azure OpenAI** - Enterprise AI services
+- **OpenAI Responses API** - Primary AI provider (`gpt-5.2`)
+- **Azure OpenAI** - Optional fallback provider
 - **GitHub API** - Repository and issue integration
 - **Jira API** - Project management integration
 - **Linear API** - Modern issue tracking
