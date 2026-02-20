@@ -64,10 +64,26 @@ function extractAnchorHrefs(html: string): string[] {
 }
 
 function hasUnsafeMarkupSignals(html: string): boolean {
-  return (
-    /<(script|style|iframe|object|embed|form|meta)[\s>]/i.test(html) ||
-    /\son[a-z]+\s*=/i.test(html)
-  )
+  if (!html.trim()) {
+    return false
+  }
+
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const blockedSelectors = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'meta']
+
+  if (blockedSelectors.some((selector) => doc.querySelector(selector))) {
+    return true
+  }
+
+  for (const element of Array.from(doc.querySelectorAll('*'))) {
+    for (const attr of Array.from(element.attributes)) {
+      if (attr.name.toLowerCase().startsWith('on')) {
+        return true
+      }
+    }
+  }
+
+  return false
 }
 
 export function PublishingModal({ open, onClose, releaseNote, onPublish }: PublishingModalProps) {
