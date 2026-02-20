@@ -5,7 +5,16 @@ function hasExplicitScheme(value: string): boolean {
   return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value)
 }
 
+function getScheme(value: string): string | null {
+  const match = /^([a-zA-Z][a-zA-Z\d+\-.]*):/.exec(value)
+  return match ? `${match[1].toLowerCase()}:` : null
+}
+
 function isSafeRelativeUrl(value: string): boolean {
+  if (value.startsWith('//')) {
+    return false
+  }
+
   return (
     value.startsWith('/') ||
     value.startsWith('./') ||
@@ -25,33 +34,43 @@ function parseUrl(value: string): URL | null {
 export function isSafeLinkHref(value: string): boolean {
   const href = value.trim()
   if (!href) return false
+  if (/[\u0000-\u001F\u007F]/.test(href) || /\s/.test(href)) return false
 
   if (isSafeRelativeUrl(href)) {
     return true
   }
 
-  if (!hasExplicitScheme(href)) {
+  const scheme = getScheme(href)
+  if (!scheme) {
     return false
+  }
+  if (!SAFE_LINK_SCHEMES.has(scheme)) return false
+
+  if (scheme === 'mailto:') {
+    return /^mailto:[^\s]+$/i.test(href)
   }
 
   const parsed = parseUrl(href)
-  return Boolean(parsed && SAFE_LINK_SCHEMES.has(parsed.protocol))
+  return Boolean(parsed && parsed.protocol === scheme)
 }
 
 export function isSafeImageSrc(value: string): boolean {
   const src = value.trim()
   if (!src) return false
+  if (/[\u0000-\u001F\u007F]/.test(src) || /\s/.test(src)) return false
 
   if (isSafeRelativeUrl(src)) {
     return true
   }
 
-  if (!hasExplicitScheme(src)) {
+  const scheme = getScheme(src)
+  if (!scheme) {
     return false
   }
+  if (!SAFE_IMAGE_SCHEMES.has(scheme)) return false
 
   const parsed = parseUrl(src)
-  return Boolean(parsed && SAFE_IMAGE_SCHEMES.has(parsed.protocol))
+  return Boolean(parsed && parsed.protocol === scheme)
 }
 
 export function normalizeEditorLinkInput(value: string): string | null {

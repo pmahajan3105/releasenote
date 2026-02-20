@@ -20,6 +20,7 @@ export const SANITIZATION_CONFIG = {
     'a', 'img',
     'hr',
     'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+    // TipTap task list HTML uses label/input; sanitizer hooks force inert checkboxes only.
     'input', 'label'
   ],
   ALLOWED_ATTR: [

@@ -27,6 +27,19 @@ function getPurify() {
       if (node.tagName === 'A' && node.getAttribute('href')) {
         node.setAttribute('rel', 'noopener noreferrer')
       }
+
+      // Task-list safety: render checkbox visuals but disable interaction.
+      if (node.tagName === 'INPUT') {
+        const inputType = (node.getAttribute('type') || '').toLowerCase()
+        if (inputType !== 'checkbox') {
+          node.remove()
+          return
+        }
+
+        node.setAttribute('type', 'checkbox')
+        node.setAttribute('disabled', '')
+        node.setAttribute('tabindex', '-1')
+      }
     })
     configuredPurify = purify
   }

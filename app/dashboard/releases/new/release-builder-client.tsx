@@ -299,13 +299,19 @@ export default function ReleaseBuilderPage() {
 
   useEffect(() => {
     const intent = readIntent(searchParams.get('intent'))
-    if (!authInitialized || !intent || intent === 'ai' || processedIntentRef.current === intent) {
+    if (
+      !authInitialized ||
+      !user ||
+      !intent ||
+      intent === 'ai' ||
+      processedIntentRef.current === intent
+    ) {
       return
     }
 
     processedIntentRef.current = intent
     void createQuickDraft(intent)
-  }, [authInitialized, createQuickDraft, searchParams])
+  }, [authInitialized, createQuickDraft, searchParams, user])
 
   useEffect(() => {
     if (provider !== 'github') {

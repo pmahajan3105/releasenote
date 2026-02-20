@@ -6,6 +6,7 @@ import { isSafeImageSrc, isSafeLinkHref } from './url-safety'
 // Create a singleton JSDOM window to avoid creating new instances on every call
 let jsdomWindow: typeof window | null = null
 let configuredPurify: ReturnType<typeof DOMPurify> | null = null
+let stripPurify: ReturnType<typeof DOMPurify> | null = null
 
 function configurePurifyInstance(purify: ReturnType<typeof DOMPurify>) {
   if ((purify as unknown as { __releaseNoteConfigured?: boolean }).__releaseNoteConfigured) {
@@ -32,6 +33,19 @@ function configurePurifyInstance(purify: ReturnType<typeof DOMPurify>) {
     if (node.tagName === 'A' && node.getAttribute('href')) {
       node.setAttribute('rel', 'noopener noreferrer')
     }
+
+    // Task-list safety: allow checkbox markup, but never interactive form input.
+    if (node.tagName === 'INPUT') {
+      const inputType = (node.getAttribute('type') || '').toLowerCase()
+      if (inputType !== 'checkbox') {
+        node.remove()
+        return
+      }
+
+      node.setAttribute('type', 'checkbox')
+      node.setAttribute('disabled', '')
+      node.setAttribute('tabindex', '-1')
+    }
   })
 
   ;(purify as unknown as { __releaseNoteConfigured?: boolean }).__releaseNoteConfigured = true
@@ -51,6 +65,14 @@ function getPurify() {
   }
 
   return configuredPurify
+}
+
+function getStripPurify() {
+  if (!stripPurify) {
+    stripPurify = DOMPurify(getJSDOM())
+  }
+
+  return stripPurify
 }
 
 /**
@@ -99,11 +121,8 @@ export function sanitizeHtmlStrict(html: string): string {
  */
 export function stripHtml(html: string): string {
   if (!html) return ''
-  
-  const window = getJSDOM()
-  const purify = DOMPurify(window)
-  
-  return purify.sanitize(html, { 
+
+  return getStripPurify().sanitize(html, {
     ALLOWED_TAGS: [],
     ALLOWED_ATTR: []
   })
