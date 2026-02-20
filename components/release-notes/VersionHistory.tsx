@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { HistoryIcon, EyeIcon, RotateCcwIcon, UserIcon, ClockIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import type { ReleaseNote } from '@/types/database'
+import { sanitizeHtmlClient } from '@/lib/sanitize-client'
 
 interface VersionHistoryProps {
   open: boolean
@@ -263,7 +264,7 @@ export function VersionHistory({
                     <div className="h-96 overflow-auto pr-1">
                       <div className="prose prose-sm max-w-none">
                         {previewVersion.content_html ? (
-                          <div dangerouslySetInnerHTML={{ __html: previewVersion.content_html }} />
+                          <div dangerouslySetInnerHTML={{ __html: sanitizeHtmlClient(previewVersion.content_html) }} />
                         ) : previewVersion.content_markdown ? (
                           <pre className="whitespace-pre-wrap text-sm">
                             {previewVersion.content_markdown}

@@ -14,6 +14,7 @@ import { CalendarIcon, ClockIcon, GlobeIcon, SendIcon, EyeIcon } from 'lucide-re
 import { format } from 'date-fns'
 import type { ReleaseNote } from '@/types/database'
 import { toast } from 'sonner'
+import { isSafeLinkHref } from '@/lib/url-safety'
 
 interface PublishingModalProps {
   open: boolean
@@ -49,6 +50,24 @@ function sectionHasListItems(html: string, sectionName: string): boolean {
     return true
   }
   return /<li[\s>]/i.test(match[1] || '')
+}
+
+function extractAnchorHrefs(html: string): string[] {
+  if (!html.trim()) {
+    return []
+  }
+
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return Array.from(doc.querySelectorAll('a[href]'))
+    .map((anchor) => anchor.getAttribute('href')?.trim() || '')
+    .filter(Boolean)
+}
+
+function hasUnsafeMarkupSignals(html: string): boolean {
+  return (
+    /<(script|style|iframe|object|embed|form|meta)[\s>]/i.test(html) ||
+    /\son[a-z]+\s*=/i.test(html)
+  )
 }
 
 export function PublishingModal({ open, onClose, releaseNote, onPublish }: PublishingModalProps) {
@@ -87,7 +106,13 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
         const activeCount = (data.subscribers ?? []).filter(
           (subscriber) => subscriber.status === 'active'
         ).length
-        setSubscriberCount(activeCount || data.total || 0)
+
+        if (Array.isArray(data.subscribers)) {
+          setSubscriberCount(activeCount)
+          return
+        }
+
+        setSubscriberCount(typeof data.total === 'number' ? data.total : 0)
       })
       .catch(() => {
         setSubscriberCount(0)
@@ -131,17 +156,17 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
       })
     }
 
-    if (/<script[\s>]/i.test(html)) {
+    if (hasUnsafeMarkupSignals(html)) {
       nextChecks.push({
-        id: 'unsafe-script',
+        id: 'unsafe-markup',
         level: 'error',
-        message: 'Potentially unsafe script tags detected in content.',
+        message: 'Potentially unsafe markup detected in content.',
       })
     } else {
       nextChecks.push({
-        id: 'unsafe-script-pass',
+        id: 'unsafe-markup-pass',
         level: 'pass',
-        message: 'No unsafe script tags detected.',
+        message: 'No unsafe markup detected.',
       })
     }
 
@@ -155,16 +180,7 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
       })
     }
 
-    const invalidLinks = [...html.matchAll(/href=\"([^\"]+)\"/gi)].filter((match) => {
-      const href = (match[1] || '').trim().toLowerCase()
-      return !(
-        href.startsWith('http://') ||
-        href.startsWith('https://') ||
-        href.startsWith('/') ||
-        href.startsWith('#') ||
-        href.startsWith('mailto:')
-      )
-    })
+    const invalidLinks = extractAnchorHrefs(html).filter((href) => !isSafeLinkHref(href))
     if (invalidLinks.length > 0) {
       nextChecks.push({
         id: 'invalid-links',

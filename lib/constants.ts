@@ -17,9 +17,26 @@ export const SANITIZATION_CONFIG = {
     'ul', 'ol', 'li',
     'strong', 'b', 'em', 'i', 'u',
     'blockquote', 'code', 'pre',
-    'a', 'img'
+    'a', 'img',
+    'hr',
+    'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+    'input', 'label'
   ],
-  ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class']
+  ALLOWED_ATTR: [
+    'href',
+    'src',
+    'alt',
+    'title',
+    'class',
+    'target',
+    'rel',
+    'data-type',
+    'colspan',
+    'rowspan',
+    'type',
+    'checked',
+    'disabled',
+  ]
 } as const
 
 // Database Constants

@@ -1,15 +1,56 @@
 import DOMPurify from 'dompurify'
 import { JSDOM } from 'jsdom'
 import { SANITIZATION_CONFIG } from './constants'
+import { isSafeImageSrc, isSafeLinkHref } from './url-safety'
 
 // Create a singleton JSDOM window to avoid creating new instances on every call
 let jsdomWindow: typeof window | null = null
+let configuredPurify: ReturnType<typeof DOMPurify> | null = null
+
+function configurePurifyInstance(purify: ReturnType<typeof DOMPurify>) {
+  if ((purify as unknown as { __releaseNoteConfigured?: boolean }).__releaseNoteConfigured) {
+    return
+  }
+
+  const ElementConstructor = getJSDOM().Element
+
+  purify.addHook('afterSanitizeAttributes', (node) => {
+    if (!(node instanceof ElementConstructor)) {
+      return
+    }
+
+    const href = node.getAttribute('href')
+    if (href && !isSafeLinkHref(href)) {
+      node.removeAttribute('href')
+    }
+
+    const src = node.getAttribute('src')
+    if (src && !isSafeImageSrc(src)) {
+      node.removeAttribute('src')
+    }
+
+    if (node.tagName === 'A' && node.getAttribute('href')) {
+      node.setAttribute('rel', 'noopener noreferrer')
+    }
+  })
+
+  ;(purify as unknown as { __releaseNoteConfigured?: boolean }).__releaseNoteConfigured = true
+}
 
 function getJSDOM() {
   if (!jsdomWindow) {
     jsdomWindow = new JSDOM('').window as unknown as typeof window
   }
   return jsdomWindow
+}
+
+function getPurify() {
+  if (!configuredPurify) {
+    configuredPurify = DOMPurify(getJSDOM())
+    configurePurifyInstance(configuredPurify)
+  }
+
+  return configuredPurify
 }
 
 /**
@@ -27,12 +68,13 @@ export function sanitizeHtml(
 ): string {
   if (!html) return ''
 
-  const window = getJSDOM()
-  const purify = DOMPurify(window)
+  const purify = getPurify()
 
   const config = {
     ALLOWED_TAGS: options?.allowedTags || [...SANITIZATION_CONFIG.ALLOWED_TAGS],
-    ALLOWED_ATTR: options?.allowedAttributes || [...SANITIZATION_CONFIG.ALLOWED_ATTR]
+    ALLOWED_ATTR: options?.allowedAttributes || [...SANITIZATION_CONFIG.ALLOWED_ATTR],
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'meta'],
+    FORBID_ATTR: ['style'],
   }
 
   return purify.sanitize(html, config)

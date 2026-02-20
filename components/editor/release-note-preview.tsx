@@ -2,13 +2,7 @@
 
 import React from 'react'
 import Image from 'next/image'
-// Simple client-side sanitization - for preview only
-function sanitizeHtml(html: string): string {
-  if (!html) return ''
-  // For preview, we'll use a basic sanitization
-  // In production, this would be sanitized server-side
-  return html
-}
+import { sanitizeHtmlClient } from '@/lib/sanitize-client'
 
 interface ReleaseNotePreviewProps {
   title: string
@@ -32,7 +26,7 @@ export function ReleaseNotePreview({
   publishedAt,
   className = ''
 }: ReleaseNotePreviewProps) {
-  const sanitizedHtml = sanitizeHtml(content)
+  const sanitizedHtml = sanitizeHtmlClient(content)
   const previewDate = publishedAt ? new Date(publishedAt) : new Date()
 
   return (
@@ -47,6 +41,7 @@ export function ReleaseNotePreview({
               fill
               style={{ objectFit: 'cover' }}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              unoptimized
             />
           </div>
         )}
@@ -62,6 +57,7 @@ export function ReleaseNotePreview({
                   width={40}
                   height={40}
                   className="rounded-full"
+                  unoptimized
                 />
               )}
               {organization.name && (

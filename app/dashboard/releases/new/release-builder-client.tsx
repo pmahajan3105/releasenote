@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClientComponentClient } from '@/lib/supabase/ssr'
@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 type BuilderProvider = 'github' | 'jira' | 'linear'
 type BuilderStep = 'source' | 'items' | 'generate' | 'edit' | 'publish'
+type BuilderIntent = 'scratch' | 'template' | 'ai'
 
 type GitHubRepository = {
   id: number
@@ -58,11 +59,35 @@ const BUILDER_STEPS: Array<{ key: BuilderStep; label: string; description: strin
   { key: 'publish', label: 'Publish', description: 'Go live + notify' },
 ]
 
+const DEFAULT_RELEASE_TEMPLATE_HTML = `
+<h2>Summary</h2>
+<p>Add a short summary of what shipped in this release.</p>
+<h2>New Features</h2>
+<ul>
+  <li>Describe the key feature and user impact.</li>
+</ul>
+<h2>Improvements</h2>
+<ul>
+  <li>Capture notable quality or workflow improvements.</li>
+</ul>
+<h2>Fixes</h2>
+<ul>
+  <li>List important bugs fixed for users.</li>
+</ul>
+`
+
 function readStep(value: string | null): BuilderStep {
   if (value === 'items' || value === 'generate' || value === 'edit' || value === 'publish') {
     return value
   }
   return 'source'
+}
+
+function readIntent(value: string | null): BuilderIntent | null {
+  if (value === 'scratch' || value === 'template' || value === 'ai') {
+    return value
+  }
+  return null
 }
 
 function summarizeCommit(message: string): string {
@@ -124,6 +149,7 @@ export default function ReleaseBuilderPage() {
   const searchParams = useSearchParams()
   const supabase = createClientComponentClient<Database>()
   const user = useAuthStore((state) => state.user)
+  const authInitialized = useAuthStore((state) => state.isInitialized)
 
   const [provider, setProvider] = useState<BuilderProvider>('github')
   const [step, setStep] = useState<BuilderStep>(() => readStep(searchParams.get('step')))
@@ -157,6 +183,8 @@ export default function ReleaseBuilderPage() {
   const [companyDetails, setCompanyDetails] = useState('')
   const [tone, setTone] = useState<GenerateTone>('professional')
   const [draftId, setDraftId] = useState<string | null>(null)
+  const [quickDraftMode, setQuickDraftMode] = useState<'scratch' | 'template' | null>(null)
+  const processedIntentRef = useRef<BuilderIntent | null>(null)
 
   const selectedItems = useMemo(
     () => items.filter((item) => selectedItemIds.includes(item.id)),
@@ -221,6 +249,63 @@ export default function ReleaseBuilderPage() {
       setStep(nextStep)
     }
   }, [searchParams, step, canAccessStep])
+
+  const createQuickDraft = useCallback(
+    async (mode: 'scratch' | 'template') => {
+      if (!user) {
+        setError('You need to be signed in to create a draft')
+        return
+      }
+
+      setQuickDraftMode(mode)
+      setError(null)
+
+      try {
+        const dateLabel = new Date().toISOString().slice(0, 10)
+        const draftTitle =
+          mode === 'template'
+            ? `Release Notes Template ${dateLabel}`
+            : `New Release Notes ${dateLabel}`
+        const slug = `${slugify(draftTitle)}-${Date.now().toString(36)}`
+
+        const { data: inserted, error: insertError } = await supabase
+          .from('release_notes')
+          .insert({
+            organization_id: user.id,
+            author_id: user.id,
+            title: draftTitle,
+            slug,
+            status: 'draft',
+            content_html: mode === 'template' ? DEFAULT_RELEASE_TEMPLATE_HTML.trim() : '',
+            content_markdown: '',
+            source_ticket_ids: [],
+          })
+          .select('id')
+          .single()
+
+        if (insertError || !inserted?.id) {
+          throw new Error(insertError?.message || 'Failed to create draft')
+        }
+
+        router.push(`/dashboard/releases/edit/${inserted.id}`)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create draft')
+      } finally {
+        setQuickDraftMode(null)
+      }
+    },
+    [router, supabase, user]
+  )
+
+  useEffect(() => {
+    const intent = readIntent(searchParams.get('intent'))
+    if (!authInitialized || !intent || intent === 'ai' || processedIntentRef.current === intent) {
+      return
+    }
+
+    processedIntentRef.current = intent
+    void createQuickDraft(intent)
+  }, [authInitialized, createQuickDraft, searchParams])
 
   useEffect(() => {
     if (provider !== 'github') {
@@ -694,6 +779,35 @@ export default function ReleaseBuilderPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="rounded-lg border border-[#e4e7ec] bg-[#f9fafb] p-4">
+              <p className="text-sm font-medium text-[#101828]">Quick start</p>
+              <p className="mt-1 text-sm text-[#475467]">
+                Need a manual draft? Start from a blank editor or load a starter template instantly.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={quickDraftMode !== null}
+                  onClick={() => {
+                    void createQuickDraft('scratch')
+                  }}
+                >
+                  {quickDraftMode === 'scratch' ? 'Creating Blank Draft...' : 'Start from Scratch'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={quickDraftMode !== null}
+                  onClick={() => {
+                    void createQuickDraft('template')
+                  }}
+                >
+                  {quickDraftMode === 'template' ? 'Creating Template Draft...' : 'Start from Template'}
+                </Button>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               {(['github', 'jira', 'linear'] as BuilderProvider[]).map((item) => (
                 <Button
