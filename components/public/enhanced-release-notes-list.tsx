@@ -25,8 +25,6 @@ interface Organization {
   description?: string
   logo_url?: string
   brand_color?: string
-  custom_css?: string
-  custom_css_enabled?: boolean
 }
 
 interface EnhancedReleaseNotesListProps {
@@ -94,10 +92,6 @@ export function EnhancedReleaseNotesList({
         '--brand-color': brandColor,
       } as React.CSSProperties}
     >
-      {organization.custom_css_enabled && organization.custom_css && (
-        <style dangerouslySetInnerHTML={{ __html: organization.custom_css }} />
-      )}
-
       <div className="mx-auto max-w-5xl">
         <header className="mb-8 rounded-2xl border border-[#e4e7ec] bg-white px-6 py-8 shadow-sm sm:px-8">
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
@@ -107,6 +101,7 @@ export function EnhancedReleaseNotesList({
               width={64}
               height={64}
               className="rounded-xl border border-[#eaecf0] bg-[#f9fafb] object-cover"
+              unoptimized
             />
 
             <div>

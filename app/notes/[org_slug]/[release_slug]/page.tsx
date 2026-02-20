@@ -178,6 +178,7 @@ export default async function PublicReleaseNotePage({ params }: Props) {
               style={{ objectFit: 'cover' }}
               priority
               sizes="(max-width: 768px) 100vw, 1024px"
+              unoptimized
             />
           </div>
         )}
@@ -192,6 +193,7 @@ export default async function PublicReleaseNotePage({ params }: Props) {
                   width={UI_CONSTANTS.LOGO_SIZE}
                   height={UI_CONSTANTS.LOGO_SIZE}
                   className="rounded-full"
+                  unoptimized
                 />
               )}
               {organization.name && <span className="text-lg font-semibold text-[#344054]">{organization.name}</span>}

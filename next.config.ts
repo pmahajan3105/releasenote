@@ -1,6 +1,39 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+const supabaseHostname = (() => {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!rawUrl) return null
+
+  try {
+    return new URL(rawUrl).hostname
+  } catch {
+    return null
+  }
+})()
+
+const remotePatterns: NonNullable<NextConfig['images']>['remotePatterns'] = [
+  {
+    protocol: 'https',
+    hostname: '**.supabase.co',
+  },
+  {
+    protocol: 'https',
+    hostname: 'avatars.githubusercontent.com',
+  },
+  {
+    protocol: 'https',
+    hostname: 'images.unsplash.com',
+  },
+]
+
+if (supabaseHostname) {
+  remotePatterns.push({
+    protocol: 'https',
+    hostname: supabaseHostname,
+  })
+}
+
 const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
@@ -12,6 +45,7 @@ const nextConfig: NextConfig = {
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    remotePatterns,
   },
   
   // Headers for caching and security

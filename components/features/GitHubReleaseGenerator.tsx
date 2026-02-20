@@ -6,6 +6,7 @@ import { createClientComponentClient } from '@/lib/supabase/ssr'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { generateSlug } from '@/lib/utils'
+import { sanitizeHtmlClient } from '@/lib/sanitize-client'
 import type { Database } from '@/types/database'
 
 interface GitHubRepository {
@@ -273,7 +274,7 @@ export function GitHubReleaseGenerator() {
           <CardContent className="space-y-4">
             <div 
               className="p-4 bg-gray-50 border rounded min-h-[200px] prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: generatedContent }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtmlClient(generatedContent) }}
             />
             
             <div className="flex gap-2">

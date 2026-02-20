@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RichTextEditor } from '@/components/editor/rich-text-editor'
 import { toast } from '@/lib/toast'
+import { sanitizeHtmlClient } from '@/lib/sanitize-client'
 
 // Assuming a type for your release note data
 type ReleaseNote = {
@@ -227,6 +228,8 @@ export default function EditReleasePage() {
   }
 
   const renderInlinePreview = () => {
+    const sanitizedPreviewHtml = sanitizeHtmlClient(content || '<p>No content yet.</p>')
+
     return (
       <div className="rounded-lg border border-[#e4e7ec] bg-white p-5 shadow-sm">
         {(organization?.name || organization?.logo_url) && (
@@ -272,7 +275,7 @@ export default function EditReleasePage() {
 
         <div
           className="prose prose-sm mt-6 max-w-none rounded-md border border-[#eaecf0] p-4"
-          dangerouslySetInnerHTML={{ __html: content || '<p>No content yet.</p>' }}
+          dangerouslySetInnerHTML={{ __html: sanitizedPreviewHtml }}
         />
       </div>
     )

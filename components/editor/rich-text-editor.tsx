@@ -50,6 +50,7 @@ import {
 } from 'lucide-react'
 import { useCallback } from 'react'
 import { getSupabaseClient } from '@/lib/supabase'
+import { normalizeEditorLinkInput } from '@/lib/url-safety'
 
 interface RichTextEditorProps {
   content?: string | Record<string, unknown>
@@ -76,6 +77,18 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const supabase = getSupabaseClient()
 
+  const shouldIgnoreShortcutTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) {
+      return false
+    }
+
+    return Boolean(
+      target.closest(
+        'input, textarea, select, button, [role="dialog"], [data-prevent-editor-shortcuts="true"]'
+      )
+    )
+  }
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -84,6 +97,8 @@ export function RichTextEditor({
       }),
       Link.configure({
         openOnClick: false,
+        protocols: ['http', 'https', 'mailto'],
+        validate: (href) => normalizeEditorLinkInput(href) !== null,
         HTMLAttributes: {
           class: 'text-[#7F56D9] underline hover:text-[#6941C6]',
         },
@@ -130,9 +145,13 @@ export function RichTextEditor({
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl mx-auto focus:outline-none min-h-[300px] p-4',
       },
       handleDOMEvents: {
-        keydown: (_view, event) => {
+        keydown: (view, event) => {
           const isCmdOrCtrl = event.metaKey || event.ctrlKey
-          if (!isCmdOrCtrl) {
+          if (!isCmdOrCtrl || event.isComposing || shouldIgnoreShortcutTarget(event.target)) {
+            return false
+          }
+
+          if (!view.hasFocus()) {
             return false
           }
 
@@ -209,7 +228,13 @@ const addImage = useCallback(() => {
       return
     }
 
-    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+    const normalizedUrl = normalizeEditorLinkInput(url)
+    if (!normalizedUrl) {
+      window.alert('Invalid URL. Use https://, http://, mailto:, /path, or #anchor links.')
+      return
+    }
+
+    editor?.chain().focus().extendMarkRange('link').setLink({ href: normalizedUrl }).run()
   }, [editor])
 
   const addTable = useCallback(() => {

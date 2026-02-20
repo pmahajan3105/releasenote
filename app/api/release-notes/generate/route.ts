@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase/ssr'
 import { cookies } from 'next/headers'
 import { getAiProvider, getConfiguredAiProvider } from '@/lib/ai'
-import DOMPurify from 'dompurify'
-import { JSDOM } from 'jsdom'
-
-const window = new JSDOM('').window
-const purify = DOMPurify(window)
+import { sanitizeHtml } from '@/lib/sanitize'
 
 interface PromptTicket {
   type?: string
@@ -85,7 +81,8 @@ export async function POST(request: NextRequest) {
               temperature: 0.3,
               maxTokens: 2500
             })
-            const chunks = content.match(/.{1,256}/g) ?? []
+            const sanitizedStreamContent = sanitizeHtml(content)
+            const chunks = sanitizedStreamContent.match(/.{1,256}/g) ?? []
 
             for (const chunk of chunks) {
               controller.enqueue(encoder.encode(chunk))
@@ -116,18 +113,8 @@ export async function POST(request: NextRequest) {
         maxTokens: 2500
       })
 
-      // Sanitize the generated content
-      const sanitizedContent = purify.sanitize(generatedContent, {
-        ALLOWED_TAGS: [
-          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-          'p', 'br', 'div', 'span',
-          'ul', 'ol', 'li',
-          'strong', 'b', 'em', 'i', 'u',
-          'blockquote', 'code', 'pre',
-          'a', 'img'
-        ],
-        ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class']
-      })
+      // Sanitize generated HTML before returning it to the editor UI.
+      const sanitizedContent = sanitizeHtml(generatedContent)
 
       return NextResponse.json({ 
         content: sanitizedContent,
