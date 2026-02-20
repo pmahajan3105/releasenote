@@ -55,6 +55,8 @@ interface RichTextEditorProps {
   content?: string | Record<string, unknown>
   onChange?: (content: string) => void
   onChangeJson?: (content: Record<string, unknown>) => void
+  onSaveShortcut?: () => void
+  onPublishShortcut?: () => void
   placeholder?: string
   className?: string
   enableAI?: boolean
@@ -65,6 +67,8 @@ export function RichTextEditor({
   content = '', 
   onChange, 
   onChangeJson,
+  onSaveShortcut,
+  onPublishShortcut,
   placeholder = 'Start writing your release notes...', 
   className = '',
   enableAI = true,
@@ -124,6 +128,28 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl mx-auto focus:outline-none min-h-[300px] p-4',
+      },
+      handleDOMEvents: {
+        keydown: (_view, event) => {
+          const isCmdOrCtrl = event.metaKey || event.ctrlKey
+          if (!isCmdOrCtrl) {
+            return false
+          }
+
+          if (event.key.toLowerCase() === 's') {
+            event.preventDefault()
+            onSaveShortcut?.()
+            return true
+          }
+
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            onPublishShortcut?.()
+            return true
+          }
+
+          return false
+        },
       },
     },
     onUpdate: ({ editor }) => {

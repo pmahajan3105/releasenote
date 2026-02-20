@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { CalendarIcon, ClockIcon, GlobeIcon, SendIcon, EyeIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import type { ReleaseNote } from '@/types/database'
+import { toast } from 'sonner'
 
 interface PublishingModalProps {
   open: boolean
@@ -31,6 +32,25 @@ interface PublishingData {
   socialShare?: boolean
 }
 
+type PrePublishCheck = {
+  id: string
+  level: 'pass' | 'warning' | 'error'
+  message: string
+}
+
+function plainTextFromHtml(input: string): string {
+  return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function sectionHasListItems(html: string, sectionName: string): boolean {
+  const pattern = new RegExp(`<h2[^>]*>\\s*${sectionName}\\s*<\\/h2>([\\s\\S]*?)(<h2|$)`, 'i')
+  const match = html.match(pattern)
+  if (!match) {
+    return true
+  }
+  return /<li[\s>]/i.test(match[1] || '')
+}
+
 export function PublishingModal({ open, onClose, releaseNote, onPublish }: PublishingModalProps) {
   const [publishingData, setPublishingData] = useState<PublishingData>({
     status: 'published',
@@ -44,8 +64,137 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [timeInput, setTimeInput] = useState('12:00')
   const [tagInput, setTagInput] = useState('')
+  const [subscriberCount, setSubscriberCount] = useState(0)
+  const [loadingSubscribers, setLoadingSubscribers] = useState(false)
+  const [testEmail, setTestEmail] = useState('')
+  const [sendingTestEmail, setSendingTestEmail] = useState(false)
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    setLoadingSubscribers(true)
+    fetch('/api/subscribers')
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Failed to load subscribers')
+        }
+        const data = (await response.json()) as {
+          subscribers?: Array<{ status?: string }>
+          total?: number
+        }
+        const activeCount = (data.subscribers ?? []).filter(
+          (subscriber) => subscriber.status === 'active'
+        ).length
+        setSubscriberCount(activeCount || data.total || 0)
+      })
+      .catch(() => {
+        setSubscriberCount(0)
+      })
+      .finally(() => {
+        setLoadingSubscribers(false)
+      })
+  }, [open])
+
+  const checks = useMemo<PrePublishCheck[]>(() => {
+    const nextChecks: PrePublishCheck[] = []
+    const title = (releaseNote.title || '').trim()
+    const html = releaseNote.content_html || ''
+    const text = plainTextFromHtml(html)
+
+    if (!title) {
+      nextChecks.push({
+        id: 'missing-title',
+        level: 'error',
+        message: 'Title is missing. Add a clear release note title before publishing.',
+      })
+    } else {
+      nextChecks.push({
+        id: 'title',
+        level: 'pass',
+        message: 'Title is present.',
+      })
+    }
+
+    if (!text) {
+      nextChecks.push({
+        id: 'missing-content',
+        level: 'error',
+        message: 'Content is empty. Generate or write content before publishing.',
+      })
+    } else {
+      nextChecks.push({
+        id: 'content',
+        level: 'pass',
+        message: 'Content is present.',
+      })
+    }
+
+    if (/<script[\s>]/i.test(html)) {
+      nextChecks.push({
+        id: 'unsafe-script',
+        level: 'error',
+        message: 'Potentially unsafe script tags detected in content.',
+      })
+    } else {
+      nextChecks.push({
+        id: 'unsafe-script-pass',
+        level: 'pass',
+        message: 'No unsafe script tags detected.',
+      })
+    }
+
+    const firstParagraph = html.match(/<p[^>]*>([\s\S]*?)<\/p>/i)?.[1] || ''
+    const firstParagraphText = plainTextFromHtml(firstParagraph)
+    if (firstParagraphText.length > 320) {
+      nextChecks.push({
+        id: 'long-intro',
+        level: 'warning',
+        message: 'Intro paragraph is long. Consider trimming for better scan readability.',
+      })
+    }
+
+    const invalidLinks = [...html.matchAll(/href=\"([^\"]+)\"/gi)].filter((match) => {
+      const href = (match[1] || '').trim().toLowerCase()
+      return !(
+        href.startsWith('http://') ||
+        href.startsWith('https://') ||
+        href.startsWith('/') ||
+        href.startsWith('#') ||
+        href.startsWith('mailto:')
+      )
+    })
+    if (invalidLinks.length > 0) {
+      nextChecks.push({
+        id: 'invalid-links',
+        level: 'warning',
+        message: `Detected ${invalidLinks.length} link(s) that may be broken or malformed.`,
+      })
+    }
+
+    const releaseSections = ['New Features', 'Improvements', 'Fixes', 'Breaking Changes']
+    for (const section of releaseSections) {
+      if (!sectionHasListItems(html, section)) {
+        nextChecks.push({
+          id: `empty-${section.toLowerCase().replace(/\s+/g, '-')}`,
+          level: 'warning',
+          message: `${section} section appears empty.`,
+        })
+      }
+    }
+
+    return nextChecks
+  }, [releaseNote.content_html, releaseNote.title])
+
+  const hasBlockingChecks = checks.some((check) => check.level === 'error')
 
   const handlePublish = async () => {
+    if (hasBlockingChecks) {
+      toast.error('Resolve blocking pre-publish checks before publishing.')
+      return
+    }
+
     setLoading(true)
     try {
       await onPublish(publishingData)
@@ -59,6 +208,10 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
 
   const handleSchedule = async () => {
     if (!selectedDate) return
+    if (hasBlockingChecks) {
+      toast.error('Resolve blocking pre-publish checks before scheduling.')
+      return
+    }
     
     const [hours, minutes] = timeInput.split(':').map(Number)
     const scheduledDateTime = new Date(selectedDate)
@@ -76,6 +229,42 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
       console.error('Scheduling failed:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendTestEmail = async () => {
+    const recipientEmail = testEmail.trim()
+    if (!recipientEmail) {
+      toast.error('Enter a recipient email for the test send.')
+      return
+    }
+
+    setSendingTestEmail(true)
+    try {
+      const response = await fetch('/api/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientEmail,
+          testType: 'template',
+        }),
+      })
+
+      const data = (await response.json().catch(() => ({}))) as {
+        success?: boolean
+        message?: string
+        error?: string
+      }
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.error || data.message || 'Failed to send test email')
+      }
+
+      toast.success(`Test email sent to ${recipientEmail}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send test email')
+    } finally {
+      setSendingTestEmail(false)
     }
   }
 
@@ -180,6 +369,34 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
             </div>
           )}
 
+          {/* Pre-publish Checks */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium">Pre-publish Checks</h3>
+            <div className="rounded-lg border border-[#e4e7ec] bg-[#f9fafb] p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Badge variant={hasBlockingChecks ? 'destructive' : 'secondary'}>
+                  {hasBlockingChecks ? 'Blocking issues found' : 'Ready to publish'}
+                </Badge>
+              </div>
+              <ul className="space-y-2 text-sm">
+                {checks.map((check) => (
+                  <li key={check.id} className="flex items-start gap-2">
+                    <span
+                      className={`mt-1 inline-block h-2.5 w-2.5 rounded-full ${
+                        check.level === 'error'
+                          ? 'bg-red-500'
+                          : check.level === 'warning'
+                            ? 'bg-yellow-500'
+                            : 'bg-green-500'
+                      }`}
+                    />
+                    <span>{check.message}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
           {/* SEO & Metadata */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">SEO & Metadata</h3>
@@ -248,6 +465,17 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
           {/* Notification Settings */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Notifications</h3>
+
+            <div className="rounded-lg border border-[#e4e7ec] bg-[#f9fafb] p-3 text-sm text-[#475467]">
+              {loadingSubscribers ? (
+                <span>Loading subscriber count...</span>
+              ) : (
+                <span>
+                  This release will notify <strong>{subscriberCount}</strong> active subscriber
+                  {subscriberCount === 1 ? '' : 's'} if notifications are enabled.
+                </span>
+              )}
+            </div>
             
             <div className="flex items-center justify-between">
               <div>
@@ -275,6 +503,30 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
                   setPublishingData(prev => ({ ...prev, socialShare: checked }))
                 }
               />
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-[#e4e7ec] p-4">
+              <Label htmlFor="testEmail">Send test email first</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="testEmail"
+                  value={testEmail}
+                  onChange={(event) => setTestEmail(event.target.value)}
+                  placeholder="you@company.com"
+                  type="email"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSendTestEmail}
+                  disabled={sendingTestEmail}
+                >
+                  {sendingTestEmail ? 'Sending...' : 'Send Test'}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Use this to verify template rendering and deliverability before notifying all subscribers.
+              </p>
             </div>
           </div>
 
@@ -316,7 +568,7 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
             {publishingData.status === 'published' ? (
               <Button 
                 onClick={handlePublish} 
-                disabled={loading}
+                disabled={loading || hasBlockingChecks}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <SendIcon className="w-4 h-4 mr-2" />
@@ -325,7 +577,7 @@ export function PublishingModal({ open, onClose, releaseNote, onPublish }: Publi
             ) : (
               <Button 
                 onClick={handleSchedule} 
-                disabled={loading || !isScheduleValid}
+                disabled={loading || !isScheduleValid || hasBlockingChecks}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <ClockIcon className="w-4 h-4 mr-2" />

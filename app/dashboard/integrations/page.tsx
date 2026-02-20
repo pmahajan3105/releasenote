@@ -351,7 +351,7 @@ export default function DashboardIntegrationsPage() {
                         </Button>
                       </div>
 
-                      <Link href="/dashboard/releases/new/ai" className="w-full">
+                      <Link href="/dashboard/releases/new" className="w-full">
                         <Button className="w-full bg-[#7F56D9] text-white hover:bg-[#6941C6]">
                           <ExternalLinkIcon className="h-4 w-4 mr-2" />
                           Generate Release Notes
@@ -393,4 +393,3 @@ export default function DashboardIntegrationsPage() {
     </div>
   )
 }
-
