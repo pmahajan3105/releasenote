@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
   --surface-0: #f4f6fb;
   --surface-1: #ffffff;
   --surface-2: #f9fafb;
