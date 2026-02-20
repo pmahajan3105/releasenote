@@ -130,18 +130,14 @@ types/               # TypeScript definitions
 
 ## 📖 Documentation
 
-### For Users
-- **[Quick Start Guide](docs/SETUP-GUIDE.md)** - Get started in 15 minutes
-- **[Features Overview](docs/AI-ORCHESTRATION.md)** - Understanding AI capabilities
+### Canonical docs
+- **[Docs Index](docs/README.md)** - Source-of-truth map, ownership, and freshness policy
+- **[Implementation As Built](docs/IMPLEMENTATION-AS-BUILT.md)** - Current journeys, route/API inventory, auth/security posture
+- **[Setup Guide](docs/SETUP-GUIDE.md)** - Local development setup (OpenAI-first, Azure fallback)
+- **[Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** - Production deployment on Vercel + Supabase + Resend + OpenAI
 
-### For Deployment
-- **[Complete Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** - Step-by-step deployment for non-technical users
-- **Environment Configuration** – See `.env.example` in the project root for all environment variables
-
-### For Developers
-- **[OAuth Integration Guide](docs/EMAIL-SLACK-INTEGRATION.md)** - Adding new OAuth providers
-- **[Public Release Notes](docs/PUBLIC-RELEASE-NOTES.md)** - Public pages implementation
-- **[Implementation As Built](docs/IMPLEMENTATION-AS-BUILT.md)** - Current journeys, route inventory, and gap map
+### Configuration reference
+- **Environment variables** – See `.env.example` in the project root
 
 ## 🛠️ Technology Stack
 
