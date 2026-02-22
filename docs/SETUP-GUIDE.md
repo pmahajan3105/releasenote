@@ -49,7 +49,7 @@ RESEND_FROM_EMAIL=noreply@yourdomain.com
 EMAIL_FROM=noreply@yourdomain.com
 
 INTEGRATIONS_ENCRYPTION_KEY=<32-byte key as hex or base64>
-SUBSCRIBER_TOKEN_SECRET=<random secret>
+SUBSCRIBER_TOKEN_SECRET=<32+ char random secret>
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
@@ -69,6 +69,10 @@ LINEAR_CLIENT_SECRET=<linear_client_secret>
 LINEAR_REDIRECT_URL=http://localhost:3000/api/auth/linear/callback
 ```
 
+Secret format guidance:
+- `INTEGRATIONS_ENCRYPTION_KEY`: 32-byte key (hex or base64).
+- `SUBSCRIBER_TOKEN_SECRET`: at least 32 random characters (for example `openssl rand -base64 32`).
+
 ### Optional Azure OpenAI fallback
 ```env
 AI_PROVIDER=azure-openai
@@ -83,8 +87,9 @@ AZURE_OPENAI_API_VERSION=2024-06-01
 ### Option A: Local Supabase CLI (recommended for development)
 ```bash
 npx supabase start
+npx supabase db reset
 ```
-Then apply migrations via Supabase CLI workflow used in your environment.
+`db reset` applies local migrations from `supabase/migrations` (and seed, if configured).
 
 ### Option B: Hosted Supabase
 - Use your hosted project.

@@ -15,7 +15,7 @@ flowchart LR
   P --> A[API Routes in app/api]
   A --> S[(Supabase: Auth + Postgres + Storage)]
   A --> I[Integrations: GitHub, Jira, Linear]
-  A --> O[OpenAI Responses API configured model]
+  A --> O[OpenAI API (configured model)]
   A --> Z[Azure OpenAI fallback]
   A --> E[Resend]
   R[Public Reader] --> N[/notes/[org_slug] and /notes/[org_slug]/[release_slug]]

@@ -71,6 +71,21 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/login?error=invalid_auth_link', requestUrl.origin))
   }
 
+  if (!authenticated) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      const loginUrl = new URL('/login', requestUrl.origin)
+      loginUrl.searchParams.set('error', 'missing_auth_params')
+      loginUrl.searchParams.set('redirectTo', redirectPath)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    authenticated = true
+  }
+
   if (authenticated) {
     const {
       data: { user },
