@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     authenticated = true
   }
 
-  if (tokenHash && !isEmailOtpType(otpType)) {
+  if (!authenticated && tokenHash && !isEmailOtpType(otpType)) {
     return NextResponse.redirect(new URL('/login?error=invalid_auth_link', requestUrl.origin))
   }
 
