@@ -16,14 +16,18 @@ function isEmailOtpType(value: string | null): value is EmailOtpType {
   return value !== null && ALLOWED_OTP_TYPES.includes(value as EmailOtpType)
 }
 
+function isSafeRedirectPath(value: string): boolean {
+  return value.startsWith('/') && !value.startsWith('//') && !/[\u0000-\u001F\u007F\s]/.test(value)
+}
+
 function readSafeRedirectPath(requestUrl: URL): string {
   const redirectTo = requestUrl.searchParams.get('redirectTo')
-  if (redirectTo && redirectTo.startsWith('/')) {
+  if (redirectTo && isSafeRedirectPath(redirectTo)) {
     return redirectTo
   }
 
   const next = requestUrl.searchParams.get('next')
-  if (next && next.startsWith('/')) {
+  if (next && isSafeRedirectPath(next)) {
     return next
   }
 
@@ -80,20 +84,20 @@ export async function GET(request: Request) {
 
     if (user) {
       try {
-        // Check if user has an organization
-        const { error: orgError } = await supabase
-          .from('organizations')
-          .select('id, name')
-          .eq('id', user.id)
+        // Check if user has any organization membership.
+        const { error: membershipError } = await supabase
+          .from('organization_members')
+          .select('id')
+          .eq('user_id', user.id)
           .single()
 
-        if (orgError && orgError.code === 'PGRST116') {
+        if (membershipError && membershipError.code === 'PGRST116') {
           // User doesn't have an organization - need onboarding
           return NextResponse.redirect(new URL('/onboarding', requestUrl.origin))
         }
 
-        if (orgError) {
-          console.error('Organization check error:', orgError)
+        if (membershipError) {
+          console.error('Organization membership check error:', membershipError)
           // Continue to requested route even if check fails
         }
       } catch (error) {

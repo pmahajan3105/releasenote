@@ -20,35 +20,39 @@ async function hydrateFromSession() {
   setLoading(true)
   setError(null)
 
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession()
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession()
 
-  if (error) {
+    if (error) {
+      setUser(null)
+      setProfile(null)
+      setOrganization(null, null)
+      setError(error.message)
+      return
+    }
+
+    const user = session?.user ?? null
+    setUser(user)
+
+    if (!user) {
+      setProfile(null)
+      setOrganization(null, null)
+      return
+    }
+
+    await Promise.all([fetchProfile(user.id), fetchOrganization(user.id)])
+  } catch (err) {
     setUser(null)
     setProfile(null)
     setOrganization(null, null)
+    setError(err instanceof Error ? err.message : 'Unexpected auth error')
+  } finally {
     setLoading(false)
     setInitialized(true)
-    setError(error.message)
-    return
   }
-
-  const user = session?.user ?? null
-  setUser(user)
-
-  if (!user) {
-    setProfile(null)
-    setOrganization(null, null)
-    setLoading(false)
-    setInitialized(true)
-    return
-  }
-
-  await Promise.all([fetchProfile(user.id), fetchOrganization(user.id)])
-  setLoading(false)
-  setInitialized(true)
 }
 
 export function AuthSessionSync() {
