@@ -199,9 +199,20 @@ export class DatabaseHealthChecker {
     const startTime = Date.now()
 
     try {
+      // Only run DB query health checks when service-role key is available.
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (!serviceRoleKey) {
+        this.isHealthy = true
+        return {
+          healthy: true,
+          latency: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
+        }
+      }
+
       // Simple connectivity test
       const { createServerSupabaseClient } = await import('./supabase')
-      const supabase = createServerSupabaseClient()
+      const supabase = createServerSupabaseClient(serviceRoleKey)
       
       // Perform a lightweight query
       const { error } = await supabase
@@ -253,42 +264,59 @@ export class DatabaseHealthChecker {
 // Global health checker instance
 export const databaseHealthChecker = new DatabaseHealthChecker()
 
+declare global {
+  // Avoid duplicate interval setup during hot reloads.
+  var __dbOptimizationInitialized: boolean | undefined
+}
+
 /**
  * Initialize database monitoring and cleanup
  */
 export function initializeDatabaseOptimization() {
-  if (typeof window === 'undefined') {
-    console.info('Initializing database optimization...')
-    
-    // Initialize Supabase cleanup
-    initializeSupabaseCleanup()
-    
-    // Start performance monitoring
-    if (DATABASE_CONFIG.monitoring.enabled) {
-      setInterval(() => {
-        const metrics = databaseMonitor.getMetrics()
-        console.info('Database metrics:', metrics)
-        
-        // Reset metrics after logging to prevent memory growth
-        if (metrics.totalQueries > 10000) {
-          databaseMonitor.reset()
-        }
-      }, DATABASE_CONFIG.monitoring.metricsInterval)
-    }
-    
-    // Start health checking
-    setInterval(async () => {
-      const health = await databaseHealthChecker.checkHealth()
-      
-      if (!health.healthy) {
-        console.error('Database health check failed:', health.errors)
-      } else if (DATABASE_CONFIG.monitoring.logConnections) {
-        console.info(`Database healthy - latency: ${health.latency}ms`)
-      }
-    }, 30000) // Check every 30 seconds
-    
-    console.info('Database optimization initialized successfully')
+  if (typeof window !== 'undefined') {
+    return
   }
+
+  // Keep this infra quiet in local development by default.
+  if (process.env.NODE_ENV !== 'production' && process.env.DB_OPTIMIZATION_IN_DEV !== 'true') {
+    return
+  }
+
+  if (globalThis.__dbOptimizationInitialized) {
+    return
+  }
+
+  globalThis.__dbOptimizationInitialized = true
+  console.info('Initializing database optimization...')
+
+  // Initialize Supabase cleanup
+  initializeSupabaseCleanup()
+
+  // Start performance monitoring
+  if (DATABASE_CONFIG.monitoring.enabled) {
+    setInterval(() => {
+      const metrics = databaseMonitor.getMetrics()
+      console.info('Database metrics:', metrics)
+
+      // Reset metrics after logging to prevent memory growth
+      if (metrics.totalQueries > 10000) {
+        databaseMonitor.reset()
+      }
+    }, DATABASE_CONFIG.monitoring.metricsInterval)
+  }
+
+  // Start health checking
+  setInterval(async () => {
+    const health = await databaseHealthChecker.checkHealth()
+
+    if (!health.healthy) {
+      console.error('Database health check failed:', health.errors)
+    } else if (DATABASE_CONFIG.monitoring.logConnections) {
+      console.info(`Database healthy - latency: ${health.latency}ms`)
+    }
+  }, 30000) // Check every 30 seconds
+
+  console.info('Database optimization initialized successfully')
 }
 
 /**

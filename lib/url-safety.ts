@@ -1,11 +1,29 @@
 const SAFE_LINK_SCHEMES = new Set(['http:', 'https:', 'mailto:'])
 const SAFE_IMAGE_SCHEMES = new Set(['http:', 'https:'])
+const FALLBACK_DISALLOWED_URL_CHAR_RE = /[\u0000-\u001F\u007F\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF\s]/
+
+const DISALLOWED_URL_CHAR_RE = (() => {
+  try {
+    return new RegExp('[\\p{C}\\p{Z}]', 'u')
+  } catch {
+    return FALLBACK_DISALLOWED_URL_CHAR_RE
+  }
+})()
 
 function hasExplicitScheme(value: string): boolean {
   return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value)
 }
 
+function getScheme(value: string): string | null {
+  const match = /^([a-zA-Z][a-zA-Z\d+\-.]*):/.exec(value)
+  return match ? `${match[1].toLowerCase()}:` : null
+}
+
 function isSafeRelativeUrl(value: string): boolean {
+  if (value.startsWith('//')) {
+    return false
+  }
+
   return (
     value.startsWith('/') ||
     value.startsWith('./') ||
@@ -22,36 +40,50 @@ function parseUrl(value: string): URL | null {
   }
 }
 
+function hasUnsafeUrlCharacters(value: string): boolean {
+  return DISALLOWED_URL_CHAR_RE.test(value)
+}
+
 export function isSafeLinkHref(value: string): boolean {
   const href = value.trim()
   if (!href) return false
+  if (hasUnsafeUrlCharacters(href)) return false
 
   if (isSafeRelativeUrl(href)) {
     return true
   }
 
-  if (!hasExplicitScheme(href)) {
+  const scheme = getScheme(href)
+  if (!scheme) {
     return false
+  }
+  if (!SAFE_LINK_SCHEMES.has(scheme)) return false
+
+  if (scheme === 'mailto:') {
+    return /^mailto:[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/i.test(href)
   }
 
   const parsed = parseUrl(href)
-  return Boolean(parsed && SAFE_LINK_SCHEMES.has(parsed.protocol))
+  return Boolean(parsed && parsed.protocol === scheme)
 }
 
 export function isSafeImageSrc(value: string): boolean {
   const src = value.trim()
   if (!src) return false
+  if (hasUnsafeUrlCharacters(src)) return false
 
   if (isSafeRelativeUrl(src)) {
     return true
   }
 
-  if (!hasExplicitScheme(src)) {
+  const scheme = getScheme(src)
+  if (!scheme) {
     return false
   }
+  if (!SAFE_IMAGE_SCHEMES.has(scheme)) return false
 
   const parsed = parseUrl(src)
-  return Boolean(parsed && SAFE_IMAGE_SCHEMES.has(parsed.protocol))
+  return Boolean(parsed && parsed.protocol === scheme)
 }
 
 export function normalizeEditorLinkInput(value: string): string | null {

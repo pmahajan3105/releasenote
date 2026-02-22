@@ -1,159 +1,128 @@
-# 🚀 Deployment Guide (2025-07)
+# Deployment Guide (Vercel + Supabase)
 
-> **Audience**: Makers who want a **one-click** deploy of Release Notes Generator using Vercel (full-stack Next.js) and Supabase.
->
-> *Time: <30 minutes if you already have the required accounts.*
+_Last updated: 2026-02-20_
 
----
+This is the canonical deployment guide for the current stack.
 
-## 🗺️  Architecture Overview
+## Target Architecture
+- App + API: Next.js App Router deployed on Vercel
+- Database/Auth/Storage: Supabase
+- AI: OpenAI (configured model ID) primary, Azure OpenAI optional fallback
+- Email: Resend
 
+## Runtime Baseline
+- Node.js `>=22.11.0`
+- Next.js `16.x`
+- React `19.x`
+
+## 1) Prepare production accounts
+- GitHub repository access
+- Vercel project
+- Supabase project
+- OpenAI API key
+- Resend API key + verified sender/domain
+- OAuth apps for GitHub/Jira/Linear
+
+## 2) Required production environment variables
+Set in Vercel Project Settings -> Environment Variables.
+
+### Core
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
+SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
+
+AI_PROVIDER=openai
+OPENAI_API_KEY=<openai_key>
+OPENAI_MODEL=<openai-model-id>
+
+RESEND_API_KEY=<resend_key>
+RESEND_FROM_EMAIL=noreply@yourdomain.com
+EMAIL_FROM=noreply@yourdomain.com
+
+INTEGRATIONS_ENCRYPTION_KEY=<32-byte key as hex or base64>
+SUBSCRIBER_TOKEN_SECRET=<random secret>
+
+NEXT_PUBLIC_APP_URL=https://<your-domain>
 ```
- ┌───────────────┐       Edge / Serverless
- │   Browser     │──────►   Next.js API routes (Vercel Functions)
- └───────────────┘       │
-                         │uses
-                 ┌───────▼───────┐
-                 │  Supabase DB  │
-                 └───────────────┘
-                         │uses
-                 ┌───────▼───────┐
-                 │Azure OpenAI   │
-                 └───────────────┘
-                         │
-                 ┌───────▼───────┐
-                 │   Resend      │
-                 └───────────────┘
+
+### Integrations OAuth
+```env
+GITHUB_CLIENT_ID=<github_client_id>
+GITHUB_CLIENT_SECRET=<github_client_secret>
+GITHUB_REDIRECT_URL=https://<your-domain>/api/auth/github/callback
+
+JIRA_CLIENT_ID=<jira_client_id>
+JIRA_CLIENT_SECRET=<jira_client_secret>
+JIRA_REDIRECT_URL=https://<your-domain>/api/auth/jira/callback
+
+LINEAR_CLIENT_ID=<linear_client_id>
+LINEAR_CLIENT_SECRET=<linear_client_secret>
+LINEAR_REDIRECT_URL=https://<your-domain>/api/auth/linear/callback
 ```
 
-* **Next.js 14+** app (app router) deployed on **Vercel** – _frontend **and** backend in one place_.
-* **Supabase** – Postgres + Auth (no separate Railway service).
-* **Azure OpenAI** – GPT-4o-mini for note generation.
-* **Resend** – transactional email.
+### Optional Azure fallback
+```env
+AI_PROVIDER=azure-openai
+AZURE_OPENAI_API_KEY=<azure_key>
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini
+AZURE_OPENAI_API_VERSION=2024-06-01
+```
 
----
+## 3) Deploy on Vercel
+1. Import repository in Vercel.
+2. Framework preset: Next.js.
+3. Build command: `next build --webpack` (already wired by package scripts).
+4. Add all env vars above for Production (and Preview if needed).
+5. Deploy.
 
-## ✅ Prerequisites
+## 4) Configure Supabase for production
+1. Apply migrations in `supabase/migrations`.
+2. Verify RLS policies for organization-scoped tables.
+3. Create required storage buckets (for release images/logos as used by app).
+4. Confirm auth settings and site URL callback domain.
 
-1. **Accounts (all free tiers)**
-   - GitHub
-   - Vercel
-   - Supabase
-   - Azure
-   - Resend
-2. **Local tooling**
-   - Node 18+ & npm
-   - Git
-3. **Fork/clone this repo**
+## 5) Configure OAuth providers
+- Register callback URLs exactly as deployed domain values.
+- Ensure scopes match expected route behavior:
+  - GitHub repo access for commits/PRs
+  - Jira project/issue read scopes
+  - Linear issue/team read scopes
 
----
-
-## 1️⃣ External services setup (quick recap)
-*Already have these? Skip to step 2.*
-
-| Service | What you need | Docs |
-|---------|---------------|------|
-| Azure OpenAI | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, deployment name (e.g. `gpt-4o-mini`) | see `docs/SETUP-GUIDE.md` |
-| Resend | `RESEND_API_KEY`, verified sender/domain | see `docs/SETUP-GUIDE.md` |
-| Supabase | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`<br/>optionally `SUPABASE_SERVICE_ROLE_KEY` | https://supabase.com/docs |
-
----
-
-## 2️⃣ One-click Vercel deploy
-
-1. **Push your code to GitHub** (or fork the repo).
-2. Visit **Vercel → New Project → Import Git Repository**.
-3. Vercel auto-detects Next.js. Keep defaults:
-   - **Build Cmd**: `next build`
-   - **Output Dir**: `.vercel/output` (handled automatically)
-4. **Environment variables** – add these (minimum set):
-   ```env
-   # Supabase
-   NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-
-   # Azure OpenAI
-   AZURE_OPENAI_API_KEY=your_key
-   AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
-   AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini
-   AZURE_OPENAI_API_VERSION=2024-06-01
-
-   # Email
-   RESEND_API_KEY=re_xxx
-   RESEND_FROM_EMAIL=noreply@yourdomain.com
-
-   # GitHub OAuth (optional for repo import)
-   GITHUB_CLIENT_ID=...
-   GITHUB_CLIENT_SECRET=...
-   ```
-5. Click **Deploy**. Vercel will build and give you a `<project>.vercel.app` URL in ~2-3 minutes.
-
-> 🔒 **Tip:** After deploy, mark sensitive vars as "Encrypted" in Vercel.
-
----
-
-## 3️⃣ Supabase database bootstrap
-
-Supabase migrations live in `/supabase/migrations`. They are automatically applied when you create your Supabase project via the **SQL Editor → "Upload file" → select each .sql in order** or by using the Supabase CLI:
-
+## 6) Post-deploy validation checklist
 ```bash
-# Install CLI
-npm i -g supabase
-
-# From project root
-supabase db push --project-ref <project-ref>
+npm run typecheck
+npm run lint
+npm test -- --runInBand
+npm run build
 ```
+Then in deployed app:
+1. Auth works (`/login`, `/signup`, `/auth/callback`).
+2. Integrations connect and fetch data.
+3. Release builder works at `/dashboard/releases/new`.
+4. Generation uses `POST /api/release-notes/generate`.
+5. Publish + notify works.
+6. Public pages work:
+   - `/notes/[org_slug]`
+   - `/notes/[org_slug]/[release_slug]`
 
-That's it – no manual table creation required.
+## 7) Operational notes
+- `proxy.ts` applies security headers, route protection, and route-based rate limits.
+- Legacy API shims return `410` intentionally (not deployment errors).
+- Keep `NEXT_PUBLIC_APP_URL` accurate for OAuth callbacks and unsubscribe links.
 
----
+## 8) Common deployment issues
+- OAuth callback errors:
+  - Usually redirect URL mismatch between env vars and provider app config.
+- 401/403 on API routes:
+  - Check Supabase session and organization membership rows.
+- Email send errors:
+  - Confirm Resend key and sender verification.
+- Integration fetch failures:
+  - Check stored credentials and provider permissions.
 
-## 4️⃣ Local development (optional)
-
-```bash
-# Install deps
-npm install
-
-# Copy env sample
-cp .env.example .env.local # then fill in the vars above
-
-# Run dev server
-npm run dev
-```
-View app at http://localhost:3000. API routes are available under http://localhost:3000/api/*.
-
----
-
-## 5️⃣ Smoke test 🧪
-
-1. Visit `/api/health` – should return `{ status:"ok" }`.
-2. Sign-up/login – Supabase Auth magic link should work.
-3. Generate a release note via dashboard → "Create → AI → Quick Generate".
-4. Publish: verify email notification arrives (Resend).
-
----
-
-## 6️⃣ Troubleshooting
-
-| Symptom | Checklist |
-|---------|-----------|
-| `401 Unauthorized` from Supabase | • `NEXT_PUBLIC_SUPABASE_ANON_KEY` correct?<br/>• Row-level security off or policies set? |
-| `OpenAI 429` | Rate-limit hit – lower frequency or raise quota in Azure portal. |
-| Emails not sending | • Domain verified in Resend?<br/>• `RESEND_FROM_EMAIL` uses that domain? |
-| Vercel build fails | Run `npm run build` locally; look for TypeScript errors. |
-
-For more, see the **Troubleshooting** section in `docs/SETUP-GUIDE.md`.
-
----
-
-## 7️⃣ Maintenance 🛠️
-
-- **Weekly**: Check Vercel/Supabase dashboards for errors & quotas.
-- **Monthly**: Update npm deps (`pnpm up -L` or `npm audit fix`).
-- **Quarterly**: Rotate API keys & secrets.
-
----
-
-## 🎉 Done
-
-Share your Vercel URL and start shipping beautiful, AI-generated release notes!
+## 9) Rollback strategy
+- Re-deploy previous successful Vercel deployment.
+- Revert env var changes if incident is credential/config related.
+- Keep DB migrations backward-compatible where possible before rollout.

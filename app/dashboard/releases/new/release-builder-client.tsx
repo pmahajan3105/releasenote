@@ -147,6 +147,7 @@ function inferTicketType(item: BuilderItem): 'feature' | 'bugfix' | 'improvement
 export default function ReleaseBuilderPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const intentParam = searchParams.get('intent')
   const supabase = createClientComponentClient<Database>()
   const user = useAuthStore((state) => state.user)
   const authInitialized = useAuthStore((state) => state.isInitialized)
@@ -298,14 +299,20 @@ export default function ReleaseBuilderPage() {
   )
 
   useEffect(() => {
-    const intent = readIntent(searchParams.get('intent'))
-    if (!authInitialized || !intent || intent === 'ai' || processedIntentRef.current === intent) {
+    const intent = readIntent(intentParam)
+    if (
+      !authInitialized ||
+      !user ||
+      !intent ||
+      intent === 'ai' ||
+      processedIntentRef.current === intent
+    ) {
       return
     }
 
     processedIntentRef.current = intent
     void createQuickDraft(intent)
-  }, [authInitialized, createQuickDraft, searchParams])
+  }, [authInitialized, createQuickDraft, intentParam, user])
 
   useEffect(() => {
     if (provider !== 'github') {

@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import type { ReleaseNote } from '@/types/database'
 import { toast } from 'sonner'
 import { isSafeLinkHref } from '@/lib/url-safety'
+import { isUnsafeAttributeName, isUnsafeAttributeValue } from '@/lib/sanitize-policies'
 
 interface PublishingModalProps {
   open: boolean
@@ -64,10 +65,30 @@ function extractAnchorHrefs(html: string): string[] {
 }
 
 function hasUnsafeMarkupSignals(html: string): boolean {
-  return (
-    /<(script|style|iframe|object|embed|form|meta)[\s>]/i.test(html) ||
-    /\son[a-z]+\s*=/i.test(html)
-  )
+  if (!html.trim()) {
+    return false
+  }
+
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const blockedSelectors = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'meta']
+
+  if (blockedSelectors.some((selector) => doc.querySelector(selector))) {
+    return true
+  }
+
+  for (const element of Array.from(doc.querySelectorAll('*'))) {
+    for (const attr of Array.from(element.attributes)) {
+      if (isUnsafeAttributeName(attr.name)) {
+        return true
+      }
+
+      if (isUnsafeAttributeValue(attr.name, attr.value)) {
+        return true
+      }
+    }
+  }
+
+  return false
 }
 
 export function PublishingModal({ open, onClose, releaseNote, onPublish }: PublishingModalProps) {
