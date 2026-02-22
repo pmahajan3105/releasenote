@@ -2,6 +2,7 @@ import './globals.css'
 import '@/components/editor/prism-theme.css'
 import type { Metadata } from 'next'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { AuthSessionSync } from '@/components/auth/auth-session-sync'
 import { PrismLoader } from '@/components/editor/prism-loader'
 import { initializeDatabaseOptimization } from '@/lib/database-config'
 import '@/lib/startup-validation' // Run startup validation
@@ -26,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <AuthSessionSync />
         <PrismLoader />
         <ErrorBoundary>
           {children}
