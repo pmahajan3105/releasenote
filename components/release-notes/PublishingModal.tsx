@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import type { ReleaseNote } from '@/types/database'
 import { toast } from 'sonner'
 import { isSafeLinkHref } from '@/lib/url-safety'
+import { isUnsafeAttributeName, isUnsafeAttributeValue } from '@/lib/sanitize-policies'
 
 interface PublishingModalProps {
   open: boolean
@@ -77,7 +78,11 @@ function hasUnsafeMarkupSignals(html: string): boolean {
 
   for (const element of Array.from(doc.querySelectorAll('*'))) {
     for (const attr of Array.from(element.attributes)) {
-      if (attr.name.toLowerCase().startsWith('on')) {
+      if (isUnsafeAttributeName(attr.name)) {
+        return true
+      }
+
+      if (isUnsafeAttributeValue(attr.name, attr.value)) {
         return true
       }
     }

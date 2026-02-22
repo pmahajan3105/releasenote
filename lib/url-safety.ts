@@ -1,5 +1,14 @@
 const SAFE_LINK_SCHEMES = new Set(['http:', 'https:', 'mailto:'])
 const SAFE_IMAGE_SCHEMES = new Set(['http:', 'https:'])
+const FALLBACK_DISALLOWED_URL_CHAR_RE = /[\u0000-\u001F\u007F\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF\s]/
+
+const DISALLOWED_URL_CHAR_RE = (() => {
+  try {
+    return new RegExp('[\\p{C}\\p{Z}]', 'u')
+  } catch {
+    return FALLBACK_DISALLOWED_URL_CHAR_RE
+  }
+})()
 
 function hasExplicitScheme(value: string): boolean {
   return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value)
@@ -31,10 +40,14 @@ function parseUrl(value: string): URL | null {
   }
 }
 
+function hasUnsafeUrlCharacters(value: string): boolean {
+  return DISALLOWED_URL_CHAR_RE.test(value)
+}
+
 export function isSafeLinkHref(value: string): boolean {
   const href = value.trim()
   if (!href) return false
-  if (/[\u0000-\u001F\u007F]/.test(href) || /\s/.test(href)) return false
+  if (hasUnsafeUrlCharacters(href)) return false
 
   if (isSafeRelativeUrl(href)) {
     return true
@@ -57,7 +70,7 @@ export function isSafeLinkHref(value: string): boolean {
 export function isSafeImageSrc(value: string): boolean {
   const src = value.trim()
   if (!src) return false
-  if (/[\u0000-\u001F\u007F]/.test(src) || /\s/.test(src)) return false
+  if (hasUnsafeUrlCharacters(src)) return false
 
   if (isSafeRelativeUrl(src)) {
     return true

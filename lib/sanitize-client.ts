@@ -2,7 +2,7 @@
 
 import DOMPurify from 'dompurify'
 import { SANITIZATION_CONFIG } from './constants'
-import { isSafeImageSrc, isSafeLinkHref } from './url-safety'
+import { applyCommonSanitizePolicies } from './sanitize-policies'
 
 let configuredPurify: ReturnType<typeof DOMPurify> | null = null
 
@@ -13,33 +13,7 @@ function getPurify() {
       if (!(node instanceof window.Element)) {
         return
       }
-
-      const href = node.getAttribute('href')
-      if (href && !isSafeLinkHref(href)) {
-        node.removeAttribute('href')
-      }
-
-      const src = node.getAttribute('src')
-      if (src && !isSafeImageSrc(src)) {
-        node.removeAttribute('src')
-      }
-
-      if (node.tagName === 'A' && node.getAttribute('href')) {
-        node.setAttribute('rel', 'noopener noreferrer')
-      }
-
-      // Task-list safety: render checkbox visuals but disable interaction.
-      if (node.tagName === 'INPUT') {
-        const inputType = (node.getAttribute('type') || '').toLowerCase()
-        if (inputType !== 'checkbox') {
-          node.remove()
-          return
-        }
-
-        node.setAttribute('type', 'checkbox')
-        node.setAttribute('disabled', '')
-        node.setAttribute('tabindex', '-1')
-      }
+      applyCommonSanitizePolicies(node)
     })
     configuredPurify = purify
   }

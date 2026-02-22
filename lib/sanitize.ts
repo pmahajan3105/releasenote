@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify'
 import { JSDOM } from 'jsdom'
 import { SANITIZATION_CONFIG } from './constants'
-import { isSafeImageSrc, isSafeLinkHref } from './url-safety'
+import { applyCommonSanitizePolicies } from './sanitize-policies'
 
 // Create a singleton JSDOM window to avoid creating new instances on every call
 let jsdomWindow: typeof window | null = null
@@ -19,33 +19,7 @@ function configurePurifyInstance(purify: ReturnType<typeof DOMPurify>) {
     if (!(node instanceof ElementConstructor)) {
       return
     }
-
-    const href = node.getAttribute('href')
-    if (href && !isSafeLinkHref(href)) {
-      node.removeAttribute('href')
-    }
-
-    const src = node.getAttribute('src')
-    if (src && !isSafeImageSrc(src)) {
-      node.removeAttribute('src')
-    }
-
-    if (node.tagName === 'A' && node.getAttribute('href')) {
-      node.setAttribute('rel', 'noopener noreferrer')
-    }
-
-    // Task-list safety: allow checkbox markup, but never interactive form input.
-    if (node.tagName === 'INPUT') {
-      const inputType = (node.getAttribute('type') || '').toLowerCase()
-      if (inputType !== 'checkbox') {
-        node.remove()
-        return
-      }
-
-      node.setAttribute('type', 'checkbox')
-      node.setAttribute('disabled', '')
-      node.setAttribute('tabindex', '-1')
-    }
+    applyCommonSanitizePolicies(node)
   })
 
   ;(purify as unknown as { __releaseNoteConfigured?: boolean }).__releaseNoteConfigured = true
