@@ -1,22 +1,6 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
-function isSafeSupabaseHostname(hostname: string): boolean {
-  return /^[a-z0-9.-]+$/i.test(hostname) && hostname.endsWith('.supabase.co')
-}
-
-const supabaseHostname = (() => {
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!rawUrl) return null
-
-  try {
-    const hostname = new URL(rawUrl).hostname
-    return isSafeSupabaseHostname(hostname) ? hostname : null
-  } catch {
-    return null
-  }
-})()
-
 const remotePatterns: NonNullable<NextConfig['images']>['remotePatterns'] = [
   {
     protocol: 'https',
@@ -31,13 +15,6 @@ const remotePatterns: NonNullable<NextConfig['images']>['remotePatterns'] = [
     hostname: 'images.unsplash.com',
   },
 ]
-
-if (supabaseHostname) {
-  remotePatterns.push({
-    protocol: 'https',
-    hostname: supabaseHostname,
-  })
-}
 
 const nextConfig: NextConfig = {
   // Performance optimizations

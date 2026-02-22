@@ -10,7 +10,7 @@ This folder is intentionally split into:
   - Includes user journeys, route/API inventory, security posture, and current gaps.
 - [`SETUP-GUIDE.md`](./SETUP-GUIDE.md)
   - Local development setup and required environment variables.
-  - Primary AI path is OpenAI (`gpt-5.2`), Azure OpenAI is optional fallback.
+  - Primary AI path is OpenAI (configured model ID), Azure OpenAI is optional fallback.
 - [`DEPLOYMENT-GUIDE.md`](./DEPLOYMENT-GUIDE.md)
   - Production deployment and environment/ops checklist.
 

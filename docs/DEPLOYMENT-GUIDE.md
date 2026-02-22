@@ -7,7 +7,7 @@ This is the canonical deployment guide for the current stack.
 ## Target Architecture
 - App + API: Next.js App Router deployed on Vercel
 - Database/Auth/Storage: Supabase
-- AI: OpenAI (`gpt-5.2`) primary, Azure OpenAI optional fallback
+- AI: OpenAI (configured model ID) primary, Azure OpenAI optional fallback
 - Email: Resend
 
 ## Runtime Baseline
@@ -34,7 +34,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
 
 AI_PROVIDER=openai
 OPENAI_API_KEY=<openai_key>
-OPENAI_MODEL=gpt-5.2
+OPENAI_MODEL=<openai-model-id>
 
 RESEND_API_KEY=<resend_key>
 RESEND_FROM_EMAIL=noreply@yourdomain.com

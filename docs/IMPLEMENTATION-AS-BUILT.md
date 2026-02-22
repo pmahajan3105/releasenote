@@ -15,7 +15,7 @@ flowchart LR
   P --> A[API Routes in app/api]
   A --> S[(Supabase: Auth + Postgres + Storage)]
   A --> I[Integrations: GitHub, Jira, Linear]
-  A --> O[OpenAI Responses API gpt-5.2]
+  A --> O[OpenAI Responses API configured model]
   A --> Z[Azure OpenAI fallback]
   A --> E[Resend]
   R[Public Reader] --> N[/notes/[org_slug] and /notes/[org_slug]/[release_slug]]
@@ -95,6 +95,7 @@ flowchart LR
 ## Route Inventory (Current)
 
 ### Pages
+
 | Route | File | Status | Notes |
 |---|---|---|---|
 | `/ai-context` | `app/ai-context/page.tsx` | `redirect` | redirect/compat shim |
@@ -135,6 +136,7 @@ flowchart LR
 | `/unsubscribe` | `app/unsubscribe/page.tsx` | `active` | active page |
 
 ### APIs
+
 | Endpoint | Methods | File | Status | Notes |
 |---|---|---|---|---|
 | `/api/ai-context` | `GET,POST` | `app/api/ai-context/route.ts` | `active` | active route |
@@ -221,4 +223,3 @@ flowchart LR
 - Legacy GitHub generation endpoints moved to `410`.
 - Legacy domain/SSO settings endpoints moved to `410`.
 - HTML sanitization and URL safety were tightened across generation, editor preview, publish checks, and public render.
-

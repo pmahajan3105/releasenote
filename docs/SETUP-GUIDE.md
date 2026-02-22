@@ -10,7 +10,7 @@ This is the canonical local setup guide for this repository.
 - Next.js: `16.x`
 - React: `19.x`
 - Auth/session helpers: `@supabase/ssr` (not deprecated auth helpers)
-- AI provider: OpenAI (`gpt-5.2`) primary, Azure OpenAI optional fallback
+- AI provider: OpenAI (configured model ID) primary, Azure OpenAI optional fallback
 
 ## 1) Prerequisites
 - Git
@@ -42,7 +42,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
 
 AI_PROVIDER=openai
 OPENAI_API_KEY=<openai_key>
-OPENAI_MODEL=gpt-5.2
+OPENAI_MODEL=<openai-model-id>
 
 RESEND_API_KEY=<resend_key>
 RESEND_FROM_EMAIL=noreply@yourdomain.com

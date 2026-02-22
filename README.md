@@ -9,7 +9,7 @@
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Generation**: OpenAI (`gpt-5.2` default) with Azure OpenAI fallback
+- 🤖 **AI-Powered Generation**: OpenAI (configured model ID) with Azure OpenAI fallback
 - 🔗 **Multi-Platform Integration**: GitHub, Jira, and Linear integrations
 - 📧 **Professional Emails**: Beautiful email notifications via Resend
 - 🎨 **Modern UI**: Built with Next.js 16, React 19, Tailwind CSS, and Shadcn/ui
@@ -56,7 +56,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 # Required: AI Provider (default OpenAI)
 AI_PROVIDER=openai
 OPENAI_API_KEY=your-openai-key
-OPENAI_MODEL=gpt-5.2
+OPENAI_MODEL=<openai-model-id>
 
 # Optional: Azure OpenAI fallback
 # AI_PROVIDER=azure-openai
@@ -167,7 +167,7 @@ types/               # TypeScript definitions
 - **SWR patterns** - Stale-while-revalidate caching
 
 ### AI & Integrations
-- **OpenAI Responses API** - Primary AI provider (`gpt-5.2`)
+- **OpenAI Responses API** - Primary AI provider (configured `OPENAI_MODEL`)
 - **Azure OpenAI** - Optional fallback provider
 - **GitHub API** - Repository and issue integration
 - **Jira API** - Project management integration

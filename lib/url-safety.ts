@@ -47,7 +47,7 @@ export function isSafeLinkHref(value: string): boolean {
   if (!SAFE_LINK_SCHEMES.has(scheme)) return false
 
   if (scheme === 'mailto:') {
-    return /^mailto:[^\s]+$/i.test(href)
+    return /^mailto:[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/i.test(href)
   }
 
   const parsed = parseUrl(href)
